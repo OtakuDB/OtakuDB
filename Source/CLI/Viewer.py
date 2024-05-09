@@ -22,6 +22,16 @@ def View(table: MediaViewsTable, note: MediaViewsNote):
 		# Получение частей.
 		Parts = note.parts
 
+		# Если задана группа.
+		if note.group_id:
+			# Вывод в консоль: заголовок тегов.
+			StyledPrinter(f"GROUP: ", decorations = [Styles.Decorations.Bold], end = False)
+			# Название группы.
+			GroupName = f"@{note.group_id}" if not table.get_group(note.group_id) else table.get_group(note.group_id)["name"]
+			if GroupName == "@None": GroupName = ""
+			# Вывод в консоль: название группы.
+			StyledPrinter(GroupName, decorations = [Styles.Decorations.Italic])
+
 		# Если заданы теги.
 		if note.tags:
 			# Вывод в консоль: заголовок тегов.

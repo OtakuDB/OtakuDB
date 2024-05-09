@@ -16,6 +16,7 @@ class MediaViewsNote:
 		"another-names": [],
 		"estimation": None,
 		"status": None,
+		"group": None,
 		"tags": [],
 		"parts": []
 	}
@@ -49,6 +50,12 @@ class MediaViewsNote:
 		"""Оценка."""
 
 		return self.__Data["estimation"]
+
+	@property
+	def group_id(self) -> dict | None:
+		"""ID группы."""
+
+		return self.__Data["group"]
 
 	@property
 	def id(self) -> int:
@@ -644,8 +651,8 @@ class MediaViewsTable:
 		# Сохранение описания.
 		WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/main.json", self.__Description)
 
-	def __GetNewNoteID(self) -> int:
-		"""Генерирует ID для новой записи."""
+	def __GetNewID(self, container: dict) -> int:
+		"""Генерирует ID для новой группы."""
 
 		# Новый ID.
 		NewID = None
@@ -653,7 +660,7 @@ class MediaViewsTable:
 		# Если включено использование освободившихся ID.
 		if self.__Description["recycle-id"]:
 			# Список ID.
-			ListID = self.__Notes.keys()
+			ListID = container.keys()
 
 			# Для каждого значения ID до максимального.
 			for ID in range(1, len(ListID) + 1):
@@ -668,7 +675,7 @@ class MediaViewsTable:
 		# Если ID не назначен.
 		if not NewID:
 			# Назначение нового ID методом инкремента максимального.
-			NewID = max(self.__Notes.keys()) + 1 if len(self.__Notes.keys()) > 0 else 1
+			NewID = max(container.keys()) + 1 if len(container.keys()) > 0 else 1
 
 		return NewID
 
@@ -681,8 +688,12 @@ class MediaViewsTable:
 		Files = os.listdir(f"{self.__StorageDirectory}/{self.__Name}")
 		# Фильтрация только файлов формата JSON.
 		Files = list(filter(lambda File: File.endswith(".json"), Files))
-		# Удаление файла описания.
-		Files.remove("main.json")
+
+		# Для каждого файла.
+		for File in Files: 
+			# Если название файла не является числом, удалить его.
+			if not File.replace(".json", "").isdigit(): Files.remove(File)
+
 		# Для каждого файла получить и записать ID.
 		for File in Files: ListID.append(int(File.replace(".json", "")))
 		
@@ -728,6 +739,8 @@ class MediaViewsTable:
 		self.__Name = name
 		# Словарь записей.
 		self.__Notes = dict()
+		# Словарь групп.
+		self.__Groups = dict()
 		# Описание.
 		self.__Description = {
 			"version": 1,
@@ -757,17 +770,60 @@ class MediaViewsTable:
 		# Выброс исключения
 		else: raise FileExistsError("main.json")
 
-	def create_note(self) -> int:
+		# Если найден файл описания групп.
+		if os.path.exists(f"{self.__StorageDirectory}/{self.__Name}/groups.json"):
+			# Чтение групп.
+			self.__Groups = ReadJSON(f"{self.__StorageDirectory}/{self.__Name}/groups.json")
+
+	def create_group(self, name: str) -> ExecutionStatus:
+		"""
+		Создаёт группу для объединения записей. Возвращает ID новой группы.
+			name – название группы.
+		"""
+
+		# Статус выполнения.
+		Status = ExecutionStatus(0)
+
+		try:
+			# ID новой группы.
+			ID = self.__GetNewID(self.__Groups)
+			# Заполнение структуры группы.
+			self.__Groups[str(ID)] = {
+				"name": name,
+				"elements": []
+			}
+			# Сохранение локального файла JSON.
+			WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/groups.json", self.__Groups)
+			# Изменение статуса.
+			Status = ExecutionStatus(0, data = {"id": ID})
+
+		except FileExistsError:
+			# Изменение статуса.
+			Status = ExecutionStatus(-1, "unknown_error")
+
+		return Status
+
+	def create_note(self) -> ExecutionStatus:
 		"""Создаёт запись. Возвращает ID новой записи."""
 
-		# ID новой записи.
-		ID = self.__GetNewNoteID()
-		# Сохранение локального файла JSON.
-		WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/{ID}.json", MediaViewsNote.BASE_NOTE)
-		# Чтение и объектная интерпретация записи.
-		self.__ReadNote(ID)
+		# Статус выполнения.
+		Status = ExecutionStatus(0)
 
-		return ID
+		try:
+			# ID новой записи.
+			ID = self.__GetNewID(self.__Notes)
+			# Сохранение локального файла JSON.
+			WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/{ID}.json", MediaViewsNote.BASE_NOTE)
+			# Чтение и объектная интерпретация записи.
+			self.__ReadNote(ID)
+			# Изменение статуса.
+			Status = ExecutionStatus(0, data = {"id": ID})
+
+		except:
+			# Изменение статуса.
+			Status = ExecutionStatus(-1, "unknown_error")
+
+		return Status
 
 	def rename(self, name: str) -> ExecutionStatus:
 		"""Переименовывает таблицу."""
@@ -787,6 +843,36 @@ class MediaViewsTable:
 
 		return Status
 		
+	def remove_group(self, id: int) -> ExecutionStatus:
+		"""
+		Удаляет определение группы. 
+			id – идентификатор группы.
+		"""
+
+		# Статус выполнения.
+		Status = ExecutionStatus(0)
+
+		try:
+			# Приведение ID к строковому типу.
+			id = str(id)
+			# Удаление группы из словаря.
+			del self.__Groups[id]
+
+			# Если определения групп остались.
+			if len(self.__Groups.keys()) > 0:
+				# Сохранение локального файла JSON.
+				WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/groups.json", self.__Groups)
+
+			else:
+				# Удаление локального файла.
+				os.remove(f"{self.__StorageDirectory}/{self.__Name}/groups.json")
+
+		except:
+			# Изменение статуса.
+			Status = ExecutionStatus(-1, "unknown_error")
+
+		return Status
+
 	def remove_note(self, id: int) -> ExecutionStatus:
 		"""
 		Удаляет запись из таблицы. 
@@ -809,6 +895,21 @@ class MediaViewsTable:
 			Status = ExecutionStatus(-1, "unknown_error")
 
 		return Status
+
+	def get_group(self, id: int) -> dict | None:
+		"""
+		Возвращает словарное определение группы.
+			id – идентификатор группы.
+		"""
+
+		# Группа.
+		Group = None
+		# Приведение ID к строковому типу.
+		id = str(id)
+		# Если группа существует, записать её определение.
+		if id in self.__Groups.keys(): Group = self.__Groups[id]
+
+		return Group
 
 	def get_note(self, id: int) -> MediaViewsNote | ExecutionStatus:
 		"""

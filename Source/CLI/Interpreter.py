@@ -50,6 +50,11 @@ class Interpreter:
 		com_close = Command("close")
 		CommandsList.append(com_close)
 
+		# Создание команды: delgroup.
+		Com = Command("delgroup")
+		Com.add_argument(ArgumentsTypes.Number, important = True)
+		CommandsList.append(Com)
+
 		# Создание команды: list.
 		com_list = Command("list")
 		CommandsList.append(com_list)
@@ -57,6 +62,11 @@ class Interpreter:
 		# Создание команды: new.
 		com_new = Command("new")
 		CommandsList.append(com_new)
+
+		# Создание команды: newgroup.
+		Com = Command("newgroup")
+		Com.add_argument(ArgumentsTypes.All, important = True)
+		CommandsList.append(Com)
 
 		# Создание команды: open.
 		com_open = Command("open")
@@ -135,9 +145,10 @@ class Interpreter:
 
 		# Создание команды: set.
 		Com = Command("set")
-		Com.add_key_position(["name"], ArgumentsTypes.All)
 		Com.add_key_position(["altname"], ArgumentsTypes.All)
 		Com.add_key_position(["estimation"], ArgumentsTypes.Number)
+		Com.add_key_position(["group"], ArgumentsTypes.Number)
+		Com.add_key_position(["name"], ArgumentsTypes.All)
 		Com.add_key_position(["status"], ArgumentsTypes.All)
 		Com.add_key_position(["tag"], ArgumentsTypes.All)
 		CommandsList.append(Com)
@@ -219,6 +230,14 @@ class Interpreter:
 			self.__Table = None
 			self.__InterpreterLevel = "manager"
 
+		# Обработка команды: delgroup.
+		if command_data.name == "delgroup":
+			# Создание новой группы.
+			Status = self.__Table.remove_group(command_data.arguments[0])
+			# Обработка статуса.
+			if Status.code == 0: print(f"Group @" + str(command_data.arguments[0]) + " removed.")
+			if Status.code != 0: Error(Status.message)
+
 		# Обработка команды: list.
 		if command_data.name == "list":
 			# Получение списка записей.
@@ -231,18 +250,22 @@ class Interpreter:
 					"ID": [],
 					"Status": [],
 					"Estimation": [],
-					"Name": []
+					"Name": [],
+					"Group": []
 				}
 				
 				# Для каждой записи.
 				for Note in Notes:
 					# Получение данных.
 					Name = Note.name if Note.name else ""
+					GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
+					if GroupName == "@None": GroupName = ""
 					# Заполнение колонок.
 					Content["ID"].append(Note.id)
 					Content["Status"].append(Note.emoji_status)
 					Content["Estimation"].append(Note.estimation if Note.estimation else "")
 					Content["Name"].append(Name)
+					Content["Group"].append(GroupName)
 
 				# Вывод описания.
 				Columns(Content)
@@ -254,16 +277,18 @@ class Interpreter:
 		# Обработка команды: new.
 		if command_data.name == "new":
 			# Создание новой записи.
-			ID = self.__Table.create_note()
-			
-			# Если запись создана.
-			if ID:
-				# Вывод в консоль: ID новой записи.
-				print(f"Note #{ID} created.")
+			Status = self.__Table.create_note()
+			# Обработка статуса.
+			if Status.code: print(f"Note #" + str(Status.data["id"]) + " created.")
+			if Status.code != 0: Error("unable_to_create_note")
 
-			else:
-				# Вывод в консоль: ошибка.
-				Error("unable_to_create_note")
+		# Обработка команды: newgroup.
+		if command_data.name == "newgroup":
+			# Создание новой группы.
+			Status = self.__Table.create_group(command_data.arguments[0])
+			# Обработка статуса.
+			if Status.code == 0: print(f"Group @" + str(Status.data["id"]) + " created.")
+			if Status.code != 0: Error(Status.message)
 
 		# Обработка команды: open.
 		if command_data.name == "open":
@@ -364,10 +389,10 @@ class Interpreter:
 			# Добавление закладки.
 			Status = self.__Note.set_mark(int(command_data.arguments[0]), int(command_data.arguments[1]))
 			# Обработка статуса.
+			if Status.code in [1, 2, 3]: print(Status.message)
 			if Status.code == 0: print("Mark updated.")
-			if Status.code == 1: Warning(Status.message)
-			if Status.code in [2, 3]: print(Status.message)
-			if Status.code < 0: Error(Status.message)
+			if Status.code == -1: Error(Status.message)
+			if Status.code == -2: Warning(Status.message)
 
 		# Обработка команды: newpart.
 		if command_data.name == "newpart":
