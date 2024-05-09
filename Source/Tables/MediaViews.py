@@ -517,34 +517,38 @@ class MediaViewsNote:
 					# Сохранение изменений.
 					self.save()
 					# Изменение статуса.
-					Status = ExecutionStatus(3, "Part marked as unseen.")
+					Status = ExecutionStatus(2, "Part marked as unseen.")
 
 				else:
 
 					# Если закладка лежит в диапазоне серий.
-					if mark < self.__Data["parts"][part_index]["series"]:
+					if mark < self.__Data["parts"][part_index]["series"] and mark != 0:
 						# Обновление закладки.
 						self.__Data["parts"][part_index]["mark"] = mark
-						# Обновление статуса просмотра.
-						self.__UpdateStatus()
-						# Сохранение изменений.
-						self.save()
 
 					# Если закладка на последней серии.
 					elif mark == self.__Data["parts"][part_index]["series"]:
 						# Добавление статуса полностью просмотренного и удаление закладки.
 						self.__Data["parts"][part_index]["watched"] = True
 						del self.__Data["parts"][part_index]["mark"]
-						# Обновление статуса просмотра.
-						self.__UpdateStatus()
-						# Сохранение изменений.
-						self.save()
 						# Изменение статуса.
-						Status = ExecutionStatus(2, "Part marked as fully viewed.")
+						Status = ExecutionStatus(1, "Part marked as fully viewed.")
+
+					# Если закладка на нулевой серии.
+					elif mark == 0:
+						# Удаление закладки.
+						del self.__Data["parts"][part_index]["mark"]
+						# Изменение статуса.
+						Status = ExecutionStatus(3, "Mark removed.")
+
+					# Сохранение изменений.
+					self.save()
+					# Обновление статуса просмотра.
+					self.__UpdateStatus()
 
 			else:
 				# Изменение статуса.
-				Status = ExecutionStatus(1, "only_series_supports_marks")
+				Status = ExecutionStatus(-2, "only_series_supports_marks")
 
 		except:
 			# Изменение статуса.
