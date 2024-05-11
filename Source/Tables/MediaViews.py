@@ -18,6 +18,7 @@ class MediaViewsNote:
 		"status": None,
 		"group": None,
 		"tags": [],
+		"metainfo": {},
 		"parts": []
 	}
 
@@ -52,14 +53,14 @@ class MediaViewsNote:
 		return self.__Data["estimation"]
 
 	@property
-	def group_id(self) -> dict | None:
-		"""ID группы."""
+	def group_id(self) -> int | None:
+		"""Идентификатор группы."""
 
 		return self.__Data["group"]
 
 	@property
 	def id(self) -> int:
-		"""Идентификатор записи."""
+		"""Идентификатор."""
 
 		return self.__ID
 
@@ -76,11 +77,11 @@ class MediaViewsNote:
 		return list(self.__Data["parts"])
 
 	@property
-	def progress(self) -> float | None:
+	def progress(self) -> float:
 		"""Прогресс просмотра."""
 
 		# Прогресс.
-		Progress = None
+		Progress = 0
 		# Максимальное значение прогресса.
 		MaxProgress = 0
 		# Текущий прогресс.
@@ -137,7 +138,10 @@ class MediaViewsNote:
 	#==========================================================================================#
 
 	def __GetBasePart(self, part_type: str) -> dict:
-		"""Возвращает пустую структуру части."""
+		"""
+		Возвращает стандартную словарную структуру части.
+			part_type – тип части.
+		"""
 
 		# Типы: сезон.
 		if part_type in ["season"]: return {
@@ -162,7 +166,11 @@ class MediaViewsNote:
 		}
 
 	def __ModifyPart(self, part: dict, data: dict) -> dict:
-		"""Подставляет типовые значения в часть."""
+		"""
+		Подставляет типовые значения в часть.
+			part – словарное представление части;
+			data – словарь данных для подстановки в часть.
+		"""
 
 		# Для каждого значения из переданных данных.
 		for Key in data.keys():
@@ -209,25 +217,23 @@ class MediaViewsNote:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, table_dir: str, id: int, table_properties: dict):
+	def __init__(self, table: "MediaViewsTable", note_id: int):
 		"""
 		Запись просмотра медиаконтента.
-			table_dir – путь к каталогу таблицы;
-			id – идентификатор записи.
+			table – объектное представление таблицы;
+			note_id – идентификатор записи.
 		"""
 		
 		#---> Генерация динамичкских свойств.
 		#==========================================================================================#
 		# ID записи.
-		self.__ID = id
-		# Директория таблицы.
-		self.__TableDirectory = table_dir
+		self.__ID = note_id
+		# Объектное представление таблицы.
+		self.__Table = table
 		# Данные записи.
-		self.__Data = ReadJSON(f"{table_dir}/{id}.json")
-		# Свойства таблицы.
-		self.__TableProperties = table_properties.copy()
+		self.__Data = ReadJSON(f"{table.directory}/{table.name}/{self.__ID}.json")
 	
-	def add_another_name(self, another_name: str):
+	def add_another_name(self, another_name: str) -> ExecutionStatus:
 		"""
 		Добавляет альтернативное название.
 			another_name – альтернативное название.
@@ -252,7 +258,11 @@ class MediaViewsNote:
 		return Status
 
 	def add_part(self, part_type: str, data: dict) -> ExecutionStatus:
-		"""Добавляет новую часть."""
+		"""
+		Добавляет новую часть.
+			part_type – тип части;
+			data – данные для заполнения свойств части.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -276,7 +286,10 @@ class MediaViewsNote:
 		return Status
 
 	def add_tag(self, tag: str) -> ExecutionStatus:
-		"""Добавляет тег."""
+		"""
+		Добавляет тег.
+			tag – название тега.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -290,14 +303,17 @@ class MediaViewsNote:
 				# Сохранение изменений.
 				self.save()
 
-		except FileExistsError:
+		except:
 			# Изменение статуса.
 			Status = ExecutionStatus(-1, "unknown_error")
 
 		return Status
 
 	def delete_another_name(self, another_name: int | str) -> ExecutionStatus:
-		"""Удаляет альтернативное название."""
+		"""
+		Удаляет альтернативное название.
+			another_name – альтернативное название или его индекс.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -320,14 +336,17 @@ class MediaViewsNote:
 			# Изменение статуса.
 			Status = ExecutionStatus(1, "incorrect_another_name_index")
 
-		except FileExistsError:
+		except:
 			# Изменение статуса.
 			Status = ExecutionStatus(-1, "unknown_error")
 
 		return Status
 
 	def delete_part(self, part_index: int) -> ExecutionStatus:
-		"""Удаляет часть."""
+		"""
+		Удаляет часть.
+			index – индекс части.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -347,7 +366,10 @@ class MediaViewsNote:
 		return Status
 
 	def delete_tag(self, tag: int | str) -> ExecutionStatus:
-		"""Удаляет тег."""
+		"""
+		Удаляет тег.
+			tag – тег или его индекс.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -377,7 +399,10 @@ class MediaViewsNote:
 		return Status
 
 	def down_part(self, part_index: int) -> ExecutionStatus:
-		"""Опускает часть на одну позицию вниз."""
+		"""
+		Опускает часть на одну позицию вниз.
+			part_index – индекс части.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -403,7 +428,11 @@ class MediaViewsNote:
 		return Status
 
 	def edit_part(self, part_index: int, data: dict) -> ExecutionStatus:
-		"""Редактирует часть."""
+		"""
+		Редактирует свойства части.
+			part_index – индекс части;
+			data – данные для обновления свойств части.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -414,13 +443,13 @@ class MediaViewsNote:
 			# Сохранение изменений.
 			self.save()
 
-		except FileExistsError:
+		except:
 			# Изменение статуса.
 			Status = ExecutionStatus(-1, "unknown_error")
 
 		return Status
 
-	def estimate(self, estimation: int):
+	def estimate(self, estimation: int) -> ExecutionStatus:
 		"""
 		Выставляет оценку.
 			estimation – оценка.
@@ -432,7 +461,7 @@ class MediaViewsNote:
 		try:
 
 			# Если оценка в допустимом диапазоне.
-			if estimation <= self.__TableProperties["max-estimation"]:
+			if estimation <= self.__Table.options["max-estimation"]:
 				# Выставление оценки.
 				self.__Data["estimation"] = estimation
 				# Сохранение изменений.
@@ -448,19 +477,11 @@ class MediaViewsNote:
 
 		return Status
 
-	def pop_another_name(self, index: int):
-		"""
-		Удаляет альтернативное название.
-			index – индекс альтернативного названия.
-		"""
-
-		# Удаление альтернативного названия.
-		self.__Data["another-names"].pop(index)
-		# Сохранение изменений.
-		self.save()
-
 	def rename(self, name: str) -> ExecutionStatus:
-		"""Переименовывает запись."""
+		"""
+		Переименовывает запись.
+			name – название записи.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -478,7 +499,10 @@ class MediaViewsNote:
 		return Status
 
 	def reset(self, key: str) -> ExecutionStatus:
-		"""Сбрасывает поле к стандартному значению."""
+		"""
+		Сбрасывает поле к стандартному значению.
+			key – ключ поля.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -491,20 +515,47 @@ class MediaViewsNote:
 			# Сохранение изменений.
 			self.save()
 
-		except FileExistsError:
+		except:
 			# Изменение статуса.
 			Status = ExecutionStatus(-1, "unknown_error")
 
 		return Status
 
 	def save(self):
-		"""Обновляет локальный файл."""
+		"""Сохраняет запись в локальный файл."""
 
 		# Сохранение записи.
-		WriteJSON(f"{self.__TableDirectory}/{self.__ID}.json", self.__Data)
+		WriteJSON(f"{self.__Table.directory}/{self.__Table.name}/{self.__ID}.json", self.__Data)
+
+	def set_group(self, group_id: int) -> ExecutionStatus:
+		"""
+		Устанавливает принадлежность к группе.
+			group_id – идентификатор группы.
+		"""
+
+		# Статус выполнения.
+		Status = ExecutionStatus(0)
+
+		try:
+			# Сброс значения.
+			self.__Data["group"] = group_id
+			# Добавление элемента в группу.
+			self.__Table.add_group_element(group_id, self.__ID)
+			# Сохранение изменений.
+			self.save()
+
+		except:
+			# Изменение статуса.
+			Status = ExecutionStatus(-1, "unknown_error")
+
+		return Status
 
 	def set_mark(self, part_index: int, mark: int) -> ExecutionStatus:
-		"""Добавляет закладку на серию."""
+		"""
+		Добавляет закладку на серию.
+			part_index – индекс части;
+			mark – номер серии для постановки закладки (0 для удаления закладки, номер последней серии для пометки всей части как просмотренной).
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -557,14 +608,17 @@ class MediaViewsNote:
 				# Изменение статуса.
 				Status = ExecutionStatus(-2, "only_series_supports_marks")
 
-		except:
+		except FileExistsError:
 			# Изменение статуса.
 			Status = ExecutionStatus(-1, "unknown_error")
 
 		return Status
 
 	def set_status(self, status: str) -> ExecutionStatus:
-		"""Задаёт статус."""
+		"""
+		Задаёт статус.
+			status – статус просмотра.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -589,7 +643,10 @@ class MediaViewsNote:
 		return Status
 
 	def up_part(self, part_index: int) -> ExecutionStatus:
-		"""Поднимает часть на одну позицию вверх."""
+		"""
+		Поднимает часть на одну позицию вверх.
+			part_index – индекс части.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -622,22 +679,40 @@ class MediaViewsTable:
 	#==========================================================================================#
 
 	@property
-	def notes(self) -> list[MediaViewsNote]:
-		"""Список записей."""
+	def directory(self) -> str:
+		"""Путь к каталогу таблицы."""
+
+		return self.__StorageDirectory
+
+	@property
+	def id(self) -> list[MediaViewsNote]:
+		"""Идентификатор таблицы."""
 
 		return self.__Notes.values()
 
 	@property
 	def max_estimation(self) -> int:
-		"""Максимальная оценка в этой таблице."""
+		"""Максимальная допустимая оценка."""
 
-		return self.__Description["max-estimation"]
+		return self.__Options["max-estimation"]
 
 	@property
 	def name(self) -> str:
 		"""Название таблицы."""
 
 		return self.__Name
+
+	@property
+	def notes(self) -> list[MediaViewsNote]:
+		"""Список записей."""
+
+		return self.__Notes.values()
+
+	@property
+	def options(self) -> dict:
+		"""Словарь опций таблицы."""
+
+		return self.__Options.copy()	
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -649,16 +724,19 @@ class MediaViewsTable:
 		# Если каталог не существует, создать его.
 		if not os.path.exists(f"{self.__StorageDirectory}/{self.__Name}"): os.makedirs(f"{self.__StorageDirectory}/{self.__Name}")
 		# Сохранение описания.
-		WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/main.json", self.__Description)
+		WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/main.json", self.__Options)
 
 	def __GetNewID(self, container: dict) -> int:
-		"""Генерирует ID для новой группы."""
+		"""
+		Генерирует ID для новой записи или группы.
+			container – контейнер записи или группы.
+		"""
 
 		# Новый ID.
 		NewID = None
 
 		# Если включено использование освободившихся ID.
-		if self.__Description["recycle-id"]:
+		if self.__Options["recycle-id"]:
 			# Список ID.
 			ListID = container.keys()
 
@@ -675,7 +753,7 @@ class MediaViewsTable:
 		# Если ID не назначен.
 		if not NewID:
 			# Назначение нового ID методом инкремента максимального.
-			NewID = max(container.keys()) + 1 if len(container.keys()) > 0 else 1
+			NewID = int(max(container.keys())) + 1 if len(container.keys()) > 0 else 1
 
 		return NewID
 
@@ -699,14 +777,14 @@ class MediaViewsTable:
 		
 		return ListID
 
-	def __ReadNote(self, id: int):
+	def __ReadNote(self, note_id: int):
 		"""
 		Считывает содержимое записи.
-			id – идентификатор записи.
+			note_id – идентификатор записи.
 		"""
 
 		# Чтение записи.
-		self.__Notes[id] = MediaViewsNote(f"{self.__StorageDirectory}/{self.__Name}", id, self.__Description)
+		self.__Notes[note_id] = MediaViewsNote(self, note_id)
 
 	def __ReadNotes(self):
 		"""Считывает содержимое всех записей."""
@@ -717,7 +795,19 @@ class MediaViewsTable:
 		# Для каждого ID записи.
 		for ID in ListID:
 			# Чтение записи.
-			self.__Notes[ID] = MediaViewsNote(f"{self.__StorageDirectory}/{self.__Name}", ID, self.__Description)
+			self.__ReadNote(ID)
+
+	def __SaveGroups(self):
+		"""Сохраняет описание группы в локальный файл."""
+
+		# Если определения групп остались.
+		if len(self.__Groups.keys()) > 0:
+			# Сохранение локального файла JSON.
+			WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/groups.json", self.__Groups)
+
+		else:
+			# Удаление локального файла.
+			os.remove(f"{self.__StorageDirectory}/{self.__Name}/groups.json")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -741,8 +831,8 @@ class MediaViewsTable:
 		self.__Notes = dict()
 		# Словарь групп.
 		self.__Groups = dict()
-		# Описание.
-		self.__Description = {
+		# Опции таблицы.
+		self.__Options = {
 			"version": 1,
 			"type": "media-views",
 			"recycle-id": False,
@@ -756,9 +846,9 @@ class MediaViewsTable:
 		# Если найден файл описания таблицы.
 		if os.path.exists(f"{self.__StorageDirectory}/{self.__Name}/main.json"):
 			# Чтение файла.
-			self.__Description = ReadJSON(f"{self.__StorageDirectory}/{self.__Name}/main.json")
+			self.__Options = ReadJSON(f"{self.__StorageDirectory}/{self.__Name}/main.json")
 			# Если тип таблицы не соответствует, выбросить исключение.
-			if self.__Description["type"] != "media-views": raise TypeError("Only \"media-views\" type tables supported.")
+			if self.__Options["type"] != "media-views": raise TypeError("Only \"media-views\" type tables supported.")
 			# Чтение записей.
 			self.__ReadNotes()
 
@@ -775,9 +865,23 @@ class MediaViewsTable:
 			# Чтение групп.
 			self.__Groups = ReadJSON(f"{self.__StorageDirectory}/{self.__Name}/groups.json")
 
+	def add_group_element(self, group_id: int, note_id: int):
+		"""
+		Добавляет идентификатор записи в элементы группы.
+			group_id – идентификатор группы;
+			note_id – идентификатор записи.
+		"""
+
+		# Данные группы.
+		Group = self.get_group(group_id)
+		# Если элемент ещё не в группе, добавить его.
+		if note_id not in Group["elements"]: Group["elements"].append(note_id)
+		# Сохранение групп в локальный файл.
+		self.__SaveGroups()
+
 	def create_group(self, name: str) -> ExecutionStatus:
 		"""
-		Создаёт группу для объединения записей. Возвращает ID новой группы.
+		Создаёт группу для объединения записей.
 			name – название группы.
 		"""
 
@@ -792,19 +896,19 @@ class MediaViewsTable:
 				"name": name,
 				"elements": []
 			}
-			# Сохранение локального файла JSON.
-			WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/groups.json", self.__Groups)
+			# Сохранение групп в локальный файл.
+			self.__SaveGroups()
 			# Изменение статуса.
 			Status = ExecutionStatus(0, data = {"id": ID})
 
-		except FileExistsError:
+		except:
 			# Изменение статуса.
 			Status = ExecutionStatus(-1, "unknown_error")
 
 		return Status
 
 	def create_note(self) -> ExecutionStatus:
-		"""Создаёт запись. Возвращает ID новой записи."""
+		"""Создаёт запись."""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -826,7 +930,10 @@ class MediaViewsTable:
 		return Status
 
 	def rename(self, name: str) -> ExecutionStatus:
-		"""Переименовывает таблицу."""
+		"""
+		Переименовывает таблицу.
+			name – новое название.
+		"""
 
 		# Статус выполнения.
 		Status = ExecutionStatus(0)
@@ -843,10 +950,10 @@ class MediaViewsTable:
 
 		return Status
 		
-	def remove_group(self, id: int) -> ExecutionStatus:
+	def remove_group(self, group_id: int) -> ExecutionStatus:
 		"""
-		Удаляет определение группы. 
-			id – идентификатор группы.
+		Удаляет группу. 
+			group_id – идентификатор группы.
 		"""
 
 		# Статус выполнения.
@@ -854,18 +961,11 @@ class MediaViewsTable:
 
 		try:
 			# Приведение ID к строковому типу.
-			id = str(id)
+			group_id = str(group_id)
 			# Удаление группы из словаря.
-			del self.__Groups[id]
-
-			# Если определения групп остались.
-			if len(self.__Groups.keys()) > 0:
-				# Сохранение локального файла JSON.
-				WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/groups.json", self.__Groups)
-
-			else:
-				# Удаление локального файла.
-				os.remove(f"{self.__StorageDirectory}/{self.__Name}/groups.json")
+			del self.__Groups[group_id]
+			# Сохранение групп в локальный файл.
+			self.__SaveGroups()
 
 		except:
 			# Изменение статуса.
@@ -873,10 +973,10 @@ class MediaViewsTable:
 
 		return Status
 
-	def remove_note(self, id: int) -> ExecutionStatus:
+	def remove_note(self, note_id: int) -> ExecutionStatus:
 		"""
 		Удаляет запись из таблицы. 
-			id – идентификатор записи.
+			note_id – идентификатор записи.
 		"""
 
 		# Статус выполнения.
@@ -884,11 +984,11 @@ class MediaViewsTable:
 
 		try:
 			# Приведение ID к целочисленному типу.
-			id = int(id)
+			note_id = int(note_id)
 			# Удаление записи из словаря.
-			del self.__Notes[id]
+			del self.__Notes[note_id]
 			# Удаление локального файла.
-			os.remove(f"{self.__StorageDirectory}/{self.__Name}/{id}.json")
+			os.remove(f"{self.__StorageDirectory}/{self.__Name}/{note_id}.json")
 
 		except:
 			# Изменение статуса.
@@ -896,25 +996,41 @@ class MediaViewsTable:
 
 		return Status
 
-	def get_group(self, id: int) -> dict | None:
+	def get_group(self, group_id: int) -> dict | None:
 		"""
-		Возвращает словарное определение группы.
-			id – идентификатор группы.
+		Возвращает словарное представление группы.
+			group_id – идентификатор группы.
 		"""
 
 		# Группа.
 		Group = None
 		# Приведение ID к строковому типу.
-		id = str(id)
+		group_id = str(group_id)
 		# Если группа существует, записать её определение.
-		if id in self.__Groups.keys(): Group = self.__Groups[id]
+		if group_id in self.__Groups.keys(): Group = self.__Groups[group_id]
 
 		return Group
 
-	def get_note(self, id: int) -> MediaViewsNote | ExecutionStatus:
+	def get_group_notes(self, group_id: int) -> list[MediaViewsNote]:
+		"""
+		Возвращает словарное представление группы.
+			group_id – идентификатор группы.
+		"""
+
+		# Список записей.
+		NotesList = list()
+		
+		# Для каждой записи.
+		for Note in self.notes:
+			# Если запись включена в указанную группу, добавить её в список.
+			if note.group == group_id: NotesList.append(Note)
+
+		return NotesList
+
+	def get_note(self, note_id: int) -> MediaViewsNote | None:
 		"""
 		Возвращает объектное представление записи.
-			id – идентификатор записи.
+			note_id – идентификатор записи.
 		"""
 
 		# Запись.
@@ -922,12 +1038,10 @@ class MediaViewsTable:
 
 		try:
 			# Приведение ID к целочисленному типу.
-			id = int(id)
+			note_id = int(note_id)
 			# Осуществление доступа к записи.
-			Note = self.__Notes[id]
+			Note = self.__Notes[note_id]
 
-		except:
-			# Изменение статуса.
-			Table = ExecutionStatus(-1, "unknown_error")
+		except: pass
 
 		return Note

@@ -2,7 +2,11 @@ from dublib.StyledPrinter import StyledPrinter, Styles
 from Source.Tables.MediaViews import MediaViewsTable, MediaViewsNote
 
 def View(table: MediaViewsTable, note: MediaViewsNote):
-	"""Выводит форматированные данные записи."""
+	"""
+	Выводит форматированные данные записи.
+		table – объектное представление таблицы;
+		note – объектное представление записи.
+	"""
 
 	# Если передана запись о просмотрах.
 	if type(note) == MediaViewsNote:

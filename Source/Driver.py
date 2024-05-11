@@ -1,5 +1,6 @@
 from Source.CLI.Templates import Error, ExecutionStatus
 from Source.Tables.MediaViews import MediaViewsTable
+from dublib.Methods import ReadJSON, WriteJSON
 
 import shutil
 import os
@@ -10,6 +11,12 @@ class Driver:
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
 	#==========================================================================================#
+
+	@property
+	def is_mounted(self) -> bool:
+		"""Состояние: монтировано ли хранилище."""
+
+		return True if self.__StorageDirectory else False
 
 	@property
 	def tables(self) -> list[str]:
@@ -28,26 +35,57 @@ class Driver:
 
 		return Tables
 
+	@property
+	def storage_directory(self) -> str | None:
+		"""Директория хранилища."""
+
+		return self.__StorageDirectory
+
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	# В разработке...	
+	def __ReadSession(self):
+		"""Читает сессионный файл."""
+
+		# Если файл сессии существует.
+		if os.path.exists("session.json"):
+			# Чтение файла сессии.
+			self.__Session = ReadJSON("session.json")
+
+		else:
+			# Сохранение файла сессии.
+			self.__SaveSession()
+
+	def __SaveSession(self):
+		"""Сохраняет сессионный файл."""
+
+		# Сохранение файла сессии.
+		WriteJSON("session.json", self.__Session)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, storage_dir: str = "Data"):
+	def __init__(self, mount: bool = False):
 		"""
 		Менеджер таблиц.
-			storage_dir – директория хранения таблиц. 
+			mount – указывает, следует ли монтировать директорию хранилища.
 		"""
 		
 		#---> Генерация динамичкских свойств.
 		#==========================================================================================#
 		# Директория хранения таблиц.
-		self.__StorageDirectory = storage_dir.rstrip("/\\")
+		self.__StorageDirectory = None
+		# Описание сессии.
+		self.__Session = {
+			"storage-directory": "Data"
+		}
+
+		# Чтение сессии.
+		self.__ReadSession()
+		# Если включено автомонтирование, выполнить его.
+		if mount: self.mount()
 
 	def create_table(self, name: str) -> ExecutionStatus:
 		"""
@@ -69,9 +107,42 @@ class Driver:
 
 		return Status
 
+	def mount(self, storage_dir: str | None = None) -> ExecutionStatus:
+		"""
+		Указывает каталог хранения таблиц.
+			storage_dir – директория хранилища.
+		"""
+
+		# Статус выполнения.
+		Status = ExecutionStatus(0)
+		# Если директория не определена, взять стандартную из файла сессии.
+		storage_dir = self.__Session["storage-directory"] if not storage_dir else storage_dir
+		
+		# Состояние: успешно ли создание.
+		try:
+			
+			# Если путь существует.
+			if os.path.exists(storage_dir): 
+				# Запись директории хранилища.
+				self.__StorageDirectory = storage_dir
+				# Изменение настроек сессии.
+				self.__Session["storage-directory"] = storage_dir
+				# Сохранение файла сессии.
+				self.__SaveSession()
+
+			else:
+				# Изменение статуса.
+				Status = ExecutionStatus(-2, "incorrect_storage_path")
+
+		except:
+			# Изменение статуса.
+			Status = ExecutionStatus(-1, "unknown_error")
+
+		return Status
+
 	def open_table(self, name: str) -> MediaViewsTable | ExecutionStatus:
 		"""
-		Открывает таблицу и возвращает её дескриптор.
+		Открывает таблицу. Возвращает объектное представление таблицы.
 			name – название таблицы.
 		"""
 

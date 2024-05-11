@@ -21,22 +21,27 @@ class Interpreter:
 		CommandsList = list()
 
 		# Создание команды: create.
-		com_create = Command("create")
-		com_create.add_argument(ArgumentsTypes.All, important = True)
-		CommandsList.append(com_create)
+		Com = Command("create")
+		Com.add_argument(ArgumentsTypes.All, important = True)
+		CommandsList.append(Com)
 
 		# Создание команды: exit.
-		com_exit = Command("exit")
-		CommandsList.append(com_exit)
+		Com = Command("exit")
+		CommandsList.append(Com)
 
 		# Создание команды: list.
-		com_list = Command("list")
-		CommandsList.append(com_list)
+		Com = Command("list")
+		CommandsList.append(Com)
+
+		# Создание команды: mount.
+		Com = Command("mount")
+		Com.add_argument(ArgumentsTypes.ValidPath)
+		CommandsList.append(Com)
 
 		# Создание команды: open.
-		com_open = Command("open")
-		com_open.add_argument(ArgumentsTypes.All, important = True)
-		CommandsList.append(com_open)
+		Com = Command("open")
+		Com.add_argument(ArgumentsTypes.All, important = True)
+		CommandsList.append(Com)
 
 		return CommandsList
 
@@ -47,8 +52,8 @@ class Interpreter:
 		CommandsList = list()
 
 		# Создание команды: close.
-		com_close = Command("close")
-		CommandsList.append(com_close)
+		Com = Command("close")
+		CommandsList.append(Com)
 
 		# Создание команды: delgroup.
 		Com = Command("delgroup")
@@ -56,12 +61,13 @@ class Interpreter:
 		CommandsList.append(Com)
 
 		# Создание команды: list.
-		com_list = Command("list")
-		CommandsList.append(com_list)
+		Com = Command("list")
+		Com.add_key_position(["group"], ArgumentsTypes.Number)
+		CommandsList.append(Com)
 
 		# Создание команды: new.
-		com_new = Command("new")
-		CommandsList.append(com_new)
+		Com = Command("new")
+		CommandsList.append(Com)
 
 		# Создание команды: newgroup.
 		Com = Command("newgroup")
@@ -69,18 +75,18 @@ class Interpreter:
 		CommandsList.append(Com)
 
 		# Создание команды: open.
-		com_open = Command("open")
-		com_open.add_argument(ArgumentsTypes.Number, important = True)
-		CommandsList.append(com_open)
+		Com = Command("open")
+		Com.add_argument(ArgumentsTypes.Number, important = True)
+		CommandsList.append(Com)
 
 		# Создание команды: remove.
-		com_remove = Command("remove")
-		CommandsList.append(com_remove)
+		Com = Command("remove")
+		CommandsList.append(Com)
 
 		# Создание команды: rename.
-		com_rename = Command("rename")
-		com_rename.add_argument(ArgumentsTypes.All, important = True)
-		CommandsList.append(com_rename)
+		Com = Command("rename")
+		Com.add_argument(ArgumentsTypes.All, important = True)
+		CommandsList.append(Com)
 
 		return CommandsList
 
@@ -200,8 +206,25 @@ class Interpreter:
 		if command_data.name == "list":
 			# Получение списка таблиц.
 			Tables = sorted(self.__Driver.tables)
-			# Вывод в консоль: список таблиц.
-			print("\n".join(Tables))
+
+			# Если существуют таблицы.
+			if len(Tables):
+				# Вывод в консоль: список таблиц.
+				print("\n".join(Tables))
+
+			else:
+				# Вывод в консоль: список таблиц.
+				print("No tables.")
+
+		# Обработка команды: mount.
+		if command_data.name == "mount":
+			# Директория хранилища.
+			StorageDir = command_data.arguments[0] if len(command_data.arguments) else "Data"
+			# Монтирование директории хранилища.
+			Status = self.__Driver.mount(StorageDir)
+			# Обработка статуса.
+			if Status.code == 0: print(f"Mounted: \"{self.__Driver.storage_directory}\"." )
+			if Status.code < 0: Error(Status.message)
 
 		# Обработка команды: open.
 		if command_data.name == "open":
@@ -249,23 +272,44 @@ class Interpreter:
 				Content = {
 					"ID": [],
 					"Status": [],
-					"Estimation": [],
 					"Name": [],
+					"Estimation": [],
 					"Group": []
 				}
+
+				# Если включена фильтрация по группе.
+				if "group" in command_data.keys:
+
+					# Для каждой записи.
+					for Note in Notes:
+
+						# Если запись принадлежит к искомой группе.
+						if Note.group_id == int(command_data.values["group"]):
+							# Получение данных.
+							Name = Note.name if Note.name else ""
+							GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
+							if GroupName == "@None": GroupName = ""
+							# Заполнение колонок.
+							Content["ID"].append(Note.id)
+							Content["Status"].append(Note.emoji_status)
+							Content["Name"].append(Name)
+							Content["Estimation"].append(Note.estimation if Note.estimation else "")
+							Content["Group"].append(GroupName)
+
+				else:
 				
-				# Для каждой записи.
-				for Note in Notes:
-					# Получение данных.
-					Name = Note.name if Note.name else ""
-					GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
-					if GroupName == "@None": GroupName = ""
-					# Заполнение колонок.
-					Content["ID"].append(Note.id)
-					Content["Status"].append(Note.emoji_status)
-					Content["Estimation"].append(Note.estimation if Note.estimation else "")
-					Content["Name"].append(Name)
-					Content["Group"].append(GroupName)
+					# Для каждой записи.
+					for Note in Notes:
+						# Получение данных.
+						Name = Note.name if Note.name else ""
+						GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
+						if GroupName == "@None": GroupName = ""
+						# Заполнение колонок.
+						Content["ID"].append(Note.id)
+						Content["Status"].append(Note.emoji_status)
+						Content["Name"].append(Name)
+						Content["Estimation"].append(Note.estimation if Note.estimation else "")
+						Content["Group"].append(GroupName)
 
 				# Вывод описания.
 				Columns(Content)
@@ -279,7 +323,7 @@ class Interpreter:
 			# Создание новой записи.
 			Status = self.__Table.create_note()
 			# Обработка статуса.
-			if Status.code: print(f"Note #" + str(Status.data["id"]) + " created.")
+			if Status.code == 0: print(f"Note #" + str(Status.data["id"]) + " created.")
 			if Status.code != 0: Error("unable_to_create_note")
 
 		# Обработка команды: newgroup.
@@ -441,14 +485,6 @@ class Interpreter:
 		# Обработка команды: set.
 		if command_data.name == "set":
 
-			# Если задаётся название.
-			if "name" in command_data.keys:
-				# Обновление названия.
-				Status = self.__Note.rename(command_data.values["name"])
-				# Обработка статуса.
-				if Status.code == 0: print("Name updated.")
-				if Status.code != 0: Error(Status.message)
-
 			# Если задаётся альтернативное название.
 			if "altname" in command_data.keys:
 				# Обновление названия.
@@ -457,12 +493,28 @@ class Interpreter:
 				if Status.code == 0: print("Another name added.")
 				if Status.code != 0: Error(Status.message)
 
+			# Если задаётся группа.
+			if "group" in command_data.keys:
+				# Установка принадлежности к группе.
+				Status = self.__Note.set_group(int(command_data.values["group"]))
+				# Обработка статуса.
+				if Status.code == 0: print("Note has been added to @" + command_data.values["group"] + " group.")
+				if Status.code != 0: Error(Status.message)
+
 			# Если задаётся оценка.
 			if "estimation" in command_data.keys:
 				# Обновление оценки.
 				Status = self.__Note.estimate(int(command_data.values["estimation"]))
 				# Обработка статуса.
 				if Status.code == 0: print("Estimation updated.")
+				if Status.code != 0: Error(Status.message)
+
+			# Если задаётся название.
+			if "name" in command_data.keys:
+				# Обновление названия.
+				Status = self.__Note.rename(command_data.values["name"])
+				# Обработка статуса.
+				if Status.code == 0: print("Name updated.")
 				if Status.code != 0: Error(Status.message)
 
 			# Если задаётся статус.
@@ -564,7 +616,9 @@ class Interpreter:
 		#---> Генерация динамичкских свойств.
 		#==========================================================================================#
 		# Менеджер таблиц.
-		self.__Driver = Driver()
+		self.__Driver = Driver(mount = True)
+		# Вывод в консоль: выполненное монтирование.
+		if self.__Driver.is_mounted: print(f"Mounted: \"{self.__Driver.storage_directory}\"." )
 		# Уровень интерпретации.
 		self.__InterpreterLevel = "manager"
 		# Определения команд.
@@ -592,10 +646,18 @@ class Interpreter:
 
 		# Пока не введена команда закрытия.
 		while True:
-			# Обработка ввода.
-			InputLine = input(self.__Selector())
-			InputLine = InputLine.strip()
-			InputLine = shlex.split(InputLine) if len(InputLine) > 0 else [""]
+
+			try:
+				# Обработка ввода.
+				InputLine = input(self.__Selector())
+				InputLine = InputLine.strip()
+				InputLine = shlex.split(InputLine) if len(InputLine) > 0 else [""]
+
+			except KeyboardInterrupt:
+				# Вывод в консоль: выход.
+				print("exit\nExiting...")
+				# Завершение работы.
+				exit(0)
 
 			# Если ввод не пустой.
 			if InputLine != [""]:
