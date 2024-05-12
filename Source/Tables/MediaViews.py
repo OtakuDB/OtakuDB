@@ -38,6 +38,7 @@ class MediaViewsNote:
 
 		# Определения статусов.
 		Statuses = {
+			"announced": "ℹ️",
 			"watching": "▶️",
 			"complete": "✅",
 			"dropped": "⛔",
@@ -63,6 +64,12 @@ class MediaViewsNote:
 		"""Идентификатор."""
 
 		return self.__ID
+
+	@property
+	def metainfo(self) -> dict:
+		"""Метаданные."""
+
+		return self.__Data["metainfo"]
 
 	@property
 	def name(self) -> str | None:
@@ -158,8 +165,8 @@ class MediaViewsNote:
 			"watched": False
 		}
 
-		# Типы: ONA, OVA.
-		if part_type in ["ONA", "OVA"]: return {
+		# Типы: ONA, OVA, специальные выпуски.
+		if part_type in ["ONA", "OVA", "specials"]: return {
 			"type": part_type,
 			"series": None,
 			"watched": False
@@ -171,12 +178,12 @@ class MediaViewsNote:
 			part – словарное представление части;
 			data – словарь данных для подстановки в часть.
 		"""
-
+		
 		# Для каждого значения из переданных данных.
 		for Key in data.keys():
 
 			# Если ключ в списке опциональных.
-			if Key in ["comment", "link"]:
+			if Key in ["announce", "comment", "link"]:
 
 				# Если значение не удаляется.
 				if data[Key] != "*":
@@ -342,6 +349,27 @@ class MediaViewsNote:
 
 		return Status
 
+	def delete_metainfo(self, key: str) -> ExecutionStatus:
+		"""
+		Удаляет метаданные.
+			key – ключ метаданных.
+		"""
+
+		# Статус выполнения.
+		Status = ExecutionStatus(0)
+
+		try:
+			# Удаление метаданных.
+			del self.__Data["metainfo"][key]
+			# Сохранение изменений.
+			self.save()
+
+		except:
+			# Изменение статуса.
+			Status = ExecutionStatus(-1, "unknown_error")
+
+		return Status
+
 	def delete_part(self, part_index: int) -> ExecutionStatus:
 		"""
 		Удаляет часть.
@@ -440,6 +468,8 @@ class MediaViewsNote:
 		try:
 			# Подстановка данных.
 			self.__Data["parts"][part_index] = self.__ModifyPart(self.__Data["parts"][part_index], data)
+			# Обновление статуса просмотра.
+			self.__UpdateStatus()
 			# Сохранение изменений.
 			self.save()
 
@@ -588,7 +618,7 @@ class MediaViewsNote:
 					elif mark == self.__Data["parts"][part_index]["series"]:
 						# Добавление статуса полностью просмотренного и удаление закладки.
 						self.__Data["parts"][part_index]["watched"] = True
-						del self.__Data["parts"][part_index]["mark"]
+						if "mark" in self.__Data["parts"][part_index].keys(): del self.__Data["parts"][part_index]["mark"]
 						# Изменение статуса.
 						Status = ExecutionStatus(1, "Part marked as fully viewed.")
 
@@ -608,7 +638,29 @@ class MediaViewsNote:
 				# Изменение статуса.
 				Status = ExecutionStatus(-2, "only_series_supports_marks")
 
-		except FileExistsError:
+		except:
+			# Изменение статуса.
+			Status = ExecutionStatus(-1, "unknown_error")
+
+		return Status
+
+	def set_metainfo(self, key: str, metainfo: str) -> ExecutionStatus:
+		"""
+		Задаёт метаданные.
+			key – ключ метаданных;
+			metainfo – значение метаданных.
+		"""
+
+		# Статус выполнения.
+		Status = ExecutionStatus(0)
+
+		try:
+			# Установка метаданных.
+			self.__Data["metainfo"][key] = metainfo
+			# Сохранение изменений.
+			self.save()
+
+		except:
 			# Изменение статуса.
 			Status = ExecutionStatus(-1, "unknown_error")
 

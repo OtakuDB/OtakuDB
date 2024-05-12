@@ -36,6 +36,18 @@ def View(table: MediaViewsTable, note: MediaViewsNote):
 			# Вывод в консоль: название группы.
 			StyledPrinter(GroupName, decorations = [Styles.Decorations.Italic])
 
+		# Если заданы метаданные.
+		if note.metainfo:
+			# Вывод в консоль: заголовок метаданных.
+			StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
+			# Метаданные.
+			MetaInfo = note.metainfo
+			
+			# Для каждого свойства.
+			for Key in MetaInfo.keys():
+				# Вывод в консоль: метаданные.
+				print(f"    {Key}: " + str(MetaInfo[Key]))
+
 		# Если заданы теги.
 		if note.tags:
 			# Вывод в консоль: заголовок тегов.
@@ -50,8 +62,11 @@ def View(table: MediaViewsTable, note: MediaViewsNote):
 
 			# Для каждой части.
 			for PartIndex in range(0, len(Parts)):
-				# Статус просмотра.
+				# Обработка статуса просмотра.
 				Watched = " ✅" if Parts[PartIndex]["watched"] else ""
+				if "announce" in Parts[PartIndex].keys(): Watched = " ℹ️"
+				# Название части.
+				Name = " " + Parts[PartIndex]["name"] if "name" in Parts[PartIndex].keys() and Parts[PartIndex]["name"] else ""
 
 				# Если часть многосерийная.
 				if "series" in Parts[PartIndex].keys():
@@ -62,18 +77,18 @@ def View(table: MediaViewsTable, note: MediaViewsNote):
 					# Прогресс просмотра части.
 					Progress = " (" + str(int(Parts[PartIndex]["mark"] / Parts[PartIndex]["series"] * 100)) + "% viewed)" if Mark else ""
 					# Номер сезона.
-					Number = str(Parts[PartIndex]["number"]) if "number" in Parts[PartIndex].keys() else ""
+					Number = " " + str(Parts[PartIndex]["number"]) if "number" in Parts[PartIndex].keys() and Parts[PartIndex]["number"] else ""
+					# Если есть и номер, и название, добавить тире.
+					if Number and Name: Number += " –"
 
 					# Вывод в консоль: тип части.
-					print(f"    {PartIndex} ▸ " + Parts[PartIndex]["type"] + f": {Number}{Watched}{MarkIndicator}")
+					print(f"    {PartIndex} ▸ " + Parts[PartIndex]["type"] + f":{Number}{Name}{Watched}{MarkIndicator}")
 					# Вывод в консоль: прогресс просмотра.
 					print("    " + " " * len(str(PartIndex)) + f"       {Mark}" + str(Parts[PartIndex]["series"]) + f" series{Progress}")
 
 				else:
-					# Название фильма.
-					Name = ": " + Parts[PartIndex]["name"] if Parts[PartIndex]["name"] else ""
 					# Вывод в консоль: название.
-					print(f"    {PartIndex} ▸ " + Parts[PartIndex]["type"] + f"{Name}{Watched}")
+					print(f"    {PartIndex} ▸ " + Parts[PartIndex]["type"] + f":{Name}{Watched}")
 
 				# Вывод в консоль: метаданные.
 				if "link" in Parts[PartIndex].keys(): print("    " + " " * len(str(PartIndex)) + f"       🔗 " + Parts[PartIndex]["link"])

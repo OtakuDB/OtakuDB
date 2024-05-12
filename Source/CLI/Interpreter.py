@@ -1,6 +1,7 @@
 from Source.CLI.Templates import Columns, Confirmation, Error, ExecutionStatus, Warning
 from dublib.Terminalyzer import ArgumentsTypes, Command, CommandData, Terminalyzer
 from dublib.Exceptions.Terminalyzer import InvalidArgumentType, NotEnoughArguments
+from dublib.StyledPrinter import Styles, TextStyler
 from Source.CLI.Viewer import View
 from Source.Driver import Driver
 
@@ -113,6 +114,7 @@ class Interpreter:
 		# Создание команды: editpart.
 		Com = Command("editpart")
 		Com.add_argument(ArgumentsTypes.Number, important = True)
+		Com.add_flag_position(["a"])
 		Com.add_flag_position(["w", "u"])
 		Com.add_key_position(["comment"], ArgumentsTypes.All)
 		Com.add_key_position(["link"], ArgumentsTypes.URL)
@@ -128,9 +130,17 @@ class Interpreter:
 		Com.add_argument(ArgumentsTypes.Number, important = True)
 		CommandsList.append(Com)
 
+		# Создание команды: meta.
+		Com = Command("meta")
+		Com.add_argument(ArgumentsTypes.All, important = True)
+		Com.add_argument(ArgumentsTypes.All)
+		Com.add_flag_position(["set", "unset"], important = True)
+		CommandsList.append(Com)
+
 		# Создание команды: newpart.
 		Com = Command("newpart")
 		Com.add_argument(ArgumentsTypes.All, important = True)
+		Com.add_flag_position(["a"])
 		Com.add_flag_position(["w"])
 		Com.add_key_position(["comment"], ArgumentsTypes.All)
 		Com.add_key_position(["link"], ArgumentsTypes.URL)
@@ -289,9 +299,15 @@ class Interpreter:
 							Name = Note.name if Note.name else ""
 							GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
 							if GroupName == "@None": GroupName = ""
+							Status = Note.status
+							# Выделение статусов цветом.
+							if Status == "announce": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
+							if Status == "watching": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
+							if Status == "complete": Status = TextStyler(Status, text_color = Styles.Colors.Green)
+							if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
 							# Заполнение колонок.
 							Content["ID"].append(Note.id)
-							Content["Status"].append(Note.emoji_status)
+							Content["Status"].append(Status)
 							Content["Name"].append(Name)
 							Content["Estimation"].append(Note.estimation if Note.estimation else "")
 							Content["Group"].append(GroupName)
@@ -304,13 +320,25 @@ class Interpreter:
 						Name = Note.name if Note.name else ""
 						GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
 						if GroupName == "@None": GroupName = ""
+						Status = Note.status
+						# Выделение статусов цветом.
+						if Status == "announce": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
+						if Status == "watching": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
+						if Status == "complete": Status = TextStyler(Status, text_color = Styles.Colors.Green)
+						if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
 						# Заполнение колонок.
 						Content["ID"].append(Note.id)
-						Content["Status"].append(Note.emoji_status)
+						Content["Status"].append(Status)
 						Content["Name"].append(Name)
 						Content["Estimation"].append(Note.estimation if Note.estimation else "")
 						Content["Group"].append(GroupName)
 
+				# Буфер проверки значения.
+				ContentBuffer = list(Content["Group"])
+				while "" in ContentBuffer: ContentBuffer.remove("")
+				print(ContentBuffer)
+				# Если в таблице нет групп, удалить их колонку.
+				if len(ContentBuffer) == 0: del Content["Group"]
 				# Вывод описания.
 				Columns(Content)
 
@@ -416,8 +444,13 @@ class Interpreter:
 			# Дополнительные данные.
 			Data = dict()
 			# Парсинг дополнительных значений.
-			if "w" in command_data.flags: Data["watched"] = True
-			if "u" in command_data.flags: Data["watched"] = False
+			if "a" in command_data.flags: Data["announce"] = True
+			if "w" in command_data.flags:
+				Data["watched"] = True
+				Data["announce"] = "*"
+			if "u" in command_data.flags:
+				Data["watched"] = False
+				Data["announce"] = "*"
 			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
 			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
 			if "number" in command_data.keys: Data["number"] = int(command_data.values["number"])
@@ -438,12 +471,34 @@ class Interpreter:
 			if Status.code == -1: Error(Status.message)
 			if Status.code == -2: Warning(Status.message)
 
+		# Обработка команды: meta.
+		if command_data.name == "meta":
+			# Статус выполнения.
+			Status = ExecutionStatus(0)
+
+			# Если метаданные добавляются.
+			if "set" in command_data.flags:
+				# Установка метаданных.
+				Status = self.__Note.set_metainfo(command_data.arguments[0],  command_data.arguments[1])
+
+			# Если метаданные удаляются.
+			if "unset" in command_data.flags:
+				# Удаление метаданных.
+				Status = self.__Note.delete_metainfo(command_data.arguments[0])
+
+			# Обработка статуса.
+			if Status.code == 0: print("Metainfo updated.")
+			if Status.code != 0: Error(Status.message)
+
 		# Обработка команды: newpart.
 		if command_data.name == "newpart":
 			# Дополнительные данные.
 			Data = dict()
 			# Парсинг дополнительных значений.
-			if "w" in command_data.flags: Data["watched"] = True
+			if "a" in command_data.flags: Data["announce"] = True
+			if "w" in command_data.flags:
+				Data["watched"] = True
+				Data["announce"] = "*"
 			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
 			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
 			if "number" in command_data.keys: Data["number"] = int(command_data.values["number"])
