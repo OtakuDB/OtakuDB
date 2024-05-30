@@ -183,7 +183,7 @@ class MediaViewsNote:
 		for Key in data.keys():
 
 			# Если ключ в списке опциональных.
-			if Key in ["announce", "comment", "link"]:
+			if Key in ["announce", "comment", "link", "name", "number"]:
 
 				# Если значение не удаляется.
 				if data[Key] != "*":

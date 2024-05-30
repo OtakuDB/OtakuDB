@@ -77,7 +77,8 @@ class Interpreter:
 
 		# Создание команды: open.
 		Com = Command("open")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
+		Com.add_argument(ArgumentsTypes.Number, important = True, layout_index = 1)
+		Com.add_flag_position(["f"], layout_index = 1)
 		CommandsList.append(Com)
 
 		# Создание команды: remove.
@@ -120,7 +121,7 @@ class Interpreter:
 		Com.add_key_position(["link"], ArgumentsTypes.URL)
 		Com.add_key_position(["mark"], ArgumentsTypes.Number)
 		Com.add_key_position(["name"], ArgumentsTypes.All)
-		Com.add_key_position(["number"], ArgumentsTypes.Number)
+		Com.add_key_position(["number"], ArgumentsTypes.All)
 		Com.add_key_position(["series"], ArgumentsTypes.Number)
 		CommandsList.append(Com)
 
@@ -146,7 +147,7 @@ class Interpreter:
 		Com.add_key_position(["link"], ArgumentsTypes.URL)
 		Com.add_key_position(["mark"], ArgumentsTypes.Number)
 		Com.add_key_position(["name"], ArgumentsTypes.All)
-		Com.add_key_position(["number"], ArgumentsTypes.Number)
+		Com.add_key_position(["number"], ArgumentsTypes.All)
 		Com.add_key_position(["series"], ArgumentsTypes.Number)
 		CommandsList.append(Com)
 
@@ -162,6 +163,7 @@ class Interpreter:
 		# Создание команды: set.
 		Com = Command("set")
 		Com.add_key_position(["altname"], ArgumentsTypes.All)
+		Com.add_key_position(["comment"], ArgumentsTypes.All)
 		Com.add_key_position(["estimation"], ArgumentsTypes.Number)
 		Com.add_key_position(["group"], ArgumentsTypes.Number)
 		Com.add_key_position(["name"], ArgumentsTypes.All)
@@ -453,9 +455,10 @@ class Interpreter:
 				Data["announce"] = "*"
 			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
 			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
-			if "number" in command_data.keys: Data["number"] = int(command_data.values["number"])
-			if "series" in command_data.keys: Data["series"] = int(command_data.values["series"])
-			# Добавление части.
+			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
+			if "number" in command_data.keys: Data["number"] = self.__ValueToInt(command_data.values["number"])
+			if "series" in command_data.keys: Data["series"] = self.__ValueToInt(command_data.values["series"])
+			# Редактирование части.
 			Status = self.__Note.edit_part(int(command_data.arguments[0]), Data)
 			# Обработка статуса.
 			if Status.code == 0: print("Part edited.")
@@ -499,10 +502,11 @@ class Interpreter:
 			if "w" in command_data.flags:
 				Data["watched"] = True
 				Data["announce"] = "*"
+			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
 			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
 			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
-			if "number" in command_data.keys: Data["number"] = int(command_data.values["number"])
-			if "series" in command_data.keys: Data["series"] = int(command_data.values["series"])
+			if "number" in command_data.keys: Data["number"] = self.__ValueToInt(command_data.values["number"])
+			if "series" in command_data.keys: Data["series"] = self.__ValueToInt(command_data.values["series"])
 			# Добавление части.
 			Status = self.__Note.add_part(command_data.arguments[0], Data)
 			# Обработка статуса.
@@ -624,6 +628,17 @@ class Interpreter:
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
+
+	def __ValueToInt(self, value: str) -> int | str:
+		"""
+		Преобразует значение в целочисленное, если то не является спецсимволом.
+			value – значение.
+		"""
+
+		# Преобразование значения.
+		if value != "*": value = int(value)
+
+		return value
 
 	def __Selector(self) -> str:
 		"""Создаёт идентификатор ввода в зависимости от уровня интерпретации."""
