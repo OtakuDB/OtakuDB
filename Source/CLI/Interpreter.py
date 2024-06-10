@@ -1,9 +1,9 @@
 from Source.CLI.Templates import Columns, Confirmation, Error, ExecutionStatus, Warning
+from Source.Driver import Driver
+
 from dublib.Terminalyzer import ArgumentsTypes, Command, CommandData, Terminalyzer
 from dublib.Exceptions.Terminalyzer import InvalidArgumentType, NotEnoughArguments
 from dublib.StyledPrinter import Styles, TextStyler
-from Source.CLI.Viewer import View
-from Source.Driver import Driver
 
 import readline
 import shlex
@@ -24,6 +24,7 @@ class Interpreter:
 		# Создание команды: create.
 		Com = Command("create")
 		Com.add_argument(ArgumentsTypes.All, important = True)
+		Com.add_key_position(["type"], ArgumentsTypes.All, important = True)
 		CommandsList.append(Com)
 
 		# Создание команды: exit.
@@ -56,25 +57,6 @@ class Interpreter:
 		Com = Command("close")
 		CommandsList.append(Com)
 
-		# Создание команды: delgroup.
-		Com = Command("delgroup")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
-		CommandsList.append(Com)
-
-		# Создание команды: list.
-		Com = Command("list")
-		Com.add_key_position(["group"], ArgumentsTypes.Number)
-		CommandsList.append(Com)
-
-		# Создание команды: new.
-		Com = Command("new")
-		CommandsList.append(Com)
-
-		# Создание команды: newgroup.
-		Com = Command("newgroup")
-		Com.add_argument(ArgumentsTypes.All, important = True)
-		CommandsList.append(Com)
-
 		# Создание команды: open.
 		Com = Command("open")
 		Com.add_argument(ArgumentsTypes.Number, important = True, layout_index = 1)
@@ -90,6 +72,9 @@ class Interpreter:
 		Com.add_argument(ArgumentsTypes.All, important = True)
 		CommandsList.append(Com)
 
+		# Добавление команд из таблицы.
+		CommandsList += self.__Table.cli.commands
+
 		return CommandsList
 
 	def __GenerateNoteCommands(self) -> list[Command]:
@@ -102,92 +87,12 @@ class Interpreter:
 		Com = Command("close")
 		CommandsList.append(Com)
 
-		# Создание команды: delpart.
-		Com = Command("delpart")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
-		CommandsList.append(Com)
-
-		# Создание команды: downpart.
-		Com = Command("downpart")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
-		CommandsList.append(Com)
-
-		# Создание команды: editpart.
-		Com = Command("editpart")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
-		Com.add_flag_position(["a"])
-		Com.add_flag_position(["w", "u"])
-		Com.add_key_position(["comment"], ArgumentsTypes.All)
-		Com.add_key_position(["link"], ArgumentsTypes.URL)
-		Com.add_key_position(["mark"], ArgumentsTypes.Number)
-		Com.add_key_position(["name"], ArgumentsTypes.All)
-		Com.add_key_position(["number"], ArgumentsTypes.All)
-		Com.add_key_position(["series"], ArgumentsTypes.Number)
-		CommandsList.append(Com)
-
-		# Создание команды: mark.
-		Com = Command("mark")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
-		Com.add_argument(ArgumentsTypes.Number, important = True)
-		CommandsList.append(Com)
-
-		# Создание команды: meta.
-		Com = Command("meta")
-		Com.add_argument(ArgumentsTypes.All, important = True)
-		Com.add_argument(ArgumentsTypes.All)
-		Com.add_flag_position(["set", "unset"], important = True)
-		CommandsList.append(Com)
-
-		# Создание команды: newpart.
-		Com = Command("newpart")
-		Com.add_argument(ArgumentsTypes.All, important = True)
-		Com.add_flag_position(["a"])
-		Com.add_flag_position(["w"])
-		Com.add_key_position(["comment"], ArgumentsTypes.All)
-		Com.add_key_position(["link"], ArgumentsTypes.URL)
-		Com.add_key_position(["mark"], ArgumentsTypes.Number)
-		Com.add_key_position(["name"], ArgumentsTypes.All)
-		Com.add_key_position(["number"], ArgumentsTypes.All)
-		Com.add_key_position(["series"], ArgumentsTypes.Number)
-		CommandsList.append(Com)
-
 		# Создание команды: remove.
 		Com = Command("remove")
 		CommandsList.append(Com)
 
-		# Создание команды: reset.
-		Com = Command("reset")
-		Com.add_argument(ArgumentsTypes.All, important = True)
-		CommandsList.append(Com)
-
-		# Создание команды: set.
-		Com = Command("set")
-		Com.add_key_position(["altname"], ArgumentsTypes.All)
-		Com.add_key_position(["comment"], ArgumentsTypes.All)
-		Com.add_key_position(["estimation"], ArgumentsTypes.Number)
-		Com.add_key_position(["group"], ArgumentsTypes.Number)
-		Com.add_key_position(["name"], ArgumentsTypes.All)
-		Com.add_key_position(["status"], ArgumentsTypes.All)
-		Com.add_key_position(["tag"], ArgumentsTypes.All)
-		CommandsList.append(Com)
-
-		# Создание команды: undrop.
-		Com = Command("undrop")
-		CommandsList.append(Com)
-
-		# Создание команды: unset.
-		Com = Command("unset")
-		Com.add_key_position(["altname", "tag"], ArgumentsTypes.All, important = True)
-		CommandsList.append(Com)
-
-		# Создание команды: uppart.
-		Com = Command("uppart")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
-		CommandsList.append(Com)
-
-		# Создание команды: view.
-		Com = Command("view")
-		CommandsList.append(Com)
+		# Добавление команд из записи.
+		CommandsList += self.__Note.cli.commands
 
 		return CommandsList
 
@@ -204,7 +109,7 @@ class Interpreter:
 		# Обработка команды: create.
 		if command_data.name == "create":
 			# Создание таблицы.
-			Status = self.__Driver.create_table(command_data.arguments[0])
+			Status = self.__Driver.create_table(command_data.arguments[0], command_data.values["type"])
 			# Обработка статуса.
 			if Status.code == 0: print("Created.")
 			if Status.code != 0: Error(Status.message)
@@ -265,107 +170,8 @@ class Interpreter:
 			self.__Table = None
 			self.__InterpreterLevel = "manager"
 
-		# Обработка команды: delgroup.
-		if command_data.name == "delgroup":
-			# Создание новой группы.
-			Status = self.__Table.remove_group(command_data.arguments[0])
-			# Обработка статуса.
-			if Status.code == 0: print(f"Group @" + str(command_data.arguments[0]) + " removed.")
-			if Status.code != 0: Error(Status.message)
-
-		# Обработка команды: list.
-		if command_data.name == "list":
-			# Получение списка записей.
-			Notes = self.__Table.notes
-			
-			# Если записи существуют.
-			if len(Notes) > 0:
-				# Табличное содержимое.
-				Content = {
-					"ID": [],
-					"Status": [],
-					"Name": [],
-					"Estimation": [],
-					"Group": []
-				}
-
-				# Если включена фильтрация по группе.
-				if "group" in command_data.keys:
-
-					# Для каждой записи.
-					for Note in Notes:
-
-						# Если запись принадлежит к искомой группе.
-						if Note.group_id == int(command_data.values["group"]):
-							# Получение данных.
-							Name = Note.name if Note.name else ""
-							GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
-							if GroupName == "@None": GroupName = ""
-							Status = Note.status
-							# Выделение статусов цветом.
-							if Status == "announce": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
-							if Status == "watching": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
-							if Status == "complete": Status = TextStyler(Status, text_color = Styles.Colors.Green)
-							if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
-							# Заполнение колонок.
-							Content["ID"].append(Note.id)
-							Content["Status"].append(Status)
-							Content["Name"].append(Name)
-							Content["Estimation"].append(Note.estimation if Note.estimation else "")
-							Content["Group"].append(GroupName)
-
-				else:
-				
-					# Для каждой записи.
-					for Note in Notes:
-						# Получение данных.
-						Name = Note.name if Note.name else ""
-						GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
-						if GroupName == "@None": GroupName = ""
-						Status = Note.status
-						# Выделение статусов цветом.
-						if Status == "announce": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
-						if Status == "watching": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
-						if Status == "complete": Status = TextStyler(Status, text_color = Styles.Colors.Green)
-						if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
-						# Заполнение колонок.
-						Content["ID"].append(Note.id)
-						Content["Status"].append(Status)
-						Content["Name"].append(Name)
-						Content["Estimation"].append(Note.estimation if Note.estimation else "")
-						Content["Group"].append(GroupName)
-
-				# Буфер проверки значения.
-				ContentBuffer = list(Content["Group"])
-				while "" in ContentBuffer: ContentBuffer.remove("")
-				print(ContentBuffer)
-				# Если в таблице нет групп, удалить их колонку.
-				if len(ContentBuffer) == 0: del Content["Group"]
-				# Вывод описания.
-				Columns(Content)
-
-			else:
-				# Вывод в консоль: таблица пуста.
-				print("Table is empty.")
-
-		# Обработка команды: new.
-		if command_data.name == "new":
-			# Создание новой записи.
-			Status = self.__Table.create_note()
-			# Обработка статуса.
-			if Status.code == 0: print(f"Note #" + str(Status.data["id"]) + " created.")
-			if Status.code != 0: Error("unable_to_create_note")
-
-		# Обработка команды: newgroup.
-		if command_data.name == "newgroup":
-			# Создание новой группы.
-			Status = self.__Table.create_group(command_data.arguments[0])
-			# Обработка статуса.
-			if Status.code == 0: print(f"Group @" + str(Status.data["id"]) + " created.")
-			if Status.code != 0: Error(Status.message)
-
 		# Обработка команды: open.
-		if command_data.name == "open":
+		elif command_data.name == "open":
 			# Открытие записи.
 			Note = self.__Table.get_note(command_data.arguments[0])
 
@@ -380,7 +186,7 @@ class Interpreter:
 				self.__InterpreterLevel = "note"
 
 		# Обработка команды: remove.
-		if command_data.name == "remove":
+		elif command_data.name == "remove":
 			# Запрос подтверждения.
 			Response = Confirmation("Are you sure to remove \"" + self.__Table.name + "\" table?")
 			
@@ -400,12 +206,15 @@ class Interpreter:
 				else: Error(Status.message)
 
 		# Обработка команды: rename.
-		if command_data.name == "rename":
+		elif command_data.name == "rename":
 			# Переименование таблицы.
 			Status = self.__Table.rename(command_data.arguments[0])
 			# Обработка статуса.
 			if Status.code == 0: print("Table renamed.")
 			if Status.code != 0: Error(Status.message)
+
+		# Обработка команд таблицы.
+		else: self.__Table.cli.execute(command_data)
 
 	def __ProcessNoteCommands(self, command_data: CommandData):
 		"""
@@ -419,102 +228,8 @@ class Interpreter:
 			self.__Note = None
 			self.__InterpreterLevel = "table"
 
-		# Обработка команды: delpart.
-		if command_data.name == "delpart":
-			# Запрос подтверждения.
-			Response = Confirmation("Are you sure to remove part?")
-			
-			# Если подтверждено.
-			if Response:
-				# Удаление части.
-				Status = self.__Note.delete_part(int(command_data.arguments[0]))
-				# Обработка статуса.
-				if Status.code == 0: print("Part deleted.")
-				if Status.code != 0: Error(Status.message)
-
-		# Обработка команды: downpart.
-		if command_data.name == "downpart":
-			# Поднятие части.
-			Status = self.__Note.down_part(int(command_data.arguments[0]))
-			# Обработка статуса.
-			if Status.code == 0: print("Part downed.")
-			if Status.code == 1: Warning(Status.message)
-			if Status.code < 0: Error(Status.message)
-
-		# Обработка команды: editpart.
-		if command_data.name == "editpart":
-			# Дополнительные данные.
-			Data = dict()
-			# Парсинг дополнительных значений.
-			if "a" in command_data.flags: Data["announce"] = True
-			if "w" in command_data.flags:
-				Data["watched"] = True
-				Data["announce"] = "*"
-			if "u" in command_data.flags:
-				Data["watched"] = False
-				Data["announce"] = "*"
-			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
-			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
-			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
-			if "number" in command_data.keys: Data["number"] = self.__ValueToInt(command_data.values["number"])
-			if "series" in command_data.keys: Data["series"] = self.__ValueToInt(command_data.values["series"])
-			# Редактирование части.
-			Status = self.__Note.edit_part(int(command_data.arguments[0]), Data)
-			# Обработка статуса.
-			if Status.code == 0: print("Part edited.")
-			if Status.code != 0: Error(Status.message)
-
-		# Обработка команды: mark.
-		if command_data.name == "mark":
-			# Добавление закладки.
-			Status = self.__Note.set_mark(int(command_data.arguments[0]), int(command_data.arguments[1]))
-			# Обработка статуса.
-			if Status.code in [1, 2, 3]: print(Status.message)
-			if Status.code == 0: print("Mark updated.")
-			if Status.code == -1: Error(Status.message)
-			if Status.code == -2: Warning(Status.message)
-
-		# Обработка команды: meta.
-		if command_data.name == "meta":
-			# Статус выполнения.
-			Status = ExecutionStatus(0)
-
-			# Если метаданные добавляются.
-			if "set" in command_data.flags:
-				# Установка метаданных.
-				Status = self.__Note.set_metainfo(command_data.arguments[0],  command_data.arguments[1])
-
-			# Если метаданные удаляются.
-			if "unset" in command_data.flags:
-				# Удаление метаданных.
-				Status = self.__Note.delete_metainfo(command_data.arguments[0])
-
-			# Обработка статуса.
-			if Status.code == 0: print("Metainfo updated.")
-			if Status.code != 0: Error(Status.message)
-
-		# Обработка команды: newpart.
-		if command_data.name == "newpart":
-			# Дополнительные данные.
-			Data = dict()
-			# Парсинг дополнительных значений.
-			if "a" in command_data.flags: Data["announce"] = True
-			if "w" in command_data.flags:
-				Data["watched"] = True
-				Data["announce"] = "*"
-			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
-			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
-			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
-			if "number" in command_data.keys: Data["number"] = self.__ValueToInt(command_data.values["number"])
-			if "series" in command_data.keys: Data["series"] = self.__ValueToInt(command_data.values["series"])
-			# Добавление части.
-			Status = self.__Note.add_part(command_data.arguments[0], Data)
-			# Обработка статуса.
-			if Status.code == 0: print("Part created.")
-			if Status.code != 0: Error(Status.message)
-
 		# Обработка команды: remove.
-		if command_data.name == "remove":
+		elif command_data.name == "remove":
 			# Запрос подтверждения.
 			Response = Confirmation("Are you sure to remove #" + str(self.__Note.id) + " note?")
 			
@@ -533,97 +248,8 @@ class Interpreter:
 
 				else: Error(Status.message)
 
-		# Обработка команды: reset.
-		if command_data.name == "reset":
-			# Сброс значения.
-			Status = self.__Note.reset(command_data.arguments[0])
-			# Обработка статуса.
-			if Status.code == 0: print("Value set to default.")
-			if Status.code != 0: Error(Status.message)
-
-		# Обработка команды: set.
-		if command_data.name == "set":
-
-			# Если задаётся альтернативное название.
-			if "altname" in command_data.keys:
-				# Обновление названия.
-				Status = self.__Note.add_another_name(command_data.values["altname"])
-				# Обработка статуса.
-				if Status.code == 0: print("Another name added.")
-				if Status.code != 0: Error(Status.message)
-
-			# Если задаётся группа.
-			if "group" in command_data.keys:
-				# Установка принадлежности к группе.
-				Status = self.__Note.set_group(int(command_data.values["group"]))
-				# Обработка статуса.
-				if Status.code == 0: print("Note has been added to @" + command_data.values["group"] + " group.")
-				if Status.code != 0: Error(Status.message)
-
-			# Если задаётся оценка.
-			if "estimation" in command_data.keys:
-				# Обновление оценки.
-				Status = self.__Note.estimate(int(command_data.values["estimation"]))
-				# Обработка статуса.
-				if Status.code == 0: print("Estimation updated.")
-				if Status.code != 0: Error(Status.message)
-
-			# Если задаётся название.
-			if "name" in command_data.keys:
-				# Обновление названия.
-				Status = self.__Note.rename(command_data.values["name"])
-				# Обработка статуса.
-				if Status.code == 0: print("Name updated.")
-				if Status.code != 0: Error(Status.message)
-
-			# Если задаётся статус.
-			if "status" in command_data.keys:
-				# Установка статуса.
-				Status = self.__Note.set_status(command_data.values["status"])
-				# Обработка статуса.
-				if Status.code == 0: print("Status updated.")
-				if Status.code != 0: Error(Status.message)
-
-			# Если задаётся тег.
-			if "tag" in command_data.keys:
-				# Обновление названия.
-				Status = self.__Note.add_tag(command_data.values["tag"])
-				# Обработка статуса.
-				if Status.code == 0: print("Tag added.")
-				if Status.code != 0: Error(Status.message)
-
-		# Обработка команды: unset.
-		if command_data.name == "unset":
-
-			# Если удаляется альтернативное название.
-			if "altname" in command_data.keys:
-				# Удаление альтернативного названия.
-				Status = self.__Note.delete_another_name(command_data.values["altname"])
-				# Обработка статуса.
-				if Status.code == 0: print("Another name removed.")
-				if Status.code != 0: Error(Status.message)
-
-			# Если удаляется тег.
-			if "tag" in command_data.keys:
-				# Удаление тега.
-				Status = self.__Note.delete_tag(command_data.values["tag"])
-				# Обработка статуса.
-				if Status.code == 0: print("Tag removed.")
-				if Status.code != 0: Error(Status.message)
-
-		# Обработка команды: uppart.
-		if command_data.name == "uppart":
-			# Поднятие части.
-			Status = self.__Note.up_part(int(command_data.arguments[0]))
-			# Обработка статуса.
-			if Status.code == 0: print("Part upped.")
-			if Status.code == 1: Warning(Status.message)
-			if Status.code < 0: Error(Status.message)
-
-		# Обработка команды: view.
-		if command_data.name == "view":
-			# Просмотр записи.
-			View(self.__Table, self.__Note)
+		# Обработка команд записи.
+		else: self.__Note.cli.execute(command_data)
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -662,7 +288,7 @@ class Interpreter:
 
 		try:
 			# Проверка команд уровня интерпретации.
-			Command = Terminalyzer(input_line).check_commands(self.__Commands[self.__InterpreterLevel])
+			Command = Terminalyzer(input_line).check_commands(self.__CommandsGenerators[self.__InterpreterLevel]())
 
 		except NotEnoughArguments:
 			# Вывод в консоль: недостаточно аргументов.
@@ -692,10 +318,10 @@ class Interpreter:
 		# Уровень интерпретации.
 		self.__InterpreterLevel = "manager"
 		# Определения команд.
-		self.__Commands = {
-			"manager": self.__GenerateManagerCommands(),
-			"table": self.__GenerateTableCommands(),
-			"note": self.__GenerateNoteCommands()
+		self.__CommandsGenerators = {
+			"manager": self.__GenerateManagerCommands,
+			"table": self.__GenerateTableCommands,
+			"note": self.__GenerateNoteCommands
 		}
 		# Определения обработчиков.
 		self.__Processors = {

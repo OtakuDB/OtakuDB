@@ -1,9 +1,15 @@
 from Source.CLI.Templates import Error, ExecutionStatus
-from Source.Tables.MediaViews import MediaViewsTable
+from Source.Tables.Views import ViewsTable
+
 from dublib.Methods import ReadJSON, WriteJSON
 
 import shutil
 import os
+
+# Определения типов таблиц.
+TablesTypes = {
+	"views": ViewsTable
+}
 
 class Driver:
 	"""Менеджер таблиц."""
@@ -31,7 +37,7 @@ class Driver:
 		for Object in StorageList:
 	
 			# Если объект является каталогом и содержит описание таблицы, записать имя каталога.
-			if os.path.isdir(f"{self.__StorageDirectory}/{Object}") and os.path.exists(f"{self.__StorageDirectory}/{Object}/main.json"): Tables.append(Object)
+			if os.path.isdir(f"{self.__StorageDirectory}/{Object}") and os.path.exists(f"{self.__StorageDirectory}/{Object}/manifest.json"): Tables.append(Object)
 
 		return Tables
 
@@ -87,10 +93,11 @@ class Driver:
 		# Если включено автомонтирование, выполнить его.
 		if mount: self.mount()
 
-	def create_table(self, name: str) -> ExecutionStatus:
+	def create_table(self, name: str, table_type: str) -> ExecutionStatus:
 		"""
 		Создаёт таблицу.
-			name – название таблицы.
+			name – название таблицы;
+			table_type – тип таблицы.
 		"""
 
 		# Статус выполнения.
@@ -99,13 +106,32 @@ class Driver:
 		# Состояние: успешно ли создание.
 		try:
 			# Создание таблицы.
-			MediaViewsTable(self.__StorageDirectory, name)
+			TablesTypes[table_type](self.__StorageDirectory, name)
 
 		except:
 			# Изменение статуса.
 			Status = ExecutionStatus(-1, "unknown_error")
 
 		return Status
+
+	def get_manifest(self, name: str) -> dict | ExecutionStatus:
+		"""
+		Считывает манифест таблицы.
+			name – название таблицы.
+		"""
+
+		# Манифест таблицы.
+		Manifest = None
+
+		try:
+			# Чтение манифеста.
+			Manifest = ReadJSON(f"{self.__StorageDirectory}/{name}/manifest.json")
+
+		except FileExistsError:
+			# Изменение статуса.
+			Manifest = ExecutionStatus(-1, "unknown_error")
+
+		return Manifest	
 
 	def mount(self, storage_dir: str | None = None) -> ExecutionStatus:
 		"""
@@ -140,7 +166,7 @@ class Driver:
 
 		return Status
 
-	def open_table(self, name: str) -> MediaViewsTable | ExecutionStatus:
+	def open_table(self, name: str) -> object | ExecutionStatus:
 		"""
 		Открывает таблицу. Возвращает объектное представление таблицы.
 			name – название таблицы.
@@ -150,8 +176,10 @@ class Driver:
 		Table = None
 
 		try:
+			# Манифест таблицы.
+			Manifest = self.get_manifest(name)
 			# Создание таблицы.
-			Table = MediaViewsTable(self.__StorageDirectory, name, autocreation = False)
+			Table = TablesTypes[Manifest["type"]](self.__StorageDirectory, name, autocreation = False)
 
 		except FileExistsError:
 			# Изменение статуса.

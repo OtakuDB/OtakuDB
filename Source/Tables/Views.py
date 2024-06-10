@@ -1,9 +1,592 @@
-from Source.CLI.Templates import ExecutionStatus
+from Source.CLI.Templates import Columns, ExecutionStatus
+
+from dublib.Terminalyzer import ArgumentsTypes, Command, CommandData
+from dublib.StyledPrinter import Styles, StyledPrinter, TextStyler
 from dublib.Methods import ReadJSON, WriteJSON
 
 import os
 
-class MediaViewsNote:
+#==========================================================================================#
+# >>>>> ОБРАБОТЧИКИ ВЗАИМОДЕЙСТВИЙ С ТАБЛИЦЕЙ <<<<< #
+#==========================================================================================#
+
+class ViewsNoteCLI:
+	"""Обработчик взаимодействий с записью через CLI."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
+	#==========================================================================================#
+
+	@property
+	def commands(self) -> list[Command]:
+		"""Список дескрипторов команд."""
+
+		return self.__Commands
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __GenerateCommands(self) -> list[Command]:
+		"""Генерирует список команд."""
+
+		# Список команд.
+		CommandsList = list()
+
+		# Создание команды: delpart.
+		Com = Command("delpart")
+		Com.add_argument(ArgumentsTypes.Number, important = True)
+		CommandsList.append(Com)
+
+		# Создание команды: downpart.
+		Com = Command("downpart")
+		Com.add_argument(ArgumentsTypes.Number, important = True)
+		CommandsList.append(Com)
+
+		# Создание команды: editpart.
+		Com = Command("editpart")
+		Com.add_argument(ArgumentsTypes.Number, important = True)
+		Com.add_flag_position(["a"])
+		Com.add_flag_position(["w", "u"])
+		Com.add_key_position(["comment"], ArgumentsTypes.All)
+		Com.add_key_position(["link"], ArgumentsTypes.URL)
+		Com.add_key_position(["mark"], ArgumentsTypes.Number)
+		Com.add_key_position(["name"], ArgumentsTypes.All)
+		Com.add_key_position(["number"], ArgumentsTypes.All)
+		Com.add_key_position(["series"], ArgumentsTypes.Number)
+		CommandsList.append(Com)
+
+		# Создание команды: mark.
+		Com = Command("mark")
+		Com.add_argument(ArgumentsTypes.Number, important = True)
+		Com.add_argument(ArgumentsTypes.Number, important = True)
+		CommandsList.append(Com)
+
+		# Создание команды: meta.
+		Com = Command("meta")
+		Com.add_argument(ArgumentsTypes.All, important = True)
+		Com.add_argument(ArgumentsTypes.All)
+		Com.add_flag_position(["set", "unset"], important = True)
+		CommandsList.append(Com)
+
+		# Создание команды: newpart.
+		Com = Command("newpart")
+		Com.add_argument(ArgumentsTypes.All, important = True)
+		Com.add_flag_position(["a"])
+		Com.add_flag_position(["w"])
+		Com.add_key_position(["comment"], ArgumentsTypes.All)
+		Com.add_key_position(["link"], ArgumentsTypes.URL)
+		Com.add_key_position(["mark"], ArgumentsTypes.Number)
+		Com.add_key_position(["name"], ArgumentsTypes.All)
+		Com.add_key_position(["number"], ArgumentsTypes.All)
+		Com.add_key_position(["series"], ArgumentsTypes.Number)
+		CommandsList.append(Com)
+
+		# Создание команды: reset.
+		Com = Command("reset")
+		Com.add_argument(ArgumentsTypes.All, important = True)
+		CommandsList.append(Com)
+
+		# Создание команды: set.
+		Com = Command("set")
+		Com.add_key_position(["altname"], ArgumentsTypes.All)
+		Com.add_key_position(["comment"], ArgumentsTypes.All)
+		Com.add_key_position(["estimation"], ArgumentsTypes.Number)
+		Com.add_key_position(["group"], ArgumentsTypes.Number)
+		Com.add_key_position(["name"], ArgumentsTypes.All)
+		Com.add_key_position(["status"], ArgumentsTypes.All)
+		Com.add_key_position(["tag"], ArgumentsTypes.All)
+		CommandsList.append(Com)
+
+		# Создание команды: undrop.
+		Com = Command("undrop")
+		CommandsList.append(Com)
+
+		# Создание команды: unset.
+		Com = Command("unset")
+		Com.add_key_position(["altname", "tag"], ArgumentsTypes.All, important = True)
+		CommandsList.append(Com)
+
+		# Создание команды: uppart.
+		Com = Command("uppart")
+		Com.add_argument(ArgumentsTypes.Number, important = True)
+		CommandsList.append(Com)
+
+		# Создание команды: view.
+		Com = Command("view")
+		CommandsList.append(Com)
+
+		return CommandsList
+
+	def __ViewNote(self):
+		"""Выводит форматированные данные записи."""
+
+		# Получение основных значений.
+		TotalProgress = f" ({self.__Note.progress}% viewed)" if self.__Note.progress else ""
+		# Вывод названия и прогресса.
+		if self.__Note.name: StyledPrinter(self.__Note.name, decorations = [Styles.Decorations.Bold], end = False)
+		print(f"{TotalProgress} {self.__Note.emoji_status}")
+
+		# Если указаны альтернативные названия.
+		if self.__Note.another_names:
+			# Вывести каждое название.
+			for name in self.__Note.another_names: StyledPrinter(f"    {name}", decorations = [Styles.Decorations.Italic])
+
+		# Вывод оценки.
+		if self.__Note.estimation: print(f"⭐ {self.__Note.estimation} / {self.__Table.max_estimation}")
+		# Получение частей.
+		Parts = self.__Note.parts
+
+		# Если задана группа.
+		if self.__Note.group_id:
+			# Вывод в консоль: заголовок тегов.
+			StyledPrinter(f"GROUP: ", decorations = [Styles.Decorations.Bold], end = False)
+			# Название группы.
+			GroupName = f"@{self.__Note.group_id}" if not self.__Table.get_group(self.__Note.group_id) else self.__Table.get_group(self.__Note.group_id)["name"]
+			if GroupName == "@None": GroupName = ""
+			# Вывод в консоль: название группы.
+			StyledPrinter(GroupName, decorations = [Styles.Decorations.Italic])
+
+		# Если заданы метаданные.
+		if self.__Note.metainfo:
+			# Вывод в консоль: заголовок метаданных.
+			StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
+			# Метаданные.
+			MetaInfo = self.__Note.metainfo
+			
+			# Для каждого свойства.
+			for Key in MetaInfo.keys():
+				# Вывод в консоль: метаданные.
+				print(f"    {Key}: " + str(MetaInfo[Key]))
+
+		# Если заданы теги.
+		if self.__Note.tags:
+			# Вывод в консоль: заголовок тегов.
+			StyledPrinter(f"TAGS: ", decorations = [Styles.Decorations.Bold], end = False)
+			# Вывод в консоль: теги.
+			print(", ".join(self.__Note.tags))
+
+		# Если имеются части.
+		if Parts:
+			# Вывод в консоль: заголовок частей.
+			StyledPrinter(f"PARTS:", decorations = [Styles.Decorations.Bold])
+
+			# Для каждой части.
+			for PartIndex in range(0, len(Parts)):
+				# Обработка статуса просмотра.
+				Watched = " ✅" if Parts[PartIndex]["watched"] else ""
+				if "announce" in Parts[PartIndex].keys(): Watched = " ℹ️"
+				# Название части.
+				Name = " " + Parts[PartIndex]["name"] if "name" in Parts[PartIndex].keys() and Parts[PartIndex]["name"] else ""
+
+				# Если часть многосерийная.
+				if "series" in Parts[PartIndex].keys():
+					# Закладка.
+					Mark = str(Parts[PartIndex]["mark"]) + " / " if "mark" in Parts[PartIndex] else ""
+					# Индикатор закладки.
+					MarkIndicator = " ⏳" if Mark else ""
+					# Прогресс просмотра части.
+					Progress = " (" + str(int(Parts[PartIndex]["mark"] / Parts[PartIndex]["series"] * 100)) + "% viewed)" if Mark else ""
+					# Номер сезона.
+					Number = " " + str(Parts[PartIndex]["number"]) if "number" in Parts[PartIndex].keys() and Parts[PartIndex]["number"] else ""
+					# Если есть и номер, и название, добавить тире.
+					if Number and Name: Number += " –"
+
+					# Вывод в консоль: тип части.
+					print(f"    {PartIndex} ▸ " + Parts[PartIndex]["type"] + f":{Number}{Name}{Watched}{MarkIndicator}")
+					# Вывод в консоль: прогресс просмотра.
+					print("    " + " " * len(str(PartIndex)) + f"       {Mark}" + str(Parts[PartIndex]["series"]) + f" series{Progress}")
+
+				else:
+					# Вывод в консоль: название.
+					print(f"    {PartIndex} ▸ " + Parts[PartIndex]["type"] + f":{Name}{Watched}")
+
+				# Вывод в консоль: метаданные.
+				if "link" in Parts[PartIndex].keys(): print("    " + " " * len(str(PartIndex)) + f"       🔗 " + Parts[PartIndex]["link"])
+				if "comment" in Parts[PartIndex].keys(): print("    " + " " * len(str(PartIndex)) + f"       💭 " + Parts[PartIndex]["comment"])
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, table: "ViewsTable", note: "ViewsNote"):
+		"""
+		Обработчик взаимодействий с таблицей через CLI.
+			table – объектное представление таблицы;
+			note – объектное представление записи.
+		"""
+
+		#---> Генерация динамичкских свойств.
+		#==========================================================================================#
+		# Объектное представление таблицы.
+		self.__Table = table
+		# Объектное представление записи.
+		self.__Note = note
+		# Список дескрипторов команд.
+		self.__Commands = self.__GenerateCommands()
+
+	def execute(self, command_data: CommandData) -> ExecutionStatus:
+		"""
+		Обрабатывает команду.
+			command_data – описательная структура команды.
+		"""
+
+		# Обработка команды: delpart.
+		if command_data.name == "delpart":
+			# Запрос подтверждения.
+			Response = Confirmation("Are you sure to remove part?")
+			
+			# Если подтверждено.
+			if Response:
+				# Удаление части.
+				Status = self.__Note.delete_part(int(command_data.arguments[0]))
+				# Обработка статуса.
+				if Status.code == 0: print("Part deleted.")
+				if Status.code != 0: Error(Status.message)
+
+		# Обработка команды: downpart.
+		if command_data.name == "downpart":
+			# Поднятие части.
+			Status = self.__Note.down_part(int(command_data.arguments[0]))
+			# Обработка статуса.
+			if Status.code == 0: print("Part downed.")
+			if Status.code == 1: Warning(Status.message)
+			if Status.code < 0: Error(Status.message)
+
+		# Обработка команды: editpart.
+		if command_data.name == "editpart":
+			# Дополнительные данные.
+			Data = dict()
+			# Парсинг дополнительных значений.
+			if "a" in command_data.flags: Data["announce"] = True
+			if "w" in command_data.flags:
+				Data["watched"] = True
+				Data["announce"] = "*"
+			if "u" in command_data.flags:
+				Data["watched"] = False
+				Data["announce"] = "*"
+			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
+			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
+			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
+			if "number" in command_data.keys: Data["number"] = self.__ValueToInt(command_data.values["number"])
+			if "series" in command_data.keys: Data["series"] = self.__ValueToInt(command_data.values["series"])
+			# Редактирование части.
+			Status = self.__Note.edit_part(int(command_data.arguments[0]), Data)
+			# Обработка статуса.
+			if Status.code == 0: print("Part edited.")
+			if Status.code != 0: Error(Status.message)
+
+		# Обработка команды: mark.
+		if command_data.name == "mark":
+			# Добавление закладки.
+			Status = self.__Note.set_mark(int(command_data.arguments[0]), int(command_data.arguments[1]))
+			# Обработка статуса.
+			if Status.code in [1, 2, 3]: print(Status.message)
+			if Status.code == 0: print("Mark updated.")
+			if Status.code == -1: Error(Status.message)
+			if Status.code == -2: Warning(Status.message)
+
+		# Обработка команды: meta.
+		if command_data.name == "meta":
+			# Статус выполнения.
+			Status = ExecutionStatus(0)
+
+			# Если метаданные добавляются.
+			if "set" in command_data.flags:
+				# Установка метаданных.
+				Status = self.__Note.set_metainfo(command_data.arguments[0],  command_data.arguments[1])
+
+			# Если метаданные удаляются.
+			if "unset" in command_data.flags:
+				# Удаление метаданных.
+				Status = self.__Note.delete_metainfo(command_data.arguments[0])
+
+			# Обработка статуса.
+			if Status.code == 0: print("Metainfo updated.")
+			if Status.code != 0: Error(Status.message)
+
+		# Обработка команды: newpart.
+		if command_data.name == "newpart":
+			# Дополнительные данные.
+			Data = dict()
+			# Парсинг дополнительных значений.
+			if "a" in command_data.flags: Data["announce"] = True
+			if "w" in command_data.flags:
+				Data["watched"] = True
+				Data["announce"] = "*"
+			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
+			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
+			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
+			if "number" in command_data.keys: Data["number"] = self.__ValueToInt(command_data.values["number"])
+			if "series" in command_data.keys: Data["series"] = self.__ValueToInt(command_data.values["series"])
+			# Добавление части.
+			Status = self.__Note.add_part(command_data.arguments[0], Data)
+			# Обработка статуса.
+			if Status.code == 0: print("Part created.")
+			if Status.code != 0: Error(Status.message)
+
+		# Обработка команды: reset.
+		if command_data.name == "reset":
+			# Сброс значения.
+			Status = self.__Note.reset(command_data.arguments[0])
+			# Обработка статуса.
+			if Status.code == 0: print("Value set to default.")
+			if Status.code != 0: Error(Status.message)
+
+		# Обработка команды: set.
+		if command_data.name == "set":
+
+			# Если задаётся альтернативное название.
+			if "altname" in command_data.keys:
+				# Обновление названия.
+				Status = self.__Note.add_another_name(command_data.values["altname"])
+				# Обработка статуса.
+				if Status.code == 0: print("Another name added.")
+				if Status.code != 0: Error(Status.message)
+
+			# Если задаётся группа.
+			if "group" in command_data.keys:
+				# Установка принадлежности к группе.
+				Status = self.__Note.set_group(int(command_data.values["group"]))
+				# Обработка статуса.
+				if Status.code == 0: print("Note has been added to @" + command_data.values["group"] + " group.")
+				if Status.code != 0: Error(Status.message)
+
+			# Если задаётся оценка.
+			if "estimation" in command_data.keys:
+				# Обновление оценки.
+				Status = self.__Note.estimate(int(command_data.values["estimation"]))
+				# Обработка статуса.
+				if Status.code == 0: print("Estimation updated.")
+				if Status.code != 0: Error(Status.message)
+
+			# Если задаётся название.
+			if "name" in command_data.keys:
+				# Обновление названия.
+				Status = self.__Note.rename(command_data.values["name"])
+				# Обработка статуса.
+				if Status.code == 0: print("Name updated.")
+				if Status.code != 0: Error(Status.message)
+
+			# Если задаётся статус.
+			if "status" in command_data.keys:
+				# Установка статуса.
+				Status = self.__Note.set_status(command_data.values["status"])
+				# Обработка статуса.
+				if Status.code == 0: print("Status updated.")
+				if Status.code != 0: Error(Status.message)
+
+			# Если задаётся тег.
+			if "tag" in command_data.keys:
+				# Обновление названия.
+				Status = self.__Note.add_tag(command_data.values["tag"])
+				# Обработка статуса.
+				if Status.code == 0: print("Tag added.")
+				if Status.code != 0: Error(Status.message)
+
+		# Обработка команды: unset.
+		if command_data.name == "unset":
+
+			# Если удаляется альтернативное название.
+			if "altname" in command_data.keys:
+				# Удаление альтернативного названия.
+				Status = self.__Note.delete_another_name(command_data.values["altname"])
+				# Обработка статуса.
+				if Status.code == 0: print("Another name removed.")
+				if Status.code != 0: Error(Status.message)
+
+			# Если удаляется тег.
+			if "tag" in command_data.keys:
+				# Удаление тега.
+				Status = self.__Note.delete_tag(command_data.values["tag"])
+				# Обработка статуса.
+				if Status.code == 0: print("Tag removed.")
+				if Status.code != 0: Error(Status.message)
+
+		# Обработка команды: uppart.
+		if command_data.name == "uppart":
+			# Поднятие части.
+			Status = self.__Note.up_part(int(command_data.arguments[0]))
+			# Обработка статуса.
+			if Status.code == 0: print("Part upped.")
+			if Status.code == 1: Warning(Status.message)
+			if Status.code < 0: Error(Status.message)
+
+		# Обработка команды: view.
+		if command_data.name == "view":
+			# Просмотр записи.
+			self.__ViewNote()
+
+class ViewsTableCLI:
+	"""Обработчик взаимодействий с таблицей через CLI."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
+	#==========================================================================================#
+
+	@property
+	def commands(self) -> list[Command]:
+		"""Список дескрипторов команд."""
+
+		return self.__Commands
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __GenerateCommands(self) -> list[Command]:
+		"""Генерирует список команд."""
+
+		# Список команд.
+		CommandsList = list()
+
+		# Создание команды: delgroup.
+		Com = Command("delgroup")
+		Com.add_argument(ArgumentsTypes.Number, important = True)
+		CommandsList.append(Com)
+
+		# Создание команды: list.
+		Com = Command("list")
+		Com.add_key_position(["group"], ArgumentsTypes.Number)
+		CommandsList.append(Com)
+
+		# Создание команды: new.
+		Com = Command("new")
+		CommandsList.append(Com)
+
+		# Создание команды: newgroup.
+		Com = Command("newgroup")
+		Com.add_argument(ArgumentsTypes.All, important = True)
+		CommandsList.append(Com)
+
+		return CommandsList
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, table: "ViewsTable"):
+		"""
+		Обработчик взаимодействий с таблицей через CLI.
+			table – объектное представление таблицы.
+		"""
+
+		#---> Генерация динамичкских свойств.
+		#==========================================================================================#
+		# Объектное представление таблицы.
+		self.__Table = table
+		# Список дескрипторов команд.
+		self.__Commands = self.__GenerateCommands()
+
+	def execute(self, command_data: CommandData) -> ExecutionStatus:
+		"""
+		Обрабатывает команду.
+			command_data – описательная структура команды.
+		"""
+
+		# Обработка команды: delgroup.
+		if command_data.name == "delgroup":
+			# Создание новой группы.
+			Status = self.__Table.remove_group(command_data.arguments[0])
+			# Обработка статуса.
+			if Status.code == 0: print(f"Group @" + str(command_data.arguments[0]) + " removed.")
+			if Status.code != 0: Error(Status.message)
+
+		# Обработка команды: list.
+		if command_data.name == "list":
+			# Получение списка записей.
+			Notes = self.__Table.notes
+			
+			# Если записи существуют.
+			if len(Notes) > 0:
+				# Табличное содержимое.
+				Content = {
+					"ID": [],
+					"Status": [],
+					"Name": [],
+					"Estimation": [],
+					"Group": []
+				}
+
+				# Если включена фильтрация по группе.
+				if "group" in command_data.keys:
+
+					# Для каждой записи.
+					for Note in Notes:
+
+						# Если запись принадлежит к искомой группе.
+						if Note.group_id == int(command_data.values["group"]):
+							# Получение данных.
+							Name = Note.name if Note.name else ""
+							GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
+							if GroupName == "@None": GroupName = ""
+							Status = Note.status
+							# Выделение статусов цветом.
+							if Status == "announce": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
+							if Status == "watching": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
+							if Status == "complete": Status = TextStyler(Status, text_color = Styles.Colors.Green)
+							if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
+							# Заполнение колонок.
+							Content["ID"].append(Note.id)
+							Content["Status"].append(Status)
+							Content["Name"].append(Name)
+							Content["Estimation"].append(Note.estimation if Note.estimation else "")
+							Content["Group"].append(GroupName)
+
+				else:
+				
+					# Для каждой записи.
+					for Note in Notes:
+						# Получение данных.
+						Name = Note.name if Note.name else ""
+						GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
+						if GroupName == "@None": GroupName = ""
+						Status = Note.status
+						# Выделение статусов цветом.
+						if Status == "announce": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
+						if Status == "watching": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
+						if Status == "complete": Status = TextStyler(Status, text_color = Styles.Colors.Green)
+						if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
+						# Заполнение колонок.
+						Content["ID"].append(Note.id)
+						Content["Status"].append(Status)
+						Content["Name"].append(Name)
+						Content["Estimation"].append(Note.estimation if Note.estimation else "")
+						Content["Group"].append(GroupName)
+
+				# Буфер проверки значения.
+				ContentBuffer = list(Content["Group"])
+				while "" in ContentBuffer: ContentBuffer.remove("")
+				# Если в таблице нет групп, удалить их колонку.
+				if len(ContentBuffer) == 0: del Content["Group"]
+				# Вывод описания.
+				Columns(Content)
+
+			else:
+				# Вывод в консоль: таблица пуста.
+				print("Table is empty.")
+
+		# Обработка команды: new.
+		if command_data.name == "new":
+			# Создание новой записи.
+			Status = self.__Table.create_note()
+			# Обработка статуса.
+			if Status.code == 0: print(f"Note #" + str(Status.data["id"]) + " created.")
+			if Status.code != 0: Error("unable_to_create_note")
+
+		# Обработка команды: newgroup.
+		if command_data.name == "newgroup":
+			# Создание новой группы.
+			Status = self.__Table.create_group(command_data.arguments[0])
+			# Обработка статуса.
+			if Status.code == 0: print(f"Group @" + str(Status.data["id"]) + " created.")
+			if Status.code != 0: Error(Status.message)
+
+#==========================================================================================#
+# >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
+#==========================================================================================#
+
+class ViewsNote:
 	"""Запись просмотра медиаконтента."""
 
 	#==========================================================================================#
@@ -25,6 +608,12 @@ class MediaViewsNote:
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
 	#==========================================================================================#
+
+	@property
+	def cli(self) -> ViewsNoteCLI:
+		"""Обработчик CLI записи."""
+
+		return self.__NoteCLI
 
 	@property
 	def another_names(self) -> list[str]:
@@ -198,7 +787,7 @@ class MediaViewsNote:
 			# Если ключ удаляет закладку.
 			elif Key == "watched":
 				# Если просмотрено, удалить закладку.
-				if data["watched"] and "mark" in data.keys(): del part["mark"]
+				if data["watched"] and "mark" in part.keys(): del part["mark"]
 				# Обновление статуса просмотра.
 				part[Key] = data[Key]
 
@@ -224,7 +813,7 @@ class MediaViewsNote:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, table: "MediaViewsTable", note_id: int):
+	def __init__(self, table: "ViewsTable", note_id: int):
 		"""
 		Запись просмотра медиаконтента.
 			table – объектное представление таблицы;
@@ -239,6 +828,8 @@ class MediaViewsNote:
 		self.__Table = table
 		# Данные записи.
 		self.__Data = ReadJSON(f"{table.directory}/{table.name}/{self.__ID}.json")
+		# Обработчик CLI записи.
+		self.__NoteCLI = ViewsNoteCLI(table, self)
 	
 	def add_another_name(self, another_name: str) -> ExecutionStatus:
 		"""
@@ -723,12 +1314,18 @@ class MediaViewsNote:
 
 		return Status
 
-class MediaViewsTable:
+class ViewsTable:
 	"""Таблица просмотров медиакнотента."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
 	#==========================================================================================#
+
+	@property
+	def cli(self) -> ViewsTableCLI:
+		"""Обработчик CLI таблицы."""
+
+		return self.__TableCLI
 
 	@property
 	def directory(self) -> str:
@@ -737,7 +1334,7 @@ class MediaViewsTable:
 		return self.__StorageDirectory
 
 	@property
-	def id(self) -> list[MediaViewsNote]:
+	def id(self) -> list[ViewsNote]:
 		"""Идентификатор таблицы."""
 
 		return self.__Notes.values()
@@ -755,7 +1352,7 @@ class MediaViewsTable:
 		return self.__Name
 
 	@property
-	def notes(self) -> list[MediaViewsNote]:
+	def notes(self) -> list[ViewsNote]:
 		"""Список записей."""
 
 		return self.__Notes.values()
@@ -776,7 +1373,7 @@ class MediaViewsTable:
 		# Если каталог не существует, создать его.
 		if not os.path.exists(f"{self.__StorageDirectory}/{self.__Name}"): os.makedirs(f"{self.__StorageDirectory}/{self.__Name}")
 		# Сохранение описания.
-		WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/main.json", self.__Options)
+		WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/manifest.json", self.__Options)
 
 	def __GetNewID(self, container: dict) -> int:
 		"""
@@ -836,7 +1433,7 @@ class MediaViewsTable:
 		"""
 
 		# Чтение записи.
-		self.__Notes[note_id] = MediaViewsNote(self, note_id)
+		self.__Notes[note_id] = ViewsNote(self, note_id)
 
 	def __ReadNotes(self):
 		"""Считывает содержимое всех записей."""
@@ -886,7 +1483,7 @@ class MediaViewsTable:
 		# Опции таблицы.
 		self.__Options = {
 			"version": 1,
-			"type": "media-views",
+			"type": "views",
 			"recycle-id": False,
 			"max-estimation": 10,
 			"viewer": {
@@ -894,13 +1491,15 @@ class MediaViewsTable:
 				"comments": True
 			}
 		}
+		# Обработчик CLI таблицы.
+		self.__TableCLI = ViewsTableCLI(self)
 
 		# Если найден файл описания таблицы.
-		if os.path.exists(f"{self.__StorageDirectory}/{self.__Name}/main.json"):
+		if os.path.exists(f"{self.__StorageDirectory}/{self.__Name}/manifest.json"):
 			# Чтение файла.
-			self.__Options = ReadJSON(f"{self.__StorageDirectory}/{self.__Name}/main.json")
+			self.__Options = ReadJSON(f"{self.__StorageDirectory}/{self.__Name}/manifest.json")
 			# Если тип таблицы не соответствует, выбросить исключение.
-			if self.__Options["type"] != "media-views": raise TypeError("Only \"media-views\" type tables supported.")
+			if self.__Options["type"] != "views": raise TypeError("Only \"media-views\" type tables supported.")
 			# Чтение записей.
 			self.__ReadNotes()
 
@@ -910,7 +1509,7 @@ class MediaViewsTable:
 			self.__Create()
 
 		# Выброс исключения
-		else: raise FileExistsError("main.json")
+		else: raise FileExistsError("manifest.json")
 
 		# Если найден файл описания групп.
 		if os.path.exists(f"{self.__StorageDirectory}/{self.__Name}/groups.json"):
@@ -969,7 +1568,7 @@ class MediaViewsTable:
 			# ID новой записи.
 			ID = self.__GetNewID(self.__Notes)
 			# Сохранение локального файла JSON.
-			WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/{ID}.json", MediaViewsNote.BASE_NOTE)
+			WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/{ID}.json", ViewsNote.BASE_NOTE)
 			# Чтение и объектная интерпретация записи.
 			self.__ReadNote(ID)
 			# Изменение статуса.
@@ -1063,7 +1662,7 @@ class MediaViewsTable:
 
 		return Group
 
-	def get_group_notes(self, group_id: int) -> list[MediaViewsNote]:
+	def get_group_notes(self, group_id: int) -> list[ViewsNote]:
 		"""
 		Возвращает словарное представление группы.
 			group_id – идентификатор группы.
@@ -1079,7 +1678,7 @@ class MediaViewsTable:
 
 		return NotesList
 
-	def get_note(self, note_id: int) -> MediaViewsNote | None:
+	def get_note(self, note_id: int) -> ViewsNote | None:
 		"""
 		Возвращает объектное представление записи.
 			note_id – идентификатор записи.
