@@ -1,4 +1,5 @@
-from Source.CLI.Templates import Columns, ExecutionStatus
+from Source.CLI.Templates import Columns, Confirmation, Error, ExecutionStatus, Warning
+from Source.Functions import ValueToInt
 
 from dublib.Terminalyzer import ArgumentsTypes, Command, CommandData
 from dublib.StyledPrinter import Styles, StyledPrinter, TextStyler
@@ -118,7 +119,7 @@ class ViewsNoteCLI:
 
 		return CommandsList
 
-	def __ViewNote(self):
+	def __View(self):
 		"""Выводит форматированные данные записи."""
 
 		# Получение основных значений.
@@ -198,8 +199,10 @@ class ViewsNoteCLI:
 					print("    " + " " * len(str(PartIndex)) + f"       {Mark}" + str(Parts[PartIndex]["series"]) + f" series{Progress}")
 
 				else:
+					# Номер фильма.
+					Number = " " + str(Parts[PartIndex]["number"]) if "number" in Parts[PartIndex].keys() and Parts[PartIndex]["number"] else ""
 					# Вывод в консоль: название.
-					print(f"    {PartIndex} ▸ " + Parts[PartIndex]["type"] + f":{Name}{Watched}")
+					print(f"    {PartIndex} ▸ " + Parts[PartIndex]["type"] + f"{Number}:{Name}{Watched}")
 
 				# Вывод в консоль: метаданные.
 				if "link" in Parts[PartIndex].keys(): print("    " + " " * len(str(PartIndex)) + f"       🔗 " + Parts[PartIndex]["link"])
@@ -268,8 +271,8 @@ class ViewsNoteCLI:
 			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
 			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
 			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
-			if "number" in command_data.keys: Data["number"] = self.__ValueToInt(command_data.values["number"])
-			if "series" in command_data.keys: Data["series"] = self.__ValueToInt(command_data.values["series"])
+			if "number" in command_data.keys: Data["number"] = ValueToInt(command_data.values["number"])
+			if "series" in command_data.keys: Data["series"] = ValueToInt(command_data.values["series"])
 			# Редактирование части.
 			Status = self.__Note.edit_part(int(command_data.arguments[0]), Data)
 			# Обработка статуса.
@@ -317,8 +320,8 @@ class ViewsNoteCLI:
 			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
 			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
 			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
-			if "number" in command_data.keys: Data["number"] = self.__ValueToInt(command_data.values["number"])
-			if "series" in command_data.keys: Data["series"] = self.__ValueToInt(command_data.values["series"])
+			if "number" in command_data.keys: Data["number"] = ValueToInt(command_data.values["number"])
+			if "series" in command_data.keys: Data["series"] = ValueToInt(command_data.values["series"])
 			# Добавление части.
 			Status = self.__Note.add_part(command_data.arguments[0], Data)
 			# Обработка статуса.
@@ -415,7 +418,7 @@ class ViewsNoteCLI:
 		# Обработка команды: view.
 		if command_data.name == "view":
 			# Просмотр записи.
-			self.__ViewNote()
+			self.__View()
 
 class ViewsTableCLI:
 	"""Обработчик взаимодействий с таблицей через CLI."""
@@ -748,7 +751,7 @@ class ViewsNote:
 		}
 
 		# Типы: фильм.
-		if part_type in ["film"]: return {
+		if part_type in ["film", "special"]: return {
 			"type": part_type,
 			"name": None,
 			"watched": False
