@@ -1366,6 +1366,12 @@ class ViewsTable:
 
 		return self.__Options.copy()	
 
+	@property
+	def type(self) -> str:
+		"""Тип таблицы."""
+
+		return self.__Type
+
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -1483,10 +1489,12 @@ class ViewsTable:
 		self.__Notes = dict()
 		# Словарь групп.
 		self.__Groups = dict()
+		# Тип таблицы.
+		self.__Type = "views"
 		# Опции таблицы.
 		self.__Options = {
 			"version": 1,
-			"type": "views",
+			"type": self.__Type,
 			"recycle-id": False,
 			"max-estimation": 10,
 			"viewer": {
@@ -1502,7 +1510,7 @@ class ViewsTable:
 			# Чтение файла.
 			self.__Options = ReadJSON(f"{self.__StorageDirectory}/{self.__Name}/manifest.json")
 			# Если тип таблицы не соответствует, выбросить исключение.
-			if self.__Options["type"] != "views": raise TypeError("Only \"media-views\" type tables supported.")
+			if self.__Options["type"] != self.__Type: raise TypeError(f"Only \"{self.__Type}\" type tables supported.")
 			# Чтение записей.
 			self.__ReadNotes()
 

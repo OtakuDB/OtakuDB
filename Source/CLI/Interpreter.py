@@ -126,8 +126,22 @@ class Interpreter:
 
 			# Если существуют таблицы.
 			if len(Tables):
-				# Вывод в консоль: список таблиц.
-				print("\n".join(Tables))
+				# Табличное содержимое.
+				Content = {
+					"Table": [],
+					"Type": []
+				}
+				
+				# Для каждой таблицы.
+				for Table in self.__Driver.tables:
+					# Чтение манифеста.
+					Manifest = self.__Driver.get_manifest(Table)
+					# Заполнение колонок.
+					Content["Table"].append(Table)
+					Content["Type"].append(TextStyler(Manifest["type"], decorations = [Styles.Decorations.Italic]))
+
+				# Вывод списка.
+				Columns(Content, sort_by = "Table")
 
 			else:
 				# Вывод в консоль: список таблиц.
