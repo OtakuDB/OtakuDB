@@ -2,7 +2,7 @@ from Source.CLI.Templates import Columns, Confirmation, Error, ExecutionStatus, 
 from Source.Functions import ValueToInt
 
 from dublib.Terminalyzer import ArgumentsTypes, Command, CommandData
-from dublib.StyledPrinter import Styles, StyledPrinter, TextStyler
+from dublib.StyledPrinter import Styles, StylesGroup, StyledPrinter, TextStyler
 from dublib.Methods import ReadJSON, WriteJSON
 
 import os
@@ -122,31 +122,44 @@ class ViewsNoteCLI:
 	def __View(self):
 		"""Выводит форматированные данные записи."""
 
-		# Получение основных значений.
-		TotalProgress = f" ({self.__Note.progress}% viewed)" if self.__Note.progress else ""
-		# Вывод названия и прогресса.
-		if self.__Note.name: StyledPrinter(self.__Note.name, decorations = [Styles.Decorations.Bold], end = False)
-		print(f"{TotalProgress} {self.__Note.emoji_status}")
-
-		# Если указаны альтернативные названия.
-		if self.__Note.another_names:
-			# Вывести каждое название.
-			for name in self.__Note.another_names: StyledPrinter(f"    {name}", decorations = [Styles.Decorations.Italic])
-
-		# Вывод оценки.
-		if self.__Note.estimation: print(f"⭐ {self.__Note.estimation} / {self.__Table.max_estimation}")
-		# Получение частей.
+		#---> Получение данных.
+		#==========================================================================================#
+		# Описание группы.
+		Group = self.__Table.get_group(self.__Note.group_id) if self.__Note.group_id else None
+		# Название группы.
+		GroupName = Group["name"] if Group and Group["name"] else None
+		# Части записи.
 		Parts = self.__Note.parts
+		# Настройки просмоторщика.
+		Options = self.__Table.options["viewer"]
+
+		#---> Объявление литералов.
+		#==========================================================================================#
+		# Общий прогресс просмотра.
+		MSG_TotalProgress = f" ({self.__Note.progress}% viewed)" if self.__Note.progress else ""
+		# Название группы. 
+		MSG_GroupName = f"@{self.__Note.group_id}" if not GroupName else f"@{GroupName}"
+
+		#---> Вывод описания записи.
+		#==========================================================================================#
+		# Если у записи есть название, вывести его.
+		if self.__Note.name: StyledPrinter(self.__Note.name, decorations = [Styles.Decorations.Bold], end = False)
+		# Вывод в консоль: общий прогресс просмотра.
+		print(f"{MSG_TotalProgress} {self.__Note.emoji_status}")
+		# Вывести в консоль каждое альтернативное название.
+		for AnotherName in self.__Note.another_names: StyledPrinter(f"    {AnotherName}", decorations = [Styles.Decorations.Italic])
+		# Если задана оценка, вывести её.
+		if self.__Note.estimation: print(f"⭐ {self.__Note.estimation} / {self.__Table.max_estimation}")
+
+		#---> Вывод классификаторов записи.
+		#==========================================================================================#
 
 		# Если задана группа.
 		if self.__Note.group_id:
-			# Вывод в консоль: заголовок тегов.
+			# Вывод в консоль: заголовок группы.
 			StyledPrinter(f"GROUP: ", decorations = [Styles.Decorations.Bold], end = False)
-			# Название группы.
-			GroupName = f"@{self.__Note.group_id}" if not self.__Table.get_group(self.__Note.group_id) else self.__Table.get_group(self.__Note.group_id)["name"]
-			if GroupName == "@None": GroupName = ""
 			# Вывод в консоль: название группы.
-			StyledPrinter(GroupName, decorations = [Styles.Decorations.Italic])
+			StyledPrinter(MSG_GroupName, decorations = [Styles.Decorations.Italic])
 
 		# Если заданы метаданные.
 		if self.__Note.metainfo:
@@ -167,6 +180,9 @@ class ViewsNoteCLI:
 			# Вывод в консоль: теги.
 			print(", ".join(self.__Note.tags))
 
+		#---> Вывод частей записи.
+		#==========================================================================================#
+
 		# Если имеются части.
 		if Parts:
 			# Вывод в консоль: заголовок частей.
@@ -174,39 +190,63 @@ class ViewsNoteCLI:
 
 			# Для каждой части.
 			for PartIndex in range(0, len(Parts)):
-				# Обработка статуса просмотра.
-				Watched = " ✅" if Parts[PartIndex]["watched"] else ""
-				if "announce" in Parts[PartIndex].keys(): Watched = " ℹ️"
+
+				#---> Объявление литералов.
+				#==========================================================================================#
+				# Эмодзи-статус части.
+				MSG_PartStatus = ""
+				if Parts[PartIndex]["watched"]: MSG_PartStatus = " ✅"
+				if "announce" in Parts[PartIndex].keys(): MSG_PartStatus = " ℹ️"
 				# Название части.
-				Name = " " + Parts[PartIndex]["name"] if "name" in Parts[PartIndex].keys() and Parts[PartIndex]["name"] else ""
+				MSG_Name = " " + Parts[PartIndex]["name"] if "name" in Parts[PartIndex].keys() and Parts[PartIndex]["name"] else ""
+				# Номер.
+				MSG_Number = " " + str(Parts[PartIndex]["number"]) if "number" in Parts[PartIndex].keys() and Parts[PartIndex]["number"] else ""
+				# Отступ (рассчитывается от длины индекса).
+				MSG_Indent = " " * len(str(PartIndex))
+				# Тип записи.
+				MSG_Type = Parts[PartIndex]["type"]
+
+				#---> Определение цвета части.
+				#==========================================================================================#
+				# Цвет текста.
+				TextColor = None
+				# Установка цветов.
+				if Options["colorize"] and "✅" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Green)
+				if Options["colorize"] and "ℹ️" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Cyan)
 
 				# Если часть многосерийная.
 				if "series" in Parts[PartIndex].keys():
-					# Закладка.
-					Mark = str(Parts[PartIndex]["mark"]) + " / " if "mark" in Parts[PartIndex] else ""
-					# Индикатор закладки.
-					MarkIndicator = " ⏳" if Mark else ""
-					# Прогресс просмотра части.
-					Progress = " (" + str(int(Parts[PartIndex]["mark"] / Parts[PartIndex]["series"] * 100)) + "% viewed)" if Mark else ""
-					# Номер сезона.
-					Number = " " + str(Parts[PartIndex]["number"]) if "number" in Parts[PartIndex].keys() and Parts[PartIndex]["number"] else ""
-					# Если есть и номер, и название, добавить тире.
-					if Number and Name: Number += " –"
 
-					# Вывод в консоль: тип части.
-					print(f"    {PartIndex} ▸ " + Parts[PartIndex]["type"] + f":{Number}{Name}{Watched}{MarkIndicator}")
-					# Вывод в консоль: прогресс просмотра.
-					print("    " + " " * len(str(PartIndex)) + f"       {Mark}" + str(Parts[PartIndex]["series"]) + f" series{Progress}")
+					#---> Объявление литералов.
+					#==========================================================================================#
+					# Закладка.
+					MSG_Mark = str(Parts[PartIndex]["mark"]) + " / " if "mark" in Parts[PartIndex] else ""
+					# Индикатор закладки.
+					MSG_MarkIndicator = " ⏳" if MSG_Mark else ""
+					# Прогресс просмотра части.
+					MSG_Progress = " (" + str(int(Parts[PartIndex]["mark"] / Parts[PartIndex]["series"] * 100)) + "% viewed)" if MSG_Mark else ""
+					# Количество серий. 
+					MSG_Series = Parts[PartIndex]["series"]
+
+					#---> Определение цвета части.
+					#==========================================================================================#
+					# Если часть в процессе просмотра, назначить ей жёлтый цвет.
+					if Options["colorize"] and "⏳" in MSG_MarkIndicator: TextColor = StylesGroup(text_color = Styles.Colors.Yellow)
+
+					#---> Вывод части.
+					#==========================================================================================#
+					# Вывод в консоль: данные части.
+					StyledPrinter(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}{MSG_MarkIndicator}", styles = TextColor)
+					# Если в части больше одной серии, вывести в консоль прогресс просмотра.
+					if not Options["hide_single_series"] or Options["hide_single_series"] and MSG_Series > 1: StyledPrinter(f"    {MSG_Indent}       {MSG_Mark}{MSG_Series} series{MSG_Progress}", styles = TextColor)
 
 				else:
-					# Номер фильма.
-					Number = " " + str(Parts[PartIndex]["number"]) if "number" in Parts[PartIndex].keys() and Parts[PartIndex]["number"] else ""
-					# Вывод в консоль: название.
-					print(f"    {PartIndex} ▸ " + Parts[PartIndex]["type"] + f"{Number}:{Name}{Watched}")
+					# Вывод в консоль: данные части.
+					StyledPrinter(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}", styles = TextColor)
 
-				# Вывод в консоль: метаданные.
-				if "link" in Parts[PartIndex].keys(): print("    " + " " * len(str(PartIndex)) + f"       🔗 " + Parts[PartIndex]["link"])
-				if "comment" in Parts[PartIndex].keys(): print("    " + " " * len(str(PartIndex)) + f"       💭 " + Parts[PartIndex]["comment"])
+				# Вывод в консоль: ссылки и комментарии.
+				if Options["links"] and "link" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
+				if Options["comments"] and "comment" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       💭 " + Parts[PartIndex]["comment"])
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -599,7 +639,7 @@ class ViewsNote:
 	# Пустая структура записи.
 	BASE_NOTE = {
 		"name": None,
-		"another-names": [],
+		"another_names": [],
 		"estimation": None,
 		"status": None,
 		"group": None,
@@ -622,7 +662,7 @@ class ViewsNote:
 	def another_names(self) -> list[str]:
 		"""Список альтернативных названий."""
 
-		return self.__Data["another-names"]
+		return self.__Data["another_names"]
 
 	@property
 	def emoji_status(self) -> str:
@@ -846,9 +886,9 @@ class ViewsNote:
 		try:
 
 			# Если такое альтренативное название ещё не задано.
-			if another_name not in self.__Data["another-names"]:
+			if another_name not in self.__Data["another_names"]:
 				# Добавление алтернативного названия.
-				self.__Data["another-names"].append(another_name)
+				self.__Data["another_names"].append(another_name)
 				# Сохранение изменений.
 				self.save()
 
@@ -924,11 +964,11 @@ class ViewsNote:
 			# Если передан индекс.
 			if another_name.isdigit():
 				# Удаление альтернативного названия по индексу.
-				self.__Data["another-names"].pop(int(another_name))
+				self.__Data["another_names"].pop(int(another_name))
 
 			else:
 				# Удаление альтернативного названия по значению.
-				self.__Data["another-names"].remove(another_name)
+				self.__Data["another_names"].remove(another_name)
 
 			# Сохранение изменений.
 			self.save()
@@ -1499,7 +1539,9 @@ class ViewsTable:
 			"max-estimation": 10,
 			"viewer": {
 				"links": True,
-				"comments": True
+				"comments": True,
+				"colorize": True,
+				"hide_single_series": True
 			}
 		}
 		# Обработчик CLI таблицы.
