@@ -1,5 +1,4 @@
 from Source.CLI.Templates import Columns, Confirmation, Error, ExecutionStatus, Warning
-from Source.Functions import ValueToInt
 
 from dublib.Terminalyzer import ArgumentsTypes, Command, CommandData
 from dublib.StyledPrinter import Styles, StylesGroup, StyledPrinter, TextStyler
@@ -48,7 +47,7 @@ class ViewsNoteCLI:
 		Com = Command("editpart")
 		Com.add_argument(ArgumentsTypes.Number, important = True)
 		Com.add_flag_position(["a"])
-		Com.add_flag_position(["w", "u"])
+		Com.add_flag_position(["s", "u", "w"])
 		Com.add_key_position(["comment"], ArgumentsTypes.All)
 		Com.add_key_position(["link"], ArgumentsTypes.URL)
 		Com.add_key_position(["mark"], ArgumentsTypes.Number)
@@ -74,7 +73,7 @@ class ViewsNoteCLI:
 		Com = Command("newpart")
 		Com.add_argument(ArgumentsTypes.All, important = True)
 		Com.add_flag_position(["a"])
-		Com.add_flag_position(["w"])
+		Com.add_flag_position(["s", "u", "w"])
 		Com.add_key_position(["comment"], ArgumentsTypes.All)
 		Com.add_key_position(["link"], ArgumentsTypes.URL)
 		Com.add_key_position(["mark"], ArgumentsTypes.Number)
@@ -195,8 +194,9 @@ class ViewsNoteCLI:
 				#==========================================================================================#
 				# Эмодзи-статус части.
 				MSG_PartStatus = ""
-				if Parts[PartIndex]["watched"]: MSG_PartStatus = " ✅"
-				if "announce" in Parts[PartIndex].keys(): MSG_PartStatus = " ℹ️"
+				if "watched" in Parts[PartIndex].keys(): MSG_PartStatus = " ✅"
+				if "announced" in Parts[PartIndex].keys(): MSG_PartStatus = " ℹ️"
+				if "skipped" in Parts[PartIndex].keys(): MSG_PartStatus = " 🚫"
 				# Название части.
 				MSG_Name = " " + Parts[PartIndex]["name"] if "name" in Parts[PartIndex].keys() and Parts[PartIndex]["name"] else ""
 				# Номер.
@@ -213,6 +213,7 @@ class ViewsNoteCLI:
 				# Установка цветов.
 				if Options["colorize"] and "✅" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Green)
 				if Options["colorize"] and "ℹ️" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Cyan)
+				if Options["colorize"] and "🚫" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Blue)
 
 				# Если часть многосерийная.
 				if "series" in Parts[PartIndex].keys():
@@ -238,7 +239,7 @@ class ViewsNoteCLI:
 					# Вывод в консоль: данные части.
 					StyledPrinter(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}{MSG_MarkIndicator}", styles = TextColor)
 					# Если в части больше одной серии, вывести в консоль прогресс просмотра.
-					if not Options["hide_single_series"] or Options["hide_single_series"] and MSG_Series > 1: StyledPrinter(f"    {MSG_Indent}       {MSG_Mark}{MSG_Series} series{MSG_Progress}", styles = TextColor)
+					if not Options["hide_single_series"] or Options["hide_single_series"] and MSG_Series and MSG_Series > 1: StyledPrinter(f"    {MSG_Indent}       {MSG_Mark}{MSG_Series} series{MSG_Progress}", styles = TextColor)
 
 				else:
 					# Вывод в консоль: данные части.
@@ -301,18 +302,24 @@ class ViewsNoteCLI:
 			# Дополнительные данные.
 			Data = dict()
 			# Парсинг дополнительных значений.
-			if "a" in command_data.flags: Data["announce"] = True
+			if "a" in command_data.flags: Data["announced"] = True
 			if "w" in command_data.flags:
 				Data["watched"] = True
-				Data["announce"] = "*"
+				Data["announced"] = "*"
+				Data["skipped"] = "*"
+			if "s" in command_data.flags:
+				Data["watched"] = "*"
+				Data["announced"] = "*"
+				Data["skipped"] = True
 			if "u" in command_data.flags:
-				Data["watched"] = False
-				Data["announce"] = "*"
+				Data["watched"] = "*"
+				Data["announced"] = "*"
+				Data["skipped"] = "*"
 			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
 			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
 			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
-			if "number" in command_data.keys: Data["number"] = ValueToInt(command_data.values["number"])
-			if "series" in command_data.keys: Data["series"] = ValueToInt(command_data.values["series"])
+			if "number" in command_data.keys: Data["number"] = command_data.values["number"]
+			if "series" in command_data.keys: Data["series"] = command_data.values["series"]
 			# Редактирование части.
 			Status = self.__Note.edit_part(int(command_data.arguments[0]), Data)
 			# Обработка статуса.
@@ -353,15 +360,24 @@ class ViewsNoteCLI:
 			# Дополнительные данные.
 			Data = dict()
 			# Парсинг дополнительных значений.
-			if "a" in command_data.flags: Data["announce"] = True
+			if "a" in command_data.flags: Data["announced"] = True
 			if "w" in command_data.flags:
 				Data["watched"] = True
-				Data["announce"] = "*"
+				Data["announced"] = "*"
+				Data["skipped"] = "*"
+			if "s" in command_data.flags:
+				Data["watched"] = "*"
+				Data["announced"] = "*"
+				Data["skipped"] = True
+			if "u" in command_data.flags:
+				Data["watched"] = "*"
+				Data["announced"] = "*"
+				Data["skipped"] = "*"
 			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
 			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
 			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
-			if "number" in command_data.keys: Data["number"] = ValueToInt(command_data.values["number"])
-			if "series" in command_data.keys: Data["series"] = ValueToInt(command_data.values["series"])
+			if "number" in command_data.keys: Data["number"] = command_data.values["number"]
+			if "series" in command_data.keys: Data["series"] = command_data.values["series"]
 			# Добавление части.
 			Status = self.__Note.add_part(command_data.arguments[0], Data)
 			# Обработка статуса.
@@ -491,6 +507,7 @@ class ViewsTableCLI:
 		# Создание команды: list.
 		Com = Command("list")
 		Com.add_key_position(["group"], ArgumentsTypes.Number)
+		Com.add_key_position(["sort"], ArgumentsTypes.Text)
 		CommandsList.append(Com)
 
 		# Создание команды: new.
@@ -537,11 +554,11 @@ class ViewsTableCLI:
 
 		# Обработка команды: list.
 		if command_data.name == "list":
-			# Получение списка записей.
-			Notes = self.__Table.notes
+			# Список отображаемых записей.
+			Notes = list()
 			
 			# Если записи существуют.
-			if len(Notes) > 0:
+			if self.__Table.notes:
 				# Табличное содержимое.
 				Content = {
 					"ID": [],
@@ -555,47 +572,31 @@ class ViewsTableCLI:
 				if "group" in command_data.keys:
 
 					# Для каждой записи.
-					for Note in Notes:
+					for Note in self.__Table.notes:
+						# Если запись принадлежит к искомой группе, добавить её в список вывода.
+						if Note.group_id == int(command_data.values["group"]): Notes.append(Note)
 
-						# Если запись принадлежит к искомой группе.
-						if Note.group_id == int(command_data.values["group"]):
-							# Получение данных.
-							Name = Note.name if Note.name else ""
-							GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
-							if GroupName == "@None": GroupName = ""
-							Status = Note.status
-							# Выделение статусов цветом.
-							if Status == "announce": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
-							if Status == "watching": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
-							if Status == "complete": Status = TextStyler(Status, text_color = Styles.Colors.Green)
-							if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
-							# Заполнение колонок.
-							Content["ID"].append(Note.id)
-							Content["Status"].append(Status)
-							Content["Name"].append(Name)
-							Content["Estimation"].append(Note.estimation if Note.estimation else "")
-							Content["Group"].append(GroupName)
-
-				else:
+				else: Notes = self.__Table.notes
 				
-					# Для каждой записи.
-					for Note in Notes:
-						# Получение данных.
-						Name = Note.name if Note.name else ""
-						GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
-						if GroupName == "@None": GroupName = ""
-						Status = Note.status
-						# Выделение статусов цветом.
-						if Status == "announce": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
-						if Status == "watching": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
-						if Status == "complete": Status = TextStyler(Status, text_color = Styles.Colors.Green)
-						if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
-						# Заполнение колонок.
-						Content["ID"].append(Note.id)
-						Content["Status"].append(Status)
-						Content["Name"].append(Name)
-						Content["Estimation"].append(Note.estimation if Note.estimation else "")
-						Content["Group"].append(GroupName)
+				# Для каждой записи.
+				for Note in Notes:
+					# Получение данных.
+					Name = Note.name if Note.name else ""
+					GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
+					if GroupName == "@None": GroupName = ""
+					Status = Note.status
+					# Выделение статусов цветом.
+					if Status == "announced": Status = TextStyler(Status, text_color = Styles.Colors.Purple)
+					if Status == "planned": Status = TextStyler(Status, text_color = Styles.Colors.Cyan)
+					if Status == "watching": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
+					if Status == "completed": Status = TextStyler(Status, text_color = Styles.Colors.Green)
+					if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
+					# Заполнение колонок.
+					Content["ID"].append(Note.id)
+					Content["Status"].append(Status)
+					Content["Name"].append(Name)
+					Content["Estimation"].append(Note.estimation if Note.estimation else "")
+					Content["Group"].append(GroupName)
 
 				# Буфер проверки значения.
 				ContentBuffer = list(Content["Group"])
@@ -672,8 +673,9 @@ class ViewsNote:
 		Statuses = {
 			"announced": "ℹ️",
 			"watching": "▶️",
-			"complete": "✅",
+			"completed": "✅",
 			"dropped": "⛔",
+			"planned": "🗓️",
 			None: ""
 		}
 
@@ -734,29 +736,37 @@ class ViewsNote:
 			# Для каждой части.
 			for Part in self.parts:
 
-				# Если есть серии.
-				if "series" in Part.keys() and Part["series"] != None:
-					# Подсчёт серий.
-					MaxProgress += Part["series"]
+				# Если часть не анонсирована и не пропущена.
+				if "announced" not in Part.keys() and "skipped" not in Part.keys():
 
-				else:
-					# Инкремент.
-					MaxProgress += 1
+					# Если есть серии.
+					if "series" in Part.keys() and Part["series"] != None:
+						# Подсчёт серий.
+						MaxProgress += Part["series"]
+
+					else:
+						# Инкремент.
+						MaxProgress += 1
 
 			# Для каждой части.
 			for Part in self.parts:
 
-				# Если часть просмотрена и есть серии.
-				if Part["watched"] and "series" in Part.keys() and Part["series"] != None:
-					# Подсчёт серий.
-					CurrentProgress += Part["series"] if "mark" not in Part.keys() else Part["mark"]
+				# Если часть не анонсирована и не пропущена.
+				if "announced" not in Part.keys() and "skipped" not in Part.keys():
 
-				elif Part["watched"]:
-					# Инкремент.
-					CurrentProgress += 1
+					# Если часть просмотрена и есть серии.
+					if "watched" in Part.keys() and "series" in Part.keys() and Part["series"] != None:
+						# Подсчёт серий.
+						CurrentProgress += Part["series"] if "mark" not in Part.keys() else Part["mark"]
+
+					elif "watched" in Part.keys():
+						# Инкремент.
+						CurrentProgress += 1
 
 			# Подсчёт прогресса.
-			Progress = int(CurrentProgress / MaxProgress * 100)
+			Progress = round(float(CurrentProgress / MaxProgress * 100), 1)
+			# Если можно округлить до целого числа, выполнить округление.
+			if str(Progress).endswith(".0"): Progress = int(Progress)
 
 		return Progress
 
@@ -786,22 +796,19 @@ class ViewsNote:
 		if part_type in ["season"]: return {
 			"type": part_type,
 			"number": None,
-			"series": None,
-			"watched": False
+			"series": None
 		}
 
 		# Типы: фильм.
 		if part_type in ["film", "special"]: return {
 			"type": part_type,
-			"name": None,
-			"watched": False
+			"name": None
 		}
 
 		# Типы: ONA, OVA, специальные выпуски.
 		if part_type in ["ONA", "OVA", "specials"]: return {
 			"type": part_type,
-			"series": None,
-			"watched": False
+			"series": None
 		}
 
 	def __ModifyPart(self, part: dict, data: dict) -> dict:
@@ -811,32 +818,26 @@ class ViewsNote:
 			data – словарь данных для подстановки в часть.
 		"""
 		
-		# Для каждого значения из переданных данных.
+		# Для каждого свойства части из переданных данных.
 		for Key in data.keys():
 
-			# Если ключ в списке опциональных.
-			if Key in ["announce", "comment", "link", "name", "number"]:
+			# Если свойство части нужно удалить и такое свойство есть.
+			if data[Key] == "*" and Key in part.keys():
+				# Удаление свойства.
+				del part[Key]
 
-				# Если значение не удаляется.
-				if data[Key] != "*":
-					# Добавление нового значения.
-					part[Key] = data[Key]
-
-				# Если опциональное значение определено.
-				elif Key in part.keys():
-					# Удаление опционального значения.
-					del part[Key]
-
-			# Если ключ удаляет закладку.
-			elif Key == "watched":
-				# Если просмотрено, удалить закладку.
-				if data["watched"] and "mark" in part.keys(): del part["mark"]
-				# Обновление статуса просмотра.
+			# Если передано новое значение свойства.
+			elif data[Key] != "*":
+				# Обновление свойства.
 				part[Key] = data[Key]
 
-			else:
-				# Если ключ определён в части, перезаписать данные.
-				if Key in part.keys(): part[Key] = data[Key]
+			#---> Обработка частных случаев.
+			#==========================================================================================#
+
+			# Если часть просмотрена и имеет закладку, удалить закладку.
+			if "watched" in part.keys() and "mark" in part.keys(): del part["mark"]
+			# Если пропущена и имеет закладку, удалить закладку.
+			if "skipped" in part.keys() and "mark" in part.keys(): del part["mark"]
 
 		return part
 
@@ -849,8 +850,21 @@ class ViewsNote:
 			Progress = self.progress
 			# Обработка статусов.
 			if Progress == None: self.__Data["status"] = None
-			elif Progress == 100: self.__Data["status"] = "complete"
+			elif Progress == 100: self.__Data["status"] = "completed"
 			else: self.__Data["status"] = "watching"
+
+		# Если просмотр завершён.
+		if self.__Data["status"] == "completed":
+
+			# Для каждой части.
+			for Part in self.__Data["parts"]:
+
+				# Если часть является анонсированной.
+				if "announced" in Part.keys():
+					# Изменение статуса записи.
+					self.__Data["status"] = "announced"
+					# Остановка цикла.
+					break
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -1125,7 +1139,7 @@ class ViewsNote:
 		try:
 
 			# Если оценка в допустимом диапазоне.
-			if estimation <= self.__Table.options["max-estimation"]:
+			if estimation <= self.__Table.options["max_estimation"]:
 				# Выставление оценки.
 				self.__Data["estimation"] = estimation
 				# Сохранение изменений.
@@ -1230,9 +1244,9 @@ class ViewsNote:
 			if "series" in self.__Data["parts"][part_index].keys():
 
 				# Если закладка установлена на просмотренную часть.
-				if self.__Data["parts"][part_index]["watched"]:
+				if "watched" in self.__Data["parts"][part_index].keys():
 					# Снятие статуса полностью просмотренного и установка закладки.
-					self.__Data["parts"][part_index]["watched"] = False
+					del self.__Data["parts"][part_index]["watched"]
 					self.__Data["parts"][part_index]["mark"] = mark
 					# Обновление статуса просмотра.
 					self.__UpdateStatus()
@@ -1240,6 +1254,18 @@ class ViewsNote:
 					self.save()
 					# Изменение статуса.
 					Status = ExecutionStatus(2, "Part marked as unseen.")
+
+				# Если закладка установлена на пропущенную часть.
+				elif "skipped" in self.__Data["parts"][part_index].keys():
+					# Снятие статуса пропуска и установка закладки.
+					del self.__Data["parts"][part_index]["skipped"]
+					self.__Data["parts"][part_index]["mark"] = mark
+					# Обновление статуса просмотра.
+					self.__UpdateStatus()
+					# Сохранение изменений.
+					self.save()
+					# Изменение статуса.
+					Status = ExecutionStatus(3, "Part marked as unskipped.")
 
 				else:
 
@@ -1310,15 +1336,19 @@ class ViewsNote:
 		Status = ExecutionStatus(0)
 		# Определения статусов.
 		Statuses = {
+			"a": "announced",
 			"w": "watching",
-			"c": "complete",
+			"c": "completed",
 			"d": "dropped",
+			"p": "planned",
 			"*": None
 		}
 
 		try:
+			# Если указан сокращённый статус, преобразовать его в полный.
+			if status in Statuses.keys(): status = Statuses[status]
 			# Установка статуса.
-			self.__Data["status"] = Statuses[status]
+			self.__Data["status"] = status
 			# Сохранение изменений.
 			self.save()
 
@@ -1386,7 +1416,7 @@ class ViewsTable:
 	def max_estimation(self) -> int:
 		"""Максимальная допустимая оценка."""
 
-		return self.__Options["max-estimation"]
+		return self.__Options["max_estimation"]
 
 	@property
 	def name(self) -> str:
@@ -1434,7 +1464,7 @@ class ViewsTable:
 		NewID = None
 
 		# Если включено использование освободившихся ID.
-		if self.__Options["recycle-id"]:
+		if self.__Options["recycle_id"]:
 			# Список ID.
 			ListID = container.keys()
 
@@ -1535,8 +1565,8 @@ class ViewsTable:
 		self.__Options = {
 			"version": 1,
 			"type": self.__Type,
-			"recycle-id": False,
-			"max-estimation": 10,
+			"recycle_id": False,
+			"max_estimation": 10,
 			"viewer": {
 				"links": True,
 				"comments": True,
