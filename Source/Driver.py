@@ -1,21 +1,22 @@
-from Source.CLI.Templates import Error, ExecutionStatus
-from Source.Tables.Views import ViewsTable
+from Source.Tables.Anime import AnimeTable
+from Source.CLI.Templates import Error
 
-from dublib.Methods import ReadJSON, WriteJSON
+from dublib.Engine.Bus import ExecutionStatus, ExecutionError
+from dublib.Methods.JSON import ReadJSON, WriteJSON
 
 import shutil
 import os
 
 # Определения типов таблиц.
 TablesTypes = {
-	"views": ViewsTable
+	AnimeTable.type: AnimeTable
 }
 
 class Driver:
 	"""Менеджер таблиц."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
+	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
@@ -79,7 +80,7 @@ class Driver:
 			mount – указывает, следует ли монтировать директорию хранилища.
 		"""
 		
-		#---> Генерация динамичкских свойств.
+		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		# Директория хранения таблиц.
 		self.__StorageDirectory = None
@@ -107,10 +108,12 @@ class Driver:
 		try:
 			# Создание таблицы.
 			TablesTypes[table_type](self.__StorageDirectory, name)
+			# Установка сообщения.
+			Status.message = "Created."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -129,7 +132,7 @@ class Driver:
 
 		except FileExistsError:
 			# Изменение статуса.
-			Manifest = ExecutionStatus(-1, "unknown_error")
+			Manifest = ExecutionError(-1, "unknown_error")
 
 		return Manifest	
 
@@ -155,37 +158,44 @@ class Driver:
 				self.__Session["storage-directory"] = storage_dir
 				# Сохранение файла сессии.
 				self.__SaveSession()
+				# Установка сообщения.
+				Status.message = f"Mounted: \"{storage_dir}\"."
 
 			else:
 				# Изменение статуса.
-				Status = ExecutionStatus(-2, "incorrect_storage_path")
+				Status = ExecutionError(-2, "incorrect_storage_path")
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
-	def open_table(self, name: str) -> object | ExecutionStatus:
+	def open_table(self, name: str) -> ExecutionStatus:
 		"""
 		Открывает таблицу. Возвращает объектное представление таблицы.
 			name – название таблицы.
 		"""
 
-		# Таблица.
-		Table = None
-
+		# Статус выполнения.
+		Status = ExecutionError(-1, "uknown_error")
+		
 		try:
-			# Манифест таблицы.
-			Manifest = self.get_manifest(name)
-			# Создание таблицы.
-			Table = TablesTypes[Manifest["type"]](self.__StorageDirectory, name, autocreation = False)
 
-		except FileExistsError:
-			# Изменение статуса.
-			Table = ExecutionStatus(-1, "unknown_error")
+			# Если директория таблицы существует.
+			if os.path.exists(f"{self.__StorageDirectory}/{name}"):
+				# Манифест таблицы.
+				Manifest = self.get_manifest(name)
+				# Создание таблицы.
+				Table = TablesTypes[Manifest["type"]](self.__StorageDirectory, name, autocreation = False)
+				# Статус выполнения.
+				Status = ExecutionStatus(0, value = Table)
 
-		return Table
+			else: Status = ExecutionError(-2, "bad_path")
+
+		except: pass
+
+		return Status
 
 	def remove_table(self, name: str) -> ExecutionStatus:
 		"""

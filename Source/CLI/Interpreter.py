@@ -1,9 +1,11 @@
-from Source.CLI.Templates import Columns, Confirmation, Error, ExecutionStatus, Warning
+from Source.CLI.Templates import Columns, Error
 from Source.Driver import Driver
 
-from dublib.Terminalyzer import ArgumentsTypes, Command, CommandData, Terminalyzer
-from dublib.Exceptions.Terminalyzer import InvalidArgumentType, NotEnoughArguments
-from dublib.StyledPrinter import Styles, TextStyler
+from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData, Terminalyzer
+from dublib.CLI.StyledPrinter import Styles, TextStyler
+from dublib.CLI.Templates import PrintExecutionStatus
+from dublib.CLI.Templates import Confirmation
+from dublib.Exceptions.CLI import *
 
 import readline
 import shlex
@@ -22,27 +24,27 @@ class Interpreter:
 		CommandsList = list()
 
 		# Создание команды: create.
-		Com = Command("create")
-		Com.add_argument(ArgumentsTypes.All, important = True)
-		Com.add_key_position(["type"], ArgumentsTypes.All, important = True)
+		Com = Command("create", "Create new table.")
+		Com.add_argument(description = "Table name.", important = True)
+		Com.add_key("type", description = "Type of table.", important = True)
 		CommandsList.append(Com)
 
 		# Создание команды: exit.
-		Com = Command("exit")
+		Com = Command("exit", "Exit from OtakuBD.")
 		CommandsList.append(Com)
 
 		# Создание команды: list.
-		Com = Command("list")
+		Com = Command("list", "Print list op tables.")
 		CommandsList.append(Com)
 
 		# Создание команды: mount.
-		Com = Command("mount")
-		Com.add_argument(ArgumentsTypes.ValidPath)
+		Com = Command("mount", "Select storage directory.")
+		Com.add_argument(description = "Path to storage directory.")
 		CommandsList.append(Com)
 
 		# Создание команды: open.
-		Com = Command("open")
-		Com.add_argument(ArgumentsTypes.All, important = True)
+		Com = Command("open", "Open table.")
+		Com.add_argument(description = "Table name.", important = True)
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -54,22 +56,23 @@ class Interpreter:
 		CommandsList = list()
 
 		# Создание команды: close.
-		Com = Command("close")
+		Com = Command("close", "Close table.")
 		CommandsList.append(Com)
 
 		# Создание команды: open.
-		Com = Command("open")
-		Com.add_argument(ArgumentsTypes.Number, important = True, layout_index = 1)
-		Com.add_flag_position(["f"], layout_index = 1)
+		Com = Command("open", "Open note.")
+		ComPos = Com.create_position("NOTE", "Note identificator.", important = True)
+		ComPos.add_argument(ParametersTypes.Number, description = "Note ID.")
+		ComPos.add_flag("last", description = "Open last created note.")
 		CommandsList.append(Com)
 
 		# Создание команды: remove.
-		Com = Command("remove")
+		Com = Command("remove", "Remove table.")
 		CommandsList.append(Com)
 
 		# Создание команды: rename.
-		Com = Command("rename")
-		Com.add_argument(ArgumentsTypes.All, important = True)
+		Com = Command("rename", "Rename table.")
+		Com.add_argument(description = "Table name.", important = True)
 		CommandsList.append(Com)
 
 		# Добавление команд из таблицы.
@@ -84,11 +87,11 @@ class Interpreter:
 		CommandsList = list()
 
 		# Создание команды: close.
-		Com = Command("close")
+		Com = Command("close", "Close note.")
 		CommandsList.append(Com)
 
 		# Создание команды: remove.
-		Com = Command("remove")
+		Com = Command("remove", "Remove note.")
 		CommandsList.append(Com)
 
 		# Добавление команд из записи.
@@ -100,19 +103,19 @@ class Interpreter:
 	# >>>>> ОБРАБОТЧИКИ УРОВНЕЙ КОМАНД <<<<< #
 	#==========================================================================================#
 
-	def __ProcessManagerCommands(self, command_data: CommandData):
+	def __ProcessManagerCommands(self, command_data: ParsedCommandData):
 		"""
 		Обрабатывает команды уровня: manager.
 			command_data – данные команды.
 		"""
+
+		# Статус обработки команды.
+		Status = None
 		
 		# Обработка команды: create.
 		if command_data.name == "create":
 			# Создание таблицы.
-			Status = self.__Driver.create_table(command_data.arguments[0], command_data.values["type"])
-			# Обработка статуса.
-			if Status.code == 0: print("Created.")
-			if Status.code != 0: Error(Status.message)
+			Status = self.__Driver.create_table(command_data.arguments[0], command_data.get_key_value("type"))
 
 		# Обработка команды: exit.
 		if command_data.name == "exit":
@@ -153,30 +156,29 @@ class Interpreter:
 			StorageDir = command_data.arguments[0] if len(command_data.arguments) else "Data"
 			# Монтирование директории хранилища.
 			Status = self.__Driver.mount(StorageDir)
-			# Обработка статуса.
-			if Status.code == 0: print(f"Mounted: \"{self.__Driver.storage_directory}\"." )
-			if Status.code < 0: Error(Status.message)
-
+			
 		# Обработка команды: open.
 		if command_data.name == "open":
 			# Открытие таблицы.
-			Table = self.__Driver.open_table(command_data.arguments[0])
+			Status = self.__Driver.open_table(command_data.arguments[0])
 
-			# Если не получен декскриптор таблицы.
-			if type(Table) == ExecutionStatus:
-				# Вывод в консоль: ошибка.
-				Error(Table.message)
-
-			else:
+			# Если открытие успешно.
+			if Status.code == 0:
 				# Переход на новый уровень интерпретации.
-				self.__Table = Table
-				self.__InterpreterLevel = "table"
+				self.__Table = Status.value
+				self.__InterpreterLevel = "table"		
 
-	def __ProcessTableCommands(self, command_data: CommandData):
+		# Вывод статуса.
+		PrintExecutionStatus(Status)
+
+	def __ProcessTableCommands(self, command_data: ParsedCommandData):
 		"""
 		Обрабатывает команды уровня: table.
 			command_data – данные команды.
 		"""
+
+		# Статус обработки команды.
+		Status = None
 
 		# Обработка команды: close.
 		if command_data.name == "close":
@@ -187,16 +189,12 @@ class Interpreter:
 		# Обработка команды: open.
 		elif command_data.name == "open":
 			# Открытие записи.
-			Note = self.__Table.get_note(command_data.arguments[0])
+			Status = self.__Table.get_note(command_data.arguments[0])
 
 			# Если не получен декскриптор таблицы.
-			if type(Note) == ExecutionStatus:
-				# Вывод в консоль: ошибка.
-				Error(Note.message)
-
-			else:
+			if Status.code == 0:
 				# Переход на новый уровень интерпретации.
-				self.__Note = Note
+				self.__Note = Status.value
 				self.__InterpreterLevel = "note"
 
 		# Обработка команды: remove.
@@ -214,27 +212,27 @@ class Interpreter:
 					# Переход на предыдущий уровень интерпретации.
 					self.__Table = None
 					self.__InterpreterLevel = "manager"
-					# Вывод в консоль: таблица удалена.
-					print("Table removed.")
-
-				else: Error(Status.message)
 
 		# Обработка команды: rename.
 		elif command_data.name == "rename":
 			# Переименование таблицы.
 			Status = self.__Table.rename(command_data.arguments[0])
-			# Обработка статуса.
-			if Status.code == 0: print("Table renamed.")
-			if Status.code != 0: Error(Status.message)
 
-		# Обработка команд таблицы.
-		else: self.__Table.cli.execute(command_data)
+		else:
+			# Обработка команд таблицы.
+			Status = self.__Table.cli.execute(command_data)
 
-	def __ProcessNoteCommands(self, command_data: CommandData):
+		# Вывод статуса.
+		PrintExecutionStatus(Status)
+
+	def __ProcessNoteCommands(self, command_data: ParsedCommandData):
 		"""
 		Обрабатывает команды уровня: note.
 			command_data – данные команды.
 		"""
+
+		# Статус обработки команды.
+		Status = None
 
 		# Обработка команды: close.
 		if command_data.name == "close":
@@ -257,13 +255,13 @@ class Interpreter:
 					# Переход на предыдущий уровень интерпретации.
 					self.__Note = None
 					self.__InterpreterLevel = "table"
-					# Вывод в консоль: запись удалена.
-					print("Note removed.")
 
-				else: Error(Status.message)
+		else:
+			# Обработка команд записи.
+			Status = self.__Note.cli.execute(command_data)
 
-		# Обработка команд записи.
-		else: self.__Note.cli.execute(command_data)
+		# Вывод статуса.
+		PrintExecutionStatus(Status)
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -281,7 +279,7 @@ class Interpreter:
 
 		return Selector
 
-	def __ParseCommandData(self, input_line: list[str]) -> CommandData:
+	def __ParseCommandData(self, input_line: list[str]) -> ParsedCommandData:
 		"""
 		Парсит команду на составляющие.
 		"""
@@ -290,18 +288,28 @@ class Interpreter:
 		Command = -1
 
 		try:
+			# Инициализация анализатора.
+			Analyzer = Terminalyzer(input_line)
+			# Включение модуля помощи.
+			Analyzer.enable_help(True)
+			# Отключение записи о важности параметров.
+			Analyzer.help_translation.important_note = ""
 			# Проверка команд уровня интерпретации.
-			Command = Terminalyzer(input_line).check_commands(self.__CommandsGenerators[self.__InterpreterLevel]())
+			Command = Analyzer.check_commands(self.__CommandsGenerators[self.__InterpreterLevel]())
 
-		except NotEnoughArguments:
-			# Вывод в консоль: недостаточно аргументов.
-			Error("not_enough_arguments")
+		except NotEnoughParameters:
+			# Вывод в консоль: недостаточно параметров.
+			Error("not_enough_parameters")
 
-		except InvalidArgumentType as ExceptionData:
+		except InvalidParameterType as ExceptionData:
 			# Получение ожидаемого типа данных.
 			Type = str(ExceptionData).split("\"")[-2]
-			# Вывод в консоль: недостаточно аргументов.
-			Error("invalid_argument_type", Type)
+			# Вывод в консоль: неверный тип параметра.
+			Error("invalid_parameter_type", Type)
+
+		except TooManyParameters:
+			# Вывод в консоль: слишком много параметров.
+			Error("too_many_parameters")
 
 		return Command
 
@@ -312,7 +320,7 @@ class Interpreter:
 	def __init__(self):
 		"""Обработчик интерфейса командной строки."""
 
-		#---> Генерация динамичкских свойств.
+		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		# Менеджер таблиц.
 		self.__Driver = Driver(mount = True)

@@ -1,8 +1,10 @@
-from Source.CLI.Templates import Columns, Confirmation, Error, ExecutionStatus, Warning
+from Source.CLI.Templates import Columns
 
-from dublib.Terminalyzer import ArgumentsTypes, Command, CommandData
-from dublib.StyledPrinter import Styles, StylesGroup, StyledPrinter, TextStyler
-from dublib.Methods import ReadJSON, WriteJSON
+from dublib.CLI.StyledPrinter import Styles, StylesGroup, StyledPrinter, TextStyler
+from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
+from dublib.Engine.Bus import ExecutionError, ExecutionWarning, ExecutionStatus
+from dublib.Methods.JSON import ReadJSON, WriteJSON
+from dublib.CLI.Templates import Confirmation
 
 import os
 
@@ -10,11 +12,11 @@ import os
 # >>>>> ОБРАБОТЧИКИ ВЗАИМОДЕЙСТВИЙ С ТАБЛИЦЕЙ <<<<< #
 #==========================================================================================#
 
-class ViewsNoteCLI:
+class AnimeNoteCLI:
 	"""Обработчик взаимодействий с записью через CLI."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
+	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
@@ -34,86 +36,81 @@ class ViewsNoteCLI:
 		CommandsList = list()
 
 		# Создание команды: delpart.
-		Com = Command("delpart")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
+		Com = Command("delpart", "Remove part.")
+		Com.add_argument(ParametersTypes.Number, description = "Part index.", important = True)
 		CommandsList.append(Com)
 
 		# Создание команды: downpart.
-		Com = Command("downpart")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
+		Com = Command("downpart", "Omit part in list.")
+		Com.add_argument(ParametersTypes.Number, description = "Part index.", important = True)
 		CommandsList.append(Com)
 
 		# Создание команды: editpart.
-		Com = Command("editpart")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
-		Com.add_flag_position(["a"])
-		Com.add_flag_position(["s", "u", "w"])
-		Com.add_key_position(["comment"], ArgumentsTypes.All)
-		Com.add_key_position(["link"], ArgumentsTypes.URL)
-		Com.add_key_position(["mark"], ArgumentsTypes.Number)
-		Com.add_key_position(["name"], ArgumentsTypes.All)
-		Com.add_key_position(["number"], ArgumentsTypes.All)
-		Com.add_key_position(["series"], ArgumentsTypes.Number)
+		Com = Command("editpart", "Edit part.")
+		Com.add_argument(ParametersTypes.Number, description = "Part index.", important = True)
+		Com.add_flag("a", description = "Mark part as announced.")
+		Com.add_flag("s", description = "Mark part as skipped.")
+		Com.add_flag("u", description = "Mark part as unwatched.")
+		Com.add_flag("w", description = "Mark part as watched.")
+		Com.add_key("comment", description = "Add comment to part.")
+		Com.add_key("link", ParametersTypes.URL, description = "Attach link to part.")
+		Com.add_key("name", description = "Set name of part.")
+		Com.add_key("number", description = "Set number of part (not index).")
+		Com.add_key("series", ParametersTypes.Number, description = "Set series count.")
 		CommandsList.append(Com)
 
 		# Создание команды: mark.
-		Com = Command("mark")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
-		Com.add_argument(ArgumentsTypes.Number, important = True)
+		Com = Command("mark", "Set bookmark to series.")
+		Com.add_argument(ParametersTypes.Number, description = "Part index.", important = True)
+		Com.add_argument(ParametersTypes.Number, description = "Bookmark.", important = True)
 		CommandsList.append(Com)
 
 		# Создание команды: meta.
-		Com = Command("meta")
-		Com.add_argument(ArgumentsTypes.All, important = True)
-		Com.add_argument(ArgumentsTypes.All)
-		Com.add_flag_position(["set", "unset"], important = True)
+		Com = Command("meta", "Manage note metainfo fields.")
+		Com.add_argument(ParametersTypes.All, description = "Field name.", important = True)
+		Com.add_argument(ParametersTypes.All, description = "Field value.")
+		Com.add_flag("set", description = "Create new or update exists field.", important = True)
+		Com.add_flag("unset", description = "Remove field.", important = True)
 		CommandsList.append(Com)
 
 		# Создание команды: newpart.
-		Com = Command("newpart")
-		Com.add_argument(ArgumentsTypes.All, important = True)
-		Com.add_flag_position(["a"])
-		Com.add_flag_position(["s", "u", "w"])
-		Com.add_key_position(["comment"], ArgumentsTypes.All)
-		Com.add_key_position(["link"], ArgumentsTypes.URL)
-		Com.add_key_position(["mark"], ArgumentsTypes.Number)
-		Com.add_key_position(["name"], ArgumentsTypes.All)
-		Com.add_key_position(["number"], ArgumentsTypes.All)
-		Com.add_key_position(["series"], ArgumentsTypes.Number)
-		CommandsList.append(Com)
-
-		# Создание команды: reset.
-		Com = Command("reset")
-		Com.add_argument(ArgumentsTypes.All, important = True)
+		Com = Command("newpart", "Create new part.")
+		Com.add_argument(description = "Part type.", important = True)
+		Com.add_flag("a", description = "Mark part as announced.")
+		Com.add_flag("s", description = "Mark part as skipped.")
+		Com.add_flag("u", description = "Mark part as unwatched.")
+		Com.add_flag("w", description = "Mark part as watched.")
+		Com.add_key("comment", description = "Add comment to part.")
+		Com.add_key("link", ParametersTypes.URL, description = "Attach link to part.")
+		Com.add_key("name", description = "Set name of part.")
+		Com.add_key("number", description = "Set number of part (not index).")
+		Com.add_key("series", ParametersTypes.Number, description = "Set series count.")
 		CommandsList.append(Com)
 
 		# Создание команды: set.
-		Com = Command("set")
-		Com.add_key_position(["altname"], ArgumentsTypes.All)
-		Com.add_key_position(["comment"], ArgumentsTypes.All)
-		Com.add_key_position(["estimation"], ArgumentsTypes.Number)
-		Com.add_key_position(["group"], ArgumentsTypes.Number)
-		Com.add_key_position(["name"], ArgumentsTypes.All)
-		Com.add_key_position(["status"], ArgumentsTypes.All)
-		Com.add_key_position(["tag"], ArgumentsTypes.All)
-		CommandsList.append(Com)
-
-		# Создание команды: undrop.
-		Com = Command("undrop")
+		Com = Command("set", "Set note values.")
+		Com.add_key("altname", description = "Alternative name.")
+		Com.add_key("estimation", ParametersTypes.Number, "Note estimation.")
+		Com.add_key("group", ParametersTypes.Number, description = "Group ID.")
+		Com.add_key("name", description = "Note name.")
+		Com.add_key("status", description = "View status.")
+		Com.add_key("tag", description = "Tag.")
 		CommandsList.append(Com)
 
 		# Создание команды: unset.
-		Com = Command("unset")
-		Com.add_key_position(["altname", "tag"], ArgumentsTypes.All, important = True)
+		Com = Command("unset", "Remove alternative names or tags.")
+		ComPos = Com.create_position("TARGET", "Target to remove.", important = True)
+		ComPos.add_key("altname", ParametersTypes.Number, "Index of alternative name.")
+		ComPos.add_key("tag", description = "Tag.")
 		CommandsList.append(Com)
 
 		# Создание команды: uppart.
-		Com = Command("uppart")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
+		Com = Command("uppart", "Raise part.")
+		Com.add_argument(ParametersTypes.Number, "Part index.", important = True)
 		CommandsList.append(Com)
 
 		# Создание команды: view.
-		Com = Command("view")
+		Com = Command("view", "View note in console.")
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -253,14 +250,14 @@ class ViewsNoteCLI:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, table: "ViewsTable", note: "ViewsNote"):
+	def __init__(self, table: "AnimeTable", note: "AnimeNote"):
 		"""
 		Обработчик взаимодействий с таблицей через CLI.
 			table – объектное представление таблицы;
 			note – объектное представление записи.
 		"""
 
-		#---> Генерация динамичкских свойств.
+		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		# Объектное представление таблицы.
 		self.__Table = table
@@ -269,11 +266,14 @@ class ViewsNoteCLI:
 		# Список дескрипторов команд.
 		self.__Commands = self.__GenerateCommands()
 
-	def execute(self, command_data: CommandData) -> ExecutionStatus:
+	def execute(self, command_data: ParsedCommandData) -> ExecutionStatus:
 		"""
 		Обрабатывает команду.
 			command_data – описательная структура команды.
 		"""
+
+		# Статус обработки команды.
+		Status = None
 
 		# Обработка команды: delpart.
 		if command_data.name == "delpart":
@@ -284,18 +284,11 @@ class ViewsNoteCLI:
 			if Response:
 				# Удаление части.
 				Status = self.__Note.delete_part(int(command_data.arguments[0]))
-				# Обработка статуса.
-				if Status.code == 0: print("Part deleted.")
-				if Status.code != 0: Error(Status.message)
 
 		# Обработка команды: downpart.
 		if command_data.name == "downpart":
 			# Поднятие части.
 			Status = self.__Note.down_part(int(command_data.arguments[0]))
-			# Обработка статуса.
-			if Status.code == 0: print("Part downed.")
-			if Status.code == 1: Warning(Status.message)
-			if Status.code < 0: Error(Status.message)
 
 		# Обработка команды: editpart.
 		if command_data.name == "editpart":
@@ -315,32 +308,24 @@ class ViewsNoteCLI:
 				Data["watched"] = "*"
 				Data["announced"] = "*"
 				Data["skipped"] = "*"
-			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
-			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
-			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
-			if "number" in command_data.keys: Data["number"] = command_data.values["number"]
-			if "series" in command_data.keys: Data["series"] = command_data.values["series"]
+			if command_data.check_key("link"): Data["link"] = command_data.get_key_value("link")
+			if command_data.check_key("comment"): Data["comment"] = command_data.get_key_value("comment")
+			if command_data.check_key("name"): Data["name"] = command_data.get_key_value("name")
+			if command_data.check_key("number"): Data["number"] = command_data.get_key_value("number")
+			if command_data.check_key("series"): Data["series"] = command_data.get_key_value("series")
 			# Редактирование части.
 			Status = self.__Note.edit_part(int(command_data.arguments[0]), Data)
-			# Обработка статуса.
-			if Status.code == 0: print("Part edited.")
-			if Status.code != 0: Error(Status.message)
 
 		# Обработка команды: mark.
 		if command_data.name == "mark":
 			# Добавление закладки.
 			Status = self.__Note.set_mark(int(command_data.arguments[0]), int(command_data.arguments[1]))
-			# Обработка статуса.
-			if Status.code in [1, 2, 3]: print(Status.message)
-			if Status.code == 0: print("Mark updated.")
-			if Status.code == -1: Error(Status.message)
-			if Status.code == -2: Warning(Status.message)
 
 		# Обработка команды: meta.
 		if command_data.name == "meta":
 			# Статус выполнения.
 			Status = ExecutionStatus(0)
-
+			
 			# Если метаданные добавляются.
 			if "set" in command_data.flags:
 				# Установка метаданных.
@@ -350,10 +335,6 @@ class ViewsNoteCLI:
 			if "unset" in command_data.flags:
 				# Удаление метаданных.
 				Status = self.__Note.delete_metainfo(command_data.arguments[0])
-
-			# Обработка статуса.
-			if Status.code == 0: print("Metainfo updated.")
-			if Status.code != 0: Error(Status.message)
 
 		# Обработка команды: newpart.
 		if command_data.name == "newpart":
@@ -373,114 +354,77 @@ class ViewsNoteCLI:
 				Data["watched"] = "*"
 				Data["announced"] = "*"
 				Data["skipped"] = "*"
-			if "comment" in command_data.keys: Data["comment"] = command_data.values["comment"]
-			if "link" in command_data.keys: Data["link"] = command_data.values["link"]
-			if "name" in command_data.keys: Data["name"] = command_data.values["name"]
-			if "number" in command_data.keys: Data["number"] = command_data.values["number"]
-			if "series" in command_data.keys: Data["series"] = command_data.values["series"]
+			if "comment" in command_data.keys.keys(): Data["comment"] = command_data.keys["comment"]
+			if "link" in command_data.keys.keys(): Data["link"] = command_data.keys["link"]
+			if "name" in command_data.keys.keys(): Data["name"] = command_data.keys["name"]
+			if "number" in command_data.keys.keys(): Data["number"] = command_data.keys["number"]
+			if "series" in command_data.keys.keys(): Data["series"] = command_data.keys["series"]
 			# Добавление части.
 			Status = self.__Note.add_part(command_data.arguments[0], Data)
-			# Обработка статуса.
-			if Status.code == 0: print("Part created.")
-			if Status.code != 0: Error(Status.message)
-
-		# Обработка команды: reset.
-		if command_data.name == "reset":
-			# Сброс значения.
-			Status = self.__Note.reset(command_data.arguments[0])
-			# Обработка статуса.
-			if Status.code == 0: print("Value set to default.")
-			if Status.code != 0: Error(Status.message)
 
 		# Обработка команды: set.
 		if command_data.name == "set":
 
 			# Если задаётся альтернативное название.
-			if "altname" in command_data.keys:
+			if "altname" in command_data.keys.keys():
 				# Обновление названия.
-				Status = self.__Note.add_another_name(command_data.values["altname"])
-				# Обработка статуса.
-				if Status.code == 0: print("Another name added.")
-				if Status.code != 0: Error(Status.message)
+				Status = self.__Note.add_another_name(command_data.keys["altname"])
 
 			# Если задаётся группа.
-			if "group" in command_data.keys:
+			if "group" in command_data.keys.keys():
 				# Установка принадлежности к группе.
-				Status = self.__Note.set_group(int(command_data.values["group"]))
-				# Обработка статуса.
-				if Status.code == 0: print("Note has been added to @" + command_data.values["group"] + " group.")
-				if Status.code != 0: Error(Status.message)
+				Status = self.__Note.set_group(int(command_data.keys["group"]))
 
 			# Если задаётся оценка.
-			if "estimation" in command_data.keys:
+			if "estimation" in command_data.keys.keys():
 				# Обновление оценки.
-				Status = self.__Note.estimate(int(command_data.values["estimation"]))
-				# Обработка статуса.
-				if Status.code == 0: print("Estimation updated.")
-				if Status.code != 0: Error(Status.message)
+				Status = self.__Note.estimate(int(command_data.keys["estimation"]))
 
 			# Если задаётся название.
-			if "name" in command_data.keys:
+			if "name" in command_data.keys.keys():
 				# Обновление названия.
-				Status = self.__Note.rename(command_data.values["name"])
-				# Обработка статуса.
-				if Status.code == 0: print("Name updated.")
-				if Status.code != 0: Error(Status.message)
+				Status = self.__Note.rename(command_data.keys["name"])
 
 			# Если задаётся статус.
-			if "status" in command_data.keys:
+			if "status" in command_data.keys.keys():
 				# Установка статуса.
-				Status = self.__Note.set_status(command_data.values["status"])
-				# Обработка статуса.
-				if Status.code == 0: print("Status updated.")
-				if Status.code != 0: Error(Status.message)
+				Status = self.__Note.set_status(command_data.keys["status"])
 
 			# Если задаётся тег.
-			if "tag" in command_data.keys:
+			if "tag" in command_data.keys.keys():
 				# Обновление названия.
-				Status = self.__Note.add_tag(command_data.values["tag"])
-				# Обработка статуса.
-				if Status.code == 0: print("Tag added.")
-				if Status.code != 0: Error(Status.message)
+				Status = self.__Note.add_tag(command_data.keys["tag"])
 
 		# Обработка команды: unset.
 		if command_data.name == "unset":
 
 			# Если удаляется альтернативное название.
-			if "altname" in command_data.keys:
+			if "altname" in command_data.keys.keys():
 				# Удаление альтернативного названия.
-				Status = self.__Note.delete_another_name(command_data.values["altname"])
-				# Обработка статуса.
-				if Status.code == 0: print("Another name removed.")
-				if Status.code != 0: Error(Status.message)
+				Status = self.__Note.delete_another_name(command_data.keys["altname"])
 
 			# Если удаляется тег.
-			if "tag" in command_data.keys:
+			if "tag" in command_data.keys.keys():
 				# Удаление тега.
-				Status = self.__Note.delete_tag(command_data.values["tag"])
-				# Обработка статуса.
-				if Status.code == 0: print("Tag removed.")
-				if Status.code != 0: Error(Status.message)
+				Status = self.__Note.delete_tag(command_data.keys["tag"])
 
 		# Обработка команды: uppart.
 		if command_data.name == "uppart":
 			# Поднятие части.
 			Status = self.__Note.up_part(int(command_data.arguments[0]))
-			# Обработка статуса.
-			if Status.code == 0: print("Part upped.")
-			if Status.code == 1: Warning(Status.message)
-			if Status.code < 0: Error(Status.message)
 
 		# Обработка команды: view.
 		if command_data.name == "view":
 			# Просмотр записи.
 			self.__View()
 
-class ViewsTableCLI:
+		return Status
+
+class AnimeTableCLI:
 	"""Обработчик взаимодействий с таблицей через CLI."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
+	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
@@ -500,83 +444,91 @@ class ViewsTableCLI:
 		CommandsList = list()
 
 		# Создание команды: delgroup.
-		Com = Command("delgroup")
-		Com.add_argument(ArgumentsTypes.Number, important = True)
+		Com = Command("delgroup", "Remove group.")
+		Com.add_argument(ParametersTypes.Number, "Group ID.", important = True)
 		CommandsList.append(Com)
 
 		# Создание команды: list.
-		Com = Command("list")
-		Com.add_key_position(["group"], ArgumentsTypes.Number)
-		Com.add_key_position(["sort"], ArgumentsTypes.Text)
+		Com = Command("list", "Show list of notes.")
+		Com.add_flag("r", "Reverse list.")
+		Com.add_key("group", ParametersTypes.Number, "Group ID.")
+		Com.add_key("sort", ParametersTypes.Text, "Column name.")
+		Com.add_key("search", description = "Part of note name.")
 		CommandsList.append(Com)
 
 		# Создание команды: new.
-		Com = Command("new")
+		Com = Command("new", "Create new note.")
 		CommandsList.append(Com)
 
 		# Создание команды: newgroup.
-		Com = Command("newgroup")
-		Com.add_argument(ArgumentsTypes.All, important = True)
+		Com = Command("newgroup", "Create new group.")
+		Com.add_argument(ParametersTypes.All, "Group name.", important = True)
+		CommandsList.append(Com)
+
+		# Создание команды: search.
+		Com = Command("search", "Search notes by part of name.")
+		Com.add_argument(description = "Search query.", important = True)
 		CommandsList.append(Com)
 
 		return CommandsList
 
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, table: "ViewsTable"):
-		"""
-		Обработчик взаимодействий с таблицей через CLI.
-			table – объектное представление таблицы.
-		"""
-
-		#---> Генерация динамичкских свойств.
-		#==========================================================================================#
-		# Объектное представление таблицы.
-		self.__Table = table
-		# Список дескрипторов команд.
-		self.__Commands = self.__GenerateCommands()
-
-	def execute(self, command_data: CommandData) -> ExecutionStatus:
-		"""
-		Обрабатывает команду.
-			command_data – описательная структура команды.
-		"""
-
-		# Обработка команды: delgroup.
-		if command_data.name == "delgroup":
-			# Создание новой группы.
-			Status = self.__Table.remove_group(command_data.arguments[0])
-			# Обработка статуса.
-			if Status.code == 0: print(f"Group @" + str(command_data.arguments[0]) + " removed.")
-			if Status.code != 0: Error(Status.message)
-
-		# Обработка команды: list.
-		if command_data.name == "list":
-			# Список отображаемых записей.
+	def __List(self, command_data: ParsedCommandData, search: str | None = None):
+		# Список отображаемых записей.
 			Notes = list()
+			# Табличное содержимое.
+			Content = {
+				"ID": [],
+				"Status": [],
+				"Name": [],
+				"Estimation": [],
+				"Group": []
+			}
+			# Режим сортировки.
+			SortBy = command_data.keys["sort"].title() if "sort" in command_data.keys.keys() else "ID"
+			# Приведение в верхний регистр ID.
+			if SortBy == "Id": SortBy = SortBy.upper()
+			# Если неизвестный ключ сортировки, вернуть ошибку.
+			if SortBy not in Content.keys(): return ExecutionError(-1, "bad_sorting_parameter")
+			# Проверка присутствия флага инверсии вывода.
+			Reverse = command_data.check_flag("r")
 			
 			# Если записи существуют.
 			if self.__Table.notes:
-				# Табличное содержимое.
-				Content = {
-					"ID": [],
-					"Status": [],
-					"Name": [],
-					"Estimation": [],
-					"Group": []
-				}
 
 				# Если включена фильтрация по группе.
-				if "group" in command_data.keys:
+				if "group" in command_data.keys.keys():
 
 					# Для каждой записи.
 					for Note in self.__Table.notes:
 						# Если запись принадлежит к искомой группе, добавить её в список вывода.
-						if Note.group_id == int(command_data.values["group"]): Notes.append(Note)
+						if Note.group_id == int(command_data.keys["group"]): Notes.append(Note)
 
 				else: Notes = self.__Table.notes
+
+				# Если включён поиск.
+				if search:
+					# Вывод в консоль: поисковый запрос.
+					print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
+					# Копия записей.
+					NotesCopy = list(Notes)
+					# Буфер поиска.
+					SearchBuffer = list()
+
+					# Для каждой записи.
+					for Note in NotesCopy:
+						# Список названий.
+						Names = list()
+						# Запись названий.
+						if Note.name: Names.append(Note.name)
+						if Note.another_names: Names += Note.another_names
+
+						# Для каждого названия.
+						for Name in Names:
+							# Если название содержит поисковый запрос, записать его.
+							if search.lower() in Name.lower(): SearchBuffer.append(Note)
+
+					# Сохранение буфера поиска.
+					Notes = SearchBuffer
 				
 				# Для каждой записи.
 				for Note in Notes:
@@ -594,7 +546,7 @@ class ViewsTableCLI:
 					# Заполнение колонок.
 					Content["ID"].append(Note.id)
 					Content["Status"].append(Status)
-					Content["Name"].append(Name)
+					Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
 					Content["Estimation"].append(Note.estimation if Note.estimation else "")
 					Content["Group"].append(GroupName)
 
@@ -604,33 +556,70 @@ class ViewsTableCLI:
 				# Если в таблице нет групп, удалить их колонку.
 				if len(ContentBuffer) == 0: del Content["Group"]
 				# Вывод описания.
-				Columns(Content)
+				Columns(Content, sort_by = SortBy, reverse = Reverse)
 
 			else:
 				# Вывод в консоль: таблица пуста.
 				print("Table is empty.")
 
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, table: "AnimeTable"):
+		"""
+		Обработчик взаимодействий с таблицей через CLI.
+			table – объектное представление таблицы.
+		"""
+
+		#---> Генерация динамичкских атрибутов.
+		#==========================================================================================#
+		# Объектное представление таблицы.
+		self.__Table = table
+		# Список дескрипторов команд.
+		self.__Commands = self.__GenerateCommands()
+
+	def execute(self, command_data: ParsedCommandData) -> ExecutionStatus:
+		"""
+		Обрабатывает команду.
+			command_data – описательная структура команды.
+		"""
+
+		# Статус обработки команды.
+		Status = None
+
+		# Обработка команды: delgroup.
+		if command_data.name == "delgroup":
+			# Создание новой группы.
+			Status = self.__Table.remove_group(command_data.arguments[0])
+
+		# Обработка команды: list.
+		if command_data.name == "list":
+			# Вывод списка записей.
+			self.__List(command_data)
+
 		# Обработка команды: new.
 		if command_data.name == "new":
 			# Создание новой записи.
 			Status = self.__Table.create_note()
-			# Обработка статуса.
-			if Status.code == 0: print(f"Note #" + str(Status.data["id"]) + " created.")
-			if Status.code != 0: Error("unable_to_create_note")
 
 		# Обработка команды: newgroup.
 		if command_data.name == "newgroup":
 			# Создание новой группы.
 			Status = self.__Table.create_group(command_data.arguments[0])
-			# Обработка статуса.
-			if Status.code == 0: print(f"Group @" + str(Status.data["id"]) + " created.")
-			if Status.code != 0: Error(Status.message)
 
+		# Обработка команды: search.
+		if command_data.name == "search":
+			# Поиск записи.
+			self.__List(command_data, command_data.arguments[0])
+
+		return Status
+	
 #==========================================================================================#
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
 #==========================================================================================#
 
-class ViewsNote:
+class AnimeNote:
 	"""Запись просмотра медиаконтента."""
 
 	#==========================================================================================#
@@ -650,11 +639,11 @@ class ViewsNote:
 	}
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
+	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
-	def cli(self) -> ViewsNoteCLI:
+	def cli(self) -> AnimeNoteCLI:
 		"""Обработчик CLI записи."""
 
 		return self.__NoteCLI
@@ -870,14 +859,14 @@ class ViewsNote:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, table: "ViewsTable", note_id: int):
+	def __init__(self, table: "AnimeTable", note_id: int):
 		"""
 		Запись просмотра медиаконтента.
 			table – объектное представление таблицы;
 			note_id – идентификатор записи.
 		"""
 		
-		#---> Генерация динамичкских свойств.
+		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		# ID записи.
 		self.__ID = note_id
@@ -886,7 +875,7 @@ class ViewsNote:
 		# Данные записи.
 		self.__Data = ReadJSON(f"{table.directory}/{table.name}/{self.__ID}.json")
 		# Обработчик CLI записи.
-		self.__NoteCLI = ViewsNoteCLI(table, self)
+		self.__NoteCLI = AnimeNoteCLI(table, self)
 	
 	def add_another_name(self, another_name: str) -> ExecutionStatus:
 		"""
@@ -905,10 +894,12 @@ class ViewsNote:
 				self.__Data["another_names"].append(another_name)
 				# Сохранение изменений.
 				self.save()
+				# Установка сообщения.
+				Status.message = "Another name added."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -933,10 +924,12 @@ class ViewsNote:
 			self.__UpdateStatus()
 			# Сохранение изменений.
 			self.save()
+			# Установка сообщения.
+			Status.message = "Part created."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -957,10 +950,12 @@ class ViewsNote:
 				self.__Data["tags"].append(tag)
 				# Сохранение изменений.
 				self.save()
+				# Установка сообщения.
+				Status.message = "Tag added."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -986,14 +981,16 @@ class ViewsNote:
 
 			# Сохранение изменений.
 			self.save()
+			# Установка сообщения.
+			Status.message = "Another name removed."
 
 		except IndexError:
 			# Изменение статуса.
-			Status = ExecutionStatus(1, "incorrect_another_name_index")
+			Status = ExecutionError(1, "incorrect_another_name_index")
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1011,10 +1008,12 @@ class ViewsNote:
 			del self.__Data["metainfo"][key]
 			# Сохранение изменений.
 			self.save()
+			# Установка сообщения.
+			Status.message = "Metainfo updated."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1034,10 +1033,12 @@ class ViewsNote:
 			self.__UpdateStatus()
 			# Сохранение изменений.
 			self.save()
+			# Установка сообщения.
+			Status.message = "Part deleted."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1063,6 +1064,8 @@ class ViewsNote:
 
 			# Сохранение изменений.
 			self.save()
+			# Установка сообщение.
+			Status.message = "Tag removed."
 
 		except IndexError:
 			# Изменение статуса.
@@ -1070,7 +1073,7 @@ class ViewsNote:
 
 		except IndexError:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1087,19 +1090,21 @@ class ViewsNote:
 
 			# Если не последняя часть.
 			if part_index != len(self.__Data["parts"]) - 1:
-				# Перемещение части вверх.
+				# Перемещение части вниз.
 				self.__Data["parts"].insert(part_index + 1, self.__Data["parts"].pop(part_index))
 				# Сохранение изменений.
 				self.save()
+				# Установка сообщения.
+				Status.message = "Part downed."
 
 			# Если последняя часть.
 			elif part_index == len(self.__Data["parts"]) - 1:
 				# Изменение статуса.
-				Status = ExecutionStatus(1, "unable_down_last_part")
+				Status = ExecutionWarning(1, "unable_down_last_part")
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1120,10 +1125,12 @@ class ViewsNote:
 			self.__UpdateStatus()
 			# Сохранение изменений.
 			self.save()
+			# Установка сообщения.
+			Status.message = "Part edited."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1144,14 +1151,16 @@ class ViewsNote:
 				self.__Data["estimation"] = estimation
 				# Сохранение изменений.
 				self.save()
+				# Установка сообщение.
+				Status.message = "Estimation updated."
 
 			else:
 				# Изменение статуса.
-				Status = ExecutionStatus(1, "max_estimation_exceeded")
+				Status = ExecutionError(1, "max_estimation_exceeded")
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1169,10 +1178,12 @@ class ViewsNote:
 			self.__Data["name"] = name
 			# Сохранение изменений.
 			self.save()
+			# Установка сообщения.
+			Status.message = "Name updated."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1195,7 +1206,7 @@ class ViewsNote:
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1221,10 +1232,12 @@ class ViewsNote:
 			self.__Table.add_group_element(group_id, self.__ID)
 			# Сохранение изменений.
 			self.save()
+			# Установка сообщения.
+			Status.message = f"Note has been added to @{group_id} group."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1252,8 +1265,8 @@ class ViewsNote:
 					self.__UpdateStatus()
 					# Сохранение изменений.
 					self.save()
-					# Изменение статуса.
-					Status = ExecutionStatus(2, "Part marked as unseen.")
+					# Установка сообщения.
+					Status.message = "Part marked as unseen."
 
 				# Если закладка установлена на пропущенную часть.
 				elif "skipped" in self.__Data["parts"][part_index].keys():
@@ -1264,8 +1277,8 @@ class ViewsNote:
 					self.__UpdateStatus()
 					# Сохранение изменений.
 					self.save()
-					# Изменение статуса.
-					Status = ExecutionStatus(3, "Part marked as unskipped.")
+					# Установка сообщения.
+					Status.message = "Part marked as unskipped."
 
 				else:
 
@@ -1273,21 +1286,23 @@ class ViewsNote:
 					if mark < self.__Data["parts"][part_index]["series"] and mark != 0:
 						# Обновление закладки.
 						self.__Data["parts"][part_index]["mark"] = mark
+						# Установка сообщения.
+						Status.message = "Mark updated."
 
 					# Если закладка на последней серии.
 					elif mark == self.__Data["parts"][part_index]["series"]:
 						# Добавление статуса полностью просмотренного и удаление закладки.
 						self.__Data["parts"][part_index]["watched"] = True
 						if "mark" in self.__Data["parts"][part_index].keys(): del self.__Data["parts"][part_index]["mark"]
-						# Изменение статуса.
-						Status = ExecutionStatus(1, "Part marked as fully viewed.")
+						# Установка сообщения.
+						Status.message = "Part marked as fully viewed."
 
 					# Если закладка на нулевой серии.
 					elif mark == 0:
 						# Удаление закладки.
 						del self.__Data["parts"][part_index]["mark"]
 						# Изменение статуса.
-						Status = ExecutionStatus(3, "Mark removed.")
+						Status.message = "Mark removed."
 
 					# Сохранение изменений.
 					self.save()
@@ -1296,11 +1311,11 @@ class ViewsNote:
 
 			else:
 				# Изменение статуса.
-				Status = ExecutionStatus(-2, "only_series_supports_marks")
+				Status = ExecutionError(-2, "only_series_supports_marks")
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1319,10 +1334,12 @@ class ViewsNote:
 			self.__Data["metainfo"][key] = metainfo
 			# Сохранение изменений.
 			self.save()
+			# Установка сообщения.
+			Status.message = "Metainfo updated."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1351,10 +1368,12 @@ class ViewsNote:
 			self.__Data["status"] = status
 			# Сохранение изменений.
 			self.save()
+			# Установка сообщения.
+			Status.message = "Status updated."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1375,27 +1394,36 @@ class ViewsNote:
 				self.__Data["parts"].insert(part_index - 1, self.__Data["parts"].pop(part_index))
 				# Сохранение изменений.
 				self.save()
+				# Установка сообщения.
+				Status.message = "Part upped."
 
 			# Если первая часть.
 			elif part_index == 0:
 				# Изменение статуса.
-				Status = ExecutionStatus(1, "unable_up_first_part")
+				Status = ExecutionWarning(1, "unable_up_first_part")
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
-class ViewsTable:
+class AnimeTable:
 	"""Таблица просмотров медиакнотента."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
+	# >>>>> СТАТИЧЕСКИЕ АТРИБУТЫ <<<<< #
+	#==========================================================================================#
+
+	# Тип таблицы.
+	type = "anime"
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
-	def cli(self) -> ViewsTableCLI:
+	def cli(self) -> AnimeTableCLI:
 		"""Обработчик CLI таблицы."""
 
 		return self.__TableCLI
@@ -1407,7 +1435,7 @@ class ViewsTable:
 		return self.__StorageDirectory
 
 	@property
-	def id(self) -> list[ViewsNote]:
+	def id(self) -> list[AnimeNote]:
 		"""Идентификатор таблицы."""
 
 		return self.__Notes.values()
@@ -1425,7 +1453,7 @@ class ViewsTable:
 		return self.__Name
 
 	@property
-	def notes(self) -> list[ViewsNote]:
+	def notes(self) -> list[AnimeNote]:
 		"""Список записей."""
 
 		return self.__Notes.values()
@@ -1435,12 +1463,6 @@ class ViewsTable:
 		"""Словарь опций таблицы."""
 
 		return self.__Options.copy()	
-
-	@property
-	def type(self) -> str:
-		"""Тип таблицы."""
-
-		return self.__Type
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -1512,7 +1534,7 @@ class ViewsTable:
 		"""
 
 		# Чтение записи.
-		self.__Notes[note_id] = ViewsNote(self, note_id)
+		self.__Notes[note_id] = AnimeNote(self, note_id)
 
 	def __ReadNotes(self):
 		"""Считывает содержимое всех записей."""
@@ -1549,7 +1571,7 @@ class ViewsTable:
 			autocreation – указывает, нужно ли создавать таблицу при отсутствии таковой. 
 		"""
 		
-		#---> Генерация динамичкских свойств.
+		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		# Директория хранения таблиц.
 		self.__StorageDirectory = storage_dir.rstrip("/\\")
@@ -1560,7 +1582,7 @@ class ViewsTable:
 		# Словарь групп.
 		self.__Groups = dict()
 		# Тип таблицы.
-		self.__Type = "views"
+		self.__Type = "anime"
 		# Опции таблицы.
 		self.__Options = {
 			"version": 1,
@@ -1575,7 +1597,7 @@ class ViewsTable:
 			}
 		}
 		# Обработчик CLI таблицы.
-		self.__TableCLI = ViewsTableCLI(self)
+		self.__TableCLI = AnimeTableCLI(self)
 
 		# Если найден файл описания таблицы.
 		if os.path.exists(f"{self.__StorageDirectory}/{self.__Name}/manifest.json"):
@@ -1632,12 +1654,13 @@ class ViewsTable:
 			}
 			# Сохранение групп в локальный файл.
 			self.__SaveGroups()
-			# Изменение статуса.
-			Status = ExecutionStatus(0, data = {"id": ID})
+			# Установка сообщения.
+			Status.message = f"Group @{ID} created."
+
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1651,15 +1674,15 @@ class ViewsTable:
 			# ID новой записи.
 			ID = self.__GetNewID(self.__Notes)
 			# Сохранение локального файла JSON.
-			WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/{ID}.json", ViewsNote.BASE_NOTE)
+			WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/{ID}.json", AnimeNote.BASE_NOTE)
 			# Чтение и объектная интерпретация записи.
 			self.__ReadNote(ID)
-			# Изменение статуса.
-			Status = ExecutionStatus(0, data = {"id": ID})
+			# Установка сообщения.
+			Status = f"Note #{ID} created."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1677,10 +1700,12 @@ class ViewsTable:
 			os.rename(f"{self.__StorageDirectory}/{self.__Name}", f"{self.__StorageDirectory}/{name}")
 			# Перезапись имени.
 			self.__Name = name
+			# Установка сообщения.
+			Status.message = "Table renamed."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 		
@@ -1700,10 +1725,12 @@ class ViewsTable:
 			del self.__Groups[group_id]
 			# Сохранение групп в локальный файл.
 			self.__SaveGroups()
+			# Установка сообщения.
+			Status.message = f"Group @{group_id} removed."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1723,10 +1750,12 @@ class ViewsTable:
 			del self.__Notes[note_id]
 			# Удаление локального файла.
 			os.remove(f"{self.__StorageDirectory}/{self.__Name}/{note_id}.json")
+			# Установка сообщения.
+			Status.message = "Note removed."
 
 		except:
 			# Изменение статуса.
-			Status = ExecutionStatus(-1, "unknown_error")
+			Status = ExecutionError(-1, "unknown_error")
 
 		return Status
 
@@ -1745,7 +1774,7 @@ class ViewsTable:
 
 		return Group
 
-	def get_group_notes(self, group_id: int) -> list[ViewsNote]:
+	def get_group_notes(self, group_id: int) -> list[AnimeNote]:
 		"""
 		Возвращает словарное представление группы.
 			group_id – идентификатор группы.
@@ -1757,25 +1786,27 @@ class ViewsTable:
 		# Для каждой записи.
 		for Note in self.notes:
 			# Если запись включена в указанную группу, добавить её в список.
-			if note.group == group_id: NotesList.append(Note)
+			if Note.group == group_id: NotesList.append(Note)
 
 		return NotesList
 
-	def get_note(self, note_id: int) -> ViewsNote | None:
+	def get_note(self, note_id: int) -> ExecutionStatus:
 		"""
 		Возвращает объектное представление записи.
 			note_id – идентификатор записи.
 		"""
 
-		# Запись.
-		Note = None
+		# Статус выполнения.
+		Status = ExecutionStatus(0)
 
 		try:
 			# Приведение ID к целочисленному типу.
 			note_id = int(note_id)
 			# Осуществление доступа к записи.
-			Note = self.__Notes[note_id]
+			Status.value = self.__Notes[note_id]
 
-		except: pass
+		except:
+			# Изменение статуса.
+			Status = ExecutionError(-1, "unkonwn_error")
 
-		return Note
+		return Status
