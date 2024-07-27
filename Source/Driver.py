@@ -1,5 +1,4 @@
 from Source.Tables.Anime import AnimeTable
-from Source.CLI.Templates import Error
 
 from dublib.Engine.Bus import ExecutionStatus, ExecutionError
 from dublib.Methods.JSON import ReadJSON, WriteJSON
@@ -178,7 +177,7 @@ class Driver:
 		"""
 
 		# Статус выполнения.
-		Status = ExecutionError(-1, "uknown_error")
+		Status = ExecutionStatus(0)
 		
 		try:
 
@@ -188,12 +187,16 @@ class Driver:
 				Manifest = self.get_manifest(name)
 				# Создание таблицы.
 				Table = TablesTypes[Manifest["type"]](self.__StorageDirectory, name, autocreation = False)
-				# Статус выполнения.
-				Status = ExecutionStatus(0, value = Table)
+				# Установка значения.
+				Status.value = Table
 
-			else: Status = ExecutionError(-2, "bad_path")
+			else:
+				# Изменение статуса
+				Status = ExecutionError(-2, "table_not_found")
 
-		except: pass
+		except:
+			# Изменение статуса
+			Status = ExecutionError(-1, "uknown_error")
 
 		return Status
 

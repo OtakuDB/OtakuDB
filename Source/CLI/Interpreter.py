@@ -1,10 +1,12 @@
-from Source.CLI.Templates import Columns, Error
+from Source.CLI.Templates import Columns
 from Source.Driver import Driver
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData, Terminalyzer
+from dublib.CLI.Templates import Confirmation, PrintExecutionStatus
+from dublib.Engine.Bus import ExecutionError, ExecutionStatus
 from dublib.CLI.StyledPrinter import Styles, TextStyler
-from dublib.CLI.Templates import PrintExecutionStatus
 from dublib.CLI.Templates import Confirmation
+from dublib.Methods.System import Clear
 from dublib.Exceptions.CLI import *
 
 import readline
@@ -22,6 +24,10 @@ class Interpreter:
 
 		# Список команд.
 		CommandsList = list()
+
+		# Создание команды: clear.
+		Com = Command("clear", "Clear console.")
+		CommandsList.append(Com)
 
 		# Создание команды: create.
 		Com = Command("create", "Create new table.")
@@ -55,15 +61,23 @@ class Interpreter:
 		# Список команд.
 		CommandsList = list()
 
+		# Создание команды: clear.
+		Com = Command("clear", "Clear console.")
+		CommandsList.append(Com)
+
 		# Создание команды: close.
 		Com = Command("close", "Close table.")
+		CommandsList.append(Com)
+
+		# Создание команды: exit.
+		Com = Command("exit", "Exit from OtakuBD.")
 		CommandsList.append(Com)
 
 		# Создание команды: open.
 		Com = Command("open", "Open note.")
 		ComPos = Com.create_position("NOTE", "Note identificator.", important = True)
 		ComPos.add_argument(ParametersTypes.Number, description = "Note ID.")
-		ComPos.add_flag("last", description = "Open last created note.")
+		ComPos.add_flag("m", description = "Open note with max ID.")
 		CommandsList.append(Com)
 
 		# Создание команды: remove.
@@ -86,8 +100,16 @@ class Interpreter:
 		# Список команд.
 		CommandsList = list()
 
+		# Создание команды: clear.
+		Com = Command("clear", "Clear console.")
+		CommandsList.append(Com)
+
 		# Создание команды: close.
 		Com = Command("close", "Close note.")
+		CommandsList.append(Com)
+
+		# Создание команды: exit.
+		Com = Command("exit", "Exit from OtakuBD.")
 		CommandsList.append(Com)
 
 		# Создание команды: remove.
@@ -112,6 +134,11 @@ class Interpreter:
 		# Статус обработки команды.
 		Status = None
 		
+		# Обработка команды: clear.
+		if command_data.name == "clear":
+			# Очистка терминала.
+			Clear()
+
 		# Обработка команды: create.
 		if command_data.name == "create":
 			# Создание таблицы.
@@ -180,22 +207,38 @@ class Interpreter:
 		# Статус обработки команды.
 		Status = None
 
+		# Обработка команды: clear.
+		if command_data.name == "clear":
+			# Очистка терминала.
+			Clear()
+
 		# Обработка команды: close.
-		if command_data.name == "close":
+		elif command_data.name == "close":
 			# Переход на предыдущий уровень интерпретации.
 			self.__Table = None
 			self.__InterpreterLevel = "manager"
 
+		# Обработка команды: exit.
+		elif command_data.name == "exit":
+			# Завершение процесса.
+			self.exit()
+
 		# Обработка команды: open.
 		elif command_data.name == "open":
-			# Открытие записи.
-			Status = self.__Table.get_note(command_data.arguments[0])
+			# ID записи.
+			NoteID = None
 
-			# Если не получен декскриптор таблицы.
-			if Status.code == 0:
-				# Переход на новый уровень интерпретации.
-				self.__Note = Status.value
-				self.__InterpreterLevel = "note"
+			# Если указано открыть последнюю запись.
+			if command_data.check_flag("m") and self.__Table.notes_id:
+				# Получение записи с максимальным ID.
+				NoteID = max(self.__Table.notes_id)
+			
+			else:
+				# Использование аргумента.
+				NoteID = int(command_data.arguments[0])
+
+			# Открытие записи.
+			Status = self.__OpenNote(NoteID)
 
 		# Обработка команды: remove.
 		elif command_data.name == "remove":
@@ -222,6 +265,11 @@ class Interpreter:
 			# Обработка команд таблицы.
 			Status = self.__Table.cli.execute(command_data)
 
+		# Если получен запрос, открыть запись.
+		if Status and Status.check_data("open_note"): 
+			# Открытие записи.
+			Status = self.__OpenNote(Status["note_id"])
+
 		# Вывод статуса.
 		PrintExecutionStatus(Status)
 
@@ -234,11 +282,21 @@ class Interpreter:
 		# Статус обработки команды.
 		Status = None
 
+		# Обработка команды: clear.
+		if command_data.name == "clear":
+			# Очистка терминала.
+			Clear()
+
 		# Обработка команды: close.
-		if command_data.name == "close":
+		elif command_data.name == "close":
 			# Переход на предыдущий уровень интерпретации.
 			self.__Note = None
 			self.__InterpreterLevel = "table"
+
+		# Обработка команды: exit.
+		elif command_data.name == "exit":
+			# Завершение процесса.
+			self.exit()
 
 		# Обработка команды: remove.
 		elif command_data.name == "remove":
@@ -267,6 +325,18 @@ class Interpreter:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def __OpenNote(self, note_id: int) -> ExecutionStatus:
+		# Открытие записи.
+		Status = self.__Table.get_note(note_id)
+
+		# Если запись открыта.
+		if Status.code == 0:
+			# Переход на новый уровень интерпретации.
+			self.__Note = Status.value
+			self.__InterpreterLevel = "note"
+
+		return Status
+
 	def __Selector(self) -> str:
 		"""Создаёт идентификатор ввода в зависимости от уровня интерпретации."""
 
@@ -279,13 +349,13 @@ class Interpreter:
 
 		return Selector
 
-	def __ParseCommandData(self, input_line: list[str]) -> ParsedCommandData:
+	def __ParseCommandData(self, input_line: list[str]) -> ExecutionStatus:
 		"""
 		Парсит команду на составляющие.
 		"""
 
-		# Данные команды.
-		Command = -1
+		# Статус выполнения.
+		Status = ExecutionStatus(0)
 
 		try:
 			# Инициализация анализатора.
@@ -295,23 +365,48 @@ class Interpreter:
 			# Отключение записи о важности параметров.
 			Analyzer.help_translation.important_note = ""
 			# Проверка команд уровня интерпретации.
-			Command = Analyzer.check_commands(self.__CommandsGenerators[self.__InterpreterLevel]())
+			Status.value = Analyzer.check_commands(self.__CommandsGenerators[self.__InterpreterLevel]())
+
+			# Если не удалось определить команду.
+			if not Status.value:
+				# Изменение статуса и установка данных.
+				Status = ExecutionError(-2, "unknown_command")
+				Status["print"] = input_line[0]
 
 		except NotEnoughParameters:
-			# Вывод в консоль: недостаточно параметров.
-			Error("not_enough_parameters")
+			# Изменение статуса.
+			Status = ExecutionError(-3, "not_enough_parameters")
 
 		except InvalidParameterType as ExceptionData:
 			# Получение ожидаемого типа данных.
 			Type = str(ExceptionData).split("\"")[-2]
-			# Вывод в консоль: неверный тип параметра.
-			Error("invalid_parameter_type", Type)
+			# Изменение статуса и установка данных.
+			Status = ExecutionError(-4, "invalid_parameter_type")
+			Status["print"] = Type
 
 		except TooManyParameters:
-			# Вывод в консоль: слишком много параметров.
-			Error("too_many_parameters")
+			# Изменение статуса.
+			Status = ExecutionError(-5, "not_enough_parameters")
 
-		return Command
+		except UnknownFlag as ExceptionData:
+			# Получение неизвестного флага.
+			Flag = str(ExceptionData).split("\"")[-2].lstrip("-")
+			# Изменение статуса и установка данных.
+			Status = ExecutionError(-6, "unknown_flag")
+			Status["print"] = Flag
+
+		except UnknownKey as ExceptionData:
+			# Получение неизвестного ключа.
+			Key = str(ExceptionData).split("\"")[-2].lstrip("-")
+			# Изменение статуса и установка данных.
+			Status = ExecutionError(-7, "unknown_key")
+			Status["print"] = Key
+
+		except:
+			# Изменение статуса.
+			Status = ExecutionError(-1, "unknown_terminalyzer_error")
+
+		return Status
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -345,6 +440,21 @@ class Interpreter:
 		# Текущая запись.
 		self.__Note = None
 
+	def exit(self, print_command: bool = False):
+		"""
+		Закрывает OtakuBD.
+			print_command – указывает, добавить ли команду в вывод.
+		"""
+
+		# Если указано, вывести команду.
+		if print_command: print("exit")
+		# Если открыта таблица и пользователь согласен выйти.
+		# if self.__Table and Confirmation("You have an open table.", "Exit?") or not self.__Table:
+		# Вывод в консоль: выход.
+		print("Exiting...")
+		# Завершение работы.
+		exit(0)
+
 	def run(self):
 		"""Запускает оболочку CLI."""
 
@@ -360,22 +470,13 @@ class Interpreter:
 				InputLine = InputLine.strip()
 				InputLine = shlex.split(InputLine) if len(InputLine) > 0 else [""]
 
-			except KeyboardInterrupt:
-				# Вывод в консоль: выход.
-				print("exit\nExiting...")
-				# Завершение работы.
-				exit(0)
+			except KeyboardInterrupt: self.exit(True)
 
 			# Если ввод не пустой.
 			if InputLine != [""]:
 				# Парсинг команды.
-				Command = self.__ParseCommandData(InputLine)
-
-				# Если команда не распознана.
-				if Command == None:
-					# Вывод в консоль: ошибка распознания команды.
-					Error("unknown_command", InputLine[0])
-
-				elif Command != -1:
-					# Запуск обработчика команд текущего уровня интерпретации.
-					self.__Processors[self.__InterpreterLevel](Command)					
+				Status = self.__ParseCommandData(InputLine)
+				# Вывод в консоль: статус парсинга.
+				PrintExecutionStatus(Status)
+				# Если парсинг успешен, запустить обработку.
+				if Status.code == 0: self.__Processors[self.__InterpreterLevel](Status.value)					

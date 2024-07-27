@@ -69,8 +69,9 @@ class AnimeNoteCLI:
 		Com = Command("meta", "Manage note metainfo fields.")
 		Com.add_argument(ParametersTypes.All, description = "Field name.", important = True)
 		Com.add_argument(ParametersTypes.All, description = "Field value.")
-		Com.add_flag("set", description = "Create new or update exists field.", important = True)
-		Com.add_flag("unset", description = "Remove field.", important = True)
+		ComPos = Com.create_position("OPERATION", "Type of operation with metainfo.", important = True)
+		ComPos.add_flag("set", description = "Create new or update exists field.")
+		ComPos.add_flag("unset", description = "Remove field.")
 		CommandsList.append(Com)
 
 		# Создание команды: newpart.
@@ -458,6 +459,7 @@ class AnimeTableCLI:
 
 		# Создание команды: new.
 		Com = Command("new", "Create new note.")
+		Com.add_flag("o", "Open new note.")
 		CommandsList.append(Com)
 
 		# Создание команды: newgroup.
@@ -602,6 +604,8 @@ class AnimeTableCLI:
 		if command_data.name == "new":
 			# Создание новой записи.
 			Status = self.__Table.create_note()
+			# Если указано флагом, передать запрос на открытие записи.
+			if command_data.check_flag("o"): Status["open_note"] = True
 
 		# Обработка команды: newgroup.
 		if command_data.name == "newgroup":
@@ -643,16 +647,16 @@ class AnimeNote:
 	#==========================================================================================#
 
 	@property
-	def cli(self) -> AnimeNoteCLI:
-		"""Обработчик CLI записи."""
-
-		return self.__NoteCLI
-
-	@property
 	def another_names(self) -> list[str]:
 		"""Список альтернативных названий."""
 
 		return self.__Data["another_names"]
+	
+	@property
+	def cli(self) -> AnimeNoteCLI:
+		"""Обработчик CLI записи."""
+
+		return self.__NoteCLI
 
 	@property
 	def emoji_status(self) -> str:
@@ -1457,6 +1461,12 @@ class AnimeTable:
 		"""Список записей."""
 
 		return self.__Notes.values()
+	
+	@property
+	def notes_id(self) -> list[int]:
+		"""Список ID записей."""
+
+		return self.__Notes.keys()
 
 	@property
 	def options(self) -> dict:
@@ -1677,8 +1687,9 @@ class AnimeTable:
 			WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/{ID}.json", AnimeNote.BASE_NOTE)
 			# Чтение и объектная интерпретация записи.
 			self.__ReadNote(ID)
-			# Установка сообщения.
-			Status = f"Note #{ID} created."
+			# Установка данных и сообщения.
+			Status["note_id"] = ID
+			Status.message = f"Note #{ID} created."
 
 		except:
 			# Изменение статуса.
@@ -1802,8 +1813,15 @@ class AnimeTable:
 		try:
 			# Приведение ID к целочисленному типу.
 			note_id = int(note_id)
-			# Осуществление доступа к записи.
-			Status.value = self.__Notes[note_id]
+
+			# Если запись с таким ID существует.
+			if note_id in self.__Notes.keys():
+				# Осуществление доступа к записи.
+				Status.value = self.__Notes[note_id]
+
+			else:
+				# Изменение статуса.
+				Status = ExecutionError(-1, "note_not_found")
 
 		except:
 			# Изменение статуса.

@@ -1,4 +1,4 @@
-from dublib.CLI.StyledPrinter import StyledPrinter, Styles, TextStyler
+from dublib.CLI.StyledPrinter import Styles, TextStyler
 from prettytable import PLAIN_COLUMNS, PrettyTable
 
 #==========================================================================================#
@@ -24,15 +24,3 @@ def Columns(columns: dict[str, list], sort_by: str = "ID", reverse: bool = False
 	TableObject.sortby = TextStyler(sort_by, decorations = [Styles.Decorations.Bold])
 	# Вывод таблицы.
 	print(TableObject)
-
-def Error(error_type: str, description: str | None = None):
-	"""
-	Выводит в терминал сообщение об ошибке.
-		error_type – тип ошибки;
-		description – описание ошибки.
-	"""
-	
-	# Генерация описания.
-	description = f" - {description}" if type(description) == str else ""
-	# Вывод в консоль: ошибка.
-	StyledPrinter(f"ERROR: {error_type}{description}", text_color = Styles.Colors.Red)
