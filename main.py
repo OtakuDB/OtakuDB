@@ -1,4 +1,4 @@
 from Source.CLI.Interpreter import Interpreter
 
-c = Interpreter()
-c.run()
+InterpreterCLI = Interpreter()
+InterpreterCLI.run()
