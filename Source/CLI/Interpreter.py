@@ -1,9 +1,11 @@
 from Source.CLI.Templates import Columns
+from Source.Core.Warnings import *
+from Source.Core.Errors import *
 from Source.Driver import Driver
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData, Terminalyzer
 from dublib.CLI.Templates import Confirmation, PrintExecutionStatus
-from dublib.Engine.Bus import ExecutionError, ExecutionStatus
+from dublib.Engine.Bus import ExecutionError, ExecutionWarning, ExecutionStatus
 from dublib.CLI.StyledPrinter import Styles, TextStyler
 from dublib.CLI.Templates import Confirmation
 from dublib.Methods.System import Clear
@@ -32,7 +34,7 @@ class Interpreter:
 		Com.add_key("type", description = "Type of table.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("exit", "Exit from OtakuBD.")
+		Com = Command("exit", "Exit from OtakuDB.")
 		CommandsList.append(Com)
 
 		Com = Command("list", "Print list op tables.")
@@ -59,7 +61,48 @@ class Interpreter:
 		Com = Command("close", "Close table.")
 		CommandsList.append(Com)
 
-		Com = Command("exit", "Exit from OtakuBD.")
+		Com = Command("delete", "Delete table.")
+		CommandsList.append(Com)
+
+		Com = Command("exit", "Exit from OtakuDB.")
+		CommandsList.append(Com)
+
+		Com = Command("init", "Initialize module.")
+		Com.add_argument(description = "Module name.", important = True)
+		CommandsList.append(Com)
+
+		Com = Command("modules", "List of modules.")
+		CommandsList.append(Com)
+
+		Com = Command("open", "Open note or module.")
+		ComPos = Com.create_position("TARGET", "Target for opening.", important = True)
+		ComPos.add_argument(description = "Note ID or module name.")
+		ComPos.add_flag("m", description = "Open note with max ID.")
+		CommandsList.append(Com)
+
+		Com = Command("rename", "Rename table.")
+		Com.add_argument(description = "Table name.", important = True)
+		CommandsList.append(Com)
+
+		CommandsList += self.__Table.cli.commands
+
+		return CommandsList
+
+	def __GenerateModuleCommands(self) -> list[Command]:
+		"""Генерирует список команд уровня: table."""
+
+		CommandsList = list()
+
+		Com = Command("clear", "Clear console.")
+		CommandsList.append(Com)
+
+		Com = Command("close", "Close module.")
+		CommandsList.append(Com)
+
+		Com = Command("delete", "Delete module.")
+		CommandsList.append(Com)
+
+		Com = Command("exit", "Exit from OtakuDB.")
 		CommandsList.append(Com)
 
 		Com = Command("open", "Open note.")
@@ -68,18 +111,11 @@ class Interpreter:
 		ComPos.add_flag("m", description = "Open note with max ID.")
 		CommandsList.append(Com)
 
-		Com = Command("remove", "Remove table.")
+		Com = Command("switch", "Switch to other table module.")
+		Com.add_argument(description = "Module name.",)
 		CommandsList.append(Com)
 
-		Com = Command("rename", "Rename table.")
-		Com.add_argument(description = "Table name.", important = True)
-		CommandsList.append(Com)
-
-		Com = Command("switch", "Switch to other table submodule.")
-		Com.add_argument(description = "Submodule name.",)
-		CommandsList.append(Com)
-
-		CommandsList += self.__Table.cli.commands
+		CommandsList += self.__Module.cli.commands
 
 		return CommandsList
 
@@ -94,10 +130,10 @@ class Interpreter:
 		Com = Command("close", "Close note.")
 		CommandsList.append(Com)
 
-		Com = Command("exit", "Exit from OtakuBD.")
+		Com = Command("delete", "Delete note.")
 		CommandsList.append(Com)
 
-		Com = Command("remove", "Remove note.")
+		Com = Command("exit", "Exit from OtakuDB.")
 		CommandsList.append(Com)
 
 		CommandsList += self.__Note.cli.commands
@@ -163,7 +199,7 @@ class Interpreter:
 			command_data – данные команды.
 		"""
 
-		Status = None
+		Status = ExecutionStatus(0)
 
 		if command_data.name == "clear":
 			Clear()
@@ -175,16 +211,46 @@ class Interpreter:
 		elif command_data.name == "exit":
 			self.exit()
 
+		elif command_data.name == "init":
+			Modules = self.__Table.modules
+			if Modules: Status = self.__Driver.create_module(self.__Table, command_data.arguments[0])
+			else: Status = ExecutionWarning(-1, "Table doesn't contain modules.")
+
+		elif command_data.name == "modules":
+			Modules: list[dict] = self.__Table.modules
+
+			if Modules:
+
+				for Module in Modules:
+					ModuleStatus = TextStyler("ON", text_color = Styles.Colors.Green) if Module["active"] else TextStyler("OFF", text_color = Styles.Colors.Red)
+					print(f"{Module["name"]}: {ModuleStatus}")
+
+			else: Status = ExecutionWarning(-1, "Table doesn't contain modules.")
+
 		elif command_data.name == "open":
-			NoteID = None
 
-			if command_data.check_flag("m") and self.__Table.notes_id:
-				NoteID = max(self.__Table.notes_id)
-			
+			if command_data.arguments[0].isdigit():
+				NoteID = None
+
+				if command_data.check_flag("m") and self.__Table.notes_id:
+					NoteID = max(self.__Table.notes_id)
+				
+				else:
+					NoteID = int(command_data.arguments[0])
+
+				Status = self.__OpenNote(NoteID)
+
 			else:
-				NoteID = int(command_data.arguments[0])
+				Modules = self.__Table.modules
 
-			Status = self.__OpenNote(NoteID)
+				if Modules:
+					Status = self.__Driver.open_module(self.__Table, command_data.arguments[0])
+
+					if Status.code == 0:
+						self.__Module = Status.value
+						self.__InterpreterLevel = "module"
+
+				else: Status = TABLE_WARNING_NO_MODULES
 
 		elif command_data.name == "delete":
 			Response = Confirmation("Are you sure to delete \"" + self.__Table.name + "\" table?")
@@ -199,14 +265,79 @@ class Interpreter:
 		elif command_data.name == "rename":
 			Status = self.__Table.rename(command_data.arguments[0])
 
+		else:
+			Status = self.__Table.cli.execute(command_data)
+
+		if Status and Status.code == 0 and Status.check_data("open_note"): Status = self.__OpenNote(Status["note_id"])
+
+		PrintExecutionStatus(Status)
+
+	def __ProcessModuleCommands(self, command_data: ParsedCommandData):
+		"""
+		Обрабатывает команды уровня: table.
+			command_data – данные команды.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		if command_data.name == "clear":
+			Clear()
+
+		elif command_data.name == "close":
+			Status = self.__Driver.open_table(self.__Module.table_name)
+
+			if Status.code == 0:
+				self.__Module = None
+				self.__Table = Status.value
+				self.__InterpreterLevel = "table"
+
+		elif command_data.name == "exit":
+			self.exit()
+
+		elif command_data.name == "init":
+			Modules = self.__Table.modules
+			if Modules: Status = self.__Driver.create_module(self.__Table, command_data.arguments[0])
+			else: Status = ExecutionWarning(-1, "Table doesn't contain modules.")
+
+		elif command_data.name == "modules":
+			Modules = self.__Table.modules
+
+			if Modules:
+
+				for Module in Modules:
+					ModuleStatus = TextStyler("ON", text_color = Styles.Colors.Green) if Module["path"] else TextStyler("OFF", text_color = Styles.Colors.Red)
+					print(Module["name"] + ":", ModuleStatus)
+
+			else: Status = ExecutionStatus(0, "Table doesn't contain modules.")
+
+		elif command_data.name == "open":
+			NoteID = None
+
+			if command_data.check_flag("m") and self.__Module.notes_id:
+				NoteID = max(self.__Module.notes_id)
+			
+			else:
+				NoteID = int(command_data.arguments[0])
+
+			Status = self.__OpenNote(NoteID)
+
+		elif command_data.name == "delete":
+			Response = Confirmation("Are you sure to delete \"" + self.__Module.name + "\" module?")
+			
+			if Response:
+				Status = self.__Driver.delete_module(self.__Table, self.__Module.name)
+
+				if Status.code == 0:
+					self.__Module = None
+					self.__InterpreterLevel = "table"
+
 		elif command_data.name == "switch":
 			Status = self.__Table.rename(command_data.arguments[0])
 
 		else:
-			Status = self.__Table.cli.execute(command_data)
+			Status = self.__Module.cli.execute(command_data)
 
-		if Status and Status.check_data("open_note"): 
-			Status = self.__OpenNote(Status["note_id"])
+		if Status and Status.code == 0 and Status.check_data("open_note"): Status = self.__OpenNote(Status["note_id"])
 
 		PrintExecutionStatus(Status)
 
@@ -223,20 +354,21 @@ class Interpreter:
 
 		elif command_data.name == "close":
 			self.__Note = None
-			self.__InterpreterLevel = "table"
+			self.__InterpreterLevel = "module" if self.__Module else "table"
 
 		elif command_data.name == "exit":
 			self.exit()
 
-		elif command_data.name == "remove":
-			Response = Confirmation("Are you sure to remove #" + str(self.__Note.id) + " note?")
+		elif command_data.name == "delete":
+			Response = Confirmation("Are you sure to delete #" + str(self.__Note.id) + " note?")
 			
 			if Response:
-				Status = self.__Table.remove_note(self.__Note.id)
+				if self.__Module: Status = self.__Module.delete_note(self.__Note.id)
+				else: Status = self.__Table.delete_note(self.__Note.id)
 
 				if Status.code == 0:
 					self.__Note = None
-					self.__InterpreterLevel = "table"
+					self.__InterpreterLevel = "module" if self.__Module else "table" 
 
 		else:
 			Status = self.__Note.cli.execute(command_data)
@@ -248,7 +380,14 @@ class Interpreter:
 	#==========================================================================================#
 
 	def __OpenNote(self, note_id: int) -> ExecutionStatus:
-		Status = self.__Table.get_note(note_id)
+		"""
+		Открывает запись.
+			note_id – идентификатор записи.
+		"""
+
+		Status = ExecutionStatus(0)
+		if self.__Module: Status = self.__Module.get_note(note_id)
+		else: Status = self.__Table.get_note(note_id)
 
 		if Status.code == 0:
 			self.__Note = Status.value
@@ -260,8 +399,9 @@ class Interpreter:
 		"""Создаёт идентификатор ввода в зависимости от уровня интерпретации."""
 
 		TableName = "-" + self.__Table.name if self.__Table else ""
+		if self.__Module: TableName += ":" + self.__Module.name
 		NoteID = "-" + str(self.__Note.id) if self.__Note else ""
-		Selector = f"[OtakuBD{TableName}{NoteID}]-> "
+		Selector = f"[OtakuDB{TableName}{NoteID}]-> "
 
 		return Selector
 
@@ -289,7 +429,7 @@ class Interpreter:
 			Status["print"] = Type
 
 		except TooManyParameters:
-			Status = ExecutionError(-5, "not_enough_parameters")
+			Status = ExecutionError(-5, "too_many_parameters")
 
 		except UnknownFlag as ExceptionData:
 			Flag = str(ExceptionData).split("\"")[-2].lstrip("-")
@@ -321,19 +461,22 @@ class Interpreter:
 		self.__CommandsGenerators = {
 			"driver": self.__GenerateDriverCommands,
 			"table": self.__GenerateTableCommands,
+			"module": self.__GenerateModuleCommands,
 			"note": self.__GenerateNoteCommands
 		}
 		self.__Processors = {
 			"driver": self.__ProcessDriverCommands,
 			"table": self.__ProcessTableCommands,
+			"module": self.__ProcessModuleCommands,
 			"note": self.__ProcessNoteCommands
 		}
 		self.__Table = None
+		self.__Module = None
 		self.__Note = None
 
 	def exit(self, print_command: bool = False):
 		"""
-		Закрывает OtakuBD.
+		Закрывает OtakuDB.
 			print_command – указывает, добавить ли команду в вывод.
 		"""
 

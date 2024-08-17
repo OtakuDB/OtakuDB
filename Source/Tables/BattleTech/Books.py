@@ -5,6 +5,7 @@ from Source.Core.Errors import *
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.StyledPrinter import Styles, StyledPrinter, TextStyler
 from dublib.Engine.Bus import ExecutionError, ExecutionStatus
+from dublib.Methods.Filesystem import NormalizePath
 from dublib.Methods.JSON import ReadJSON, WriteJSON
 
 import os
@@ -37,7 +38,7 @@ class BattleTech_Books_NoteCLI:
 		"""
 
 		Names = list()
-		for EraID in eras_id: Names.append(self.__Table.eras[EraID])
+		for EraID in eras_id: Names.append(self.__Module.eras[EraID])
 
 		return Names
 
@@ -48,6 +49,10 @@ class BattleTech_Books_NoteCLI:
 
 		Com = Command("comment", "Set comment to note.")
 		Com.add_argument(description = "Comment text or * to remove.", important = True)
+		CommandsList.append(Com)
+
+		Com = Command("era", "Set era.")
+		Com.add_argument(description = "Era ID or name.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("estimate", "Set estimation.")
@@ -110,7 +115,8 @@ class BattleTech_Books_NoteCLI:
 		#==========================================================================================#
 		if UsedName: StyledPrinter(UsedName, decorations = [Styles.Decorations.Bold], end = False)
 		print(f" {self.__Note.emoji_status}")
-		if self.__Note.estimation: print(f"⭐ {self.__Note.estimation} / {self.__Table.max_estimation}")
+		if self.__Note.era: print(f"⏳ " + self.__Module.eras[self.__Note.era])
+		if self.__Note.estimation: print(f"⭐ {self.__Note.estimation} / {self.__Module.max_estimation}")
 		if self.__Note.bookmark: print(f"🔖 {self.__Note.bookmark} page")
 		if self.__Note.comment: print(f"💭 {self.__Note.comment}")
 		if self.__Note.link: print(f"🔗 {self.__Note.link}")
@@ -120,16 +126,12 @@ class BattleTech_Books_NoteCLI:
 		#---> Вывод классификаторов записи.
 		#==========================================================================================#
 
-		if self.__Note.eras:
-			StyledPrinter(f"ERAS: ", decorations = [Styles.Decorations.Bold])
-			for Era in self.__ErasToNames(self.__Note.eras): StyledPrinter(f"    {Era}", decorations = [Styles.Decorations.Italic])
-
 		if self.__Note.metainfo:
 			StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
 			MetaInfo = self.__Note.metainfo
 			
 			for Key in MetaInfo.keys():
-				CustomMetainfoMarker = "" if Key in self.__Table.metainfo_rules.keys() else "*"
+				CustomMetainfoMarker = "" if Key in self.__Module.metainfo_rules.keys() else "*"
 				print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
 
 	#==========================================================================================#
@@ -145,7 +147,7 @@ class BattleTech_Books_NoteCLI:
 
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
-		self.__Table = table
+		self.__Module = table
 		self.__Note = note
 		self.__Commands = self.__GenerateCommands()
 
@@ -159,6 +161,9 @@ class BattleTech_Books_NoteCLI:
 
 		if command_data.name == "comment":
 			Status = self.__Note.set_comment(command_data.arguments[0])
+
+		if command_data.name == "era":
+			Status = self.__Note.set_era(command_data.arguments[0])
 
 		if command_data.name == "estimate":
 			Status = self.__Note.estimate(command_data.arguments[0])
@@ -199,9 +204,6 @@ class BattleTech_Books_NoteCLI:
 
 			if command_data.check_key("altname"):
 				Status = self.__Note.delete_another_name(command_data.get_key_value("altname"))
-
-			if command_data.check_key("era"):
-				Status = self.__Note.delete_era(command_data.get_key_value("era"))
 
 		if command_data.name == "view":
 			self.__View()
@@ -264,8 +266,8 @@ class BattleTech_Books_TableCLI:
 			if SortBy not in Content.keys(): return ExecutionError(-1, "bad_sorting_parameter")
 			Reverse = command_data.check_flag("r")
 			
-			if self.__Table.notes:
-				Notes = self.__Table.notes
+			if self.__Module.notes:
+				Notes = self.__Module.notes
 
 				if search:
 					print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
@@ -289,12 +291,15 @@ class BattleTech_Books_TableCLI:
 					Status = Note.status
 					if Status == "announced": Status = TextStyler(Status, text_color = Styles.Colors.Purple)
 					if Status == "collected": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
+					if Status == "web": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
+					if Status == "ordered": Status = TextStyler(Status, text_color = Styles.Colors.White)
+					if Status == "wishlist": Status = TextStyler(Status, text_color = Styles.Colors.White)
 					if Status == "reading": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
 					if Status == "completed": Status = TextStyler(Status, text_color = Styles.Colors.Green)
 					if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
 					if Status == "skipped": Status = TextStyler(Status, text_color = Styles.Colors.Cyan)
 					Content["ID"].append(Note.id)
-					Content["Status"].append(Status)
+					Content["Status"].append(Status if Status else "–")
 					Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
 					Content["Author"].append(Author)
 					Content["Estimation"].append(Note.estimation if Note.estimation else "")
@@ -317,7 +322,7 @@ class BattleTech_Books_TableCLI:
 
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
-		self.__Table = table
+		self.__Module = table
 		self.__Commands = self.__GenerateCommands()
 
 	def execute(self, command_data: ParsedCommandData) -> ExecutionStatus:
@@ -329,14 +334,14 @@ class BattleTech_Books_TableCLI:
 		Status = None
 
 		if command_data.name == "eras":
-			Eras = self.__Table.eras
+			Eras = self.__Module.eras
 			for EraID in Eras.keys(): print(f"    {EraID}: {Eras[EraID]}")
 
 		if command_data.name == "list":
 			self.__List(command_data)
 
 		if command_data.name == "new":
-			Status = self.__Table.create_note()
+			Status = self.__Module.create_note()
 			if command_data.check_flag("o"): Status["open_note"] = True
 
 		if command_data.name == "search":
@@ -359,7 +364,7 @@ class BattleTech_Books_Note:
 		"name": None,
 		"localized_name": None,
 		"another_names": [],
-		"eras": [],
+		"era": None,
 		"estimation": None,
 		"comment": None,
 		"link": None,
@@ -367,6 +372,28 @@ class BattleTech_Books_Note:
 		"status": None,
 		"metainfo": {}
 	}
+
+	#==========================================================================================#
+	# >>>>> ОБЯЗАТЕЛЬНЫЕ СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def cli(self) -> BattleTech_Books_NoteCLI:
+		"""Класс-обработчик CLI записи."""
+
+		return self.__NoteCLI
+	
+	@property
+	def id(self) -> int:
+		"""Идентификатор."""
+
+		return self.__ID
+	
+	@property
+	def name(self) -> str | None:
+		"""Название."""
+
+		return self.__Data["name"]
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -385,22 +412,16 @@ class BattleTech_Books_Note:
 		return self.__Data["bookmark"]
 
 	@property
-	def cli(self) -> BattleTech_Books_NoteCLI:
-		"""Обработчик CLI записи."""
-
-		return self.__NoteCLI
-
-	@property
 	def comment(self) -> str | None:
 		"""Комментарий."""
 
 		return self.__Data["comment"]
 
 	@property
-	def eras(self) -> list[int]:
+	def era(self) -> list[int]:
 		"""Список ID эпох BattleTech."""
 
-		return self.__Data["eras"]
+		return self.__Data["era"]
 
 	@property
 	def emoji_status(self) -> str:
@@ -412,6 +433,9 @@ class BattleTech_Books_Note:
 			"completed": "✅",
 			"dropped": "⛔",
 			"collected": "📦",
+			"web": "🌍",
+			"wishlist": "🎁",
+			"ordered": "🚚",
 			"skipped": "🚫",
 			None: ""
 		}
@@ -423,12 +447,6 @@ class BattleTech_Books_Note:
 		"""Оценка."""
 
 		return self.__Data["estimation"]
-
-	@property
-	def id(self) -> int:
-		"""Идентификатор."""
-
-		return self.__ID
 
 	@property
 	def link(self) -> str | None:
@@ -449,36 +467,64 @@ class BattleTech_Books_Note:
 		return self.__Data["metainfo"]
 	
 	@property
-	def name(self) -> str | None:
-		"""Название."""
-
-		return self.__Data["name"]
-
-	@property
 	def status(self) -> str | None:
 		"""Статус просмотра."""
 
 		return self.__Data["status"]
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ОБЯЗАТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, table: "BattleTech_Books_Table", note_id: int):
+	def __init__(self, module: "BattleTech_Books_Module", note_id: int):
 		"""
 		Запись просмотра медиаконтента.
-			table – объектное представление таблицы;
+			module – модуль таблицы;
 			note_id – идентификатор записи.
 		"""
 		
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		self.__ID = note_id
-		self.__Path = f"{table.directory}/{table.name}/books/{self.__ID}.json"
-		self.__Table = table
+		self.__Module = module
+		self.__Path = f"{module.storage}/{module.table_name}/{module.name}/{self.__ID}.json"
 		self.__Data = ReadJSON(self.__Path)
-		self.__NoteCLI = BattleTech_Books_NoteCLI(table, self)
+		self.__NoteCLI = BattleTech_Books_NoteCLI(module, self)
 	
+	def rename(self, name: str, localized: bool = False) -> ExecutionStatus:
+		"""
+		Переименовывает запись.
+			name – название записи.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			
+			if localized:
+				self.__Data["localized_name"] = name
+				Status.message = "Localized name updated."
+
+			else:
+				self.__Data["name"] = name
+				Status.message = "Name updated."
+				
+			self.save()
+
+		except:
+			Status = ERROR_UNKNOWN
+
+		return Status
+
+	def save(self):
+		"""Сохраняет запись в локальный файл."""
+
+		WriteJSON(self.__Path, self.__Data)
+	
+	#==========================================================================================#
+	# >>>>> ДОПОЛНИТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
 	def add_another_name(self, another_name: str) -> ExecutionStatus:
 		"""
 		Добавляет альтернативное название.
@@ -493,33 +539,6 @@ class BattleTech_Books_Note:
 				self.__Data["another_names"].append(another_name)
 				self.save()
 				Status.message = "Another name added."
-
-		except:
-			Status = ERROR_UNKNOWN
-
-		return Status
-
-	def add_era(self, era: int) -> ExecutionStatus:
-		"""
-		Добавляет эру.
-			era – ID эры.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-
-			if era in self.__Table.eras.keys():
-
-				if era not in self.__Data["eras"]:
-					self.__Data["eras"].append(era)
-					self.__Data["eras"] = sorted(self.__Data["eras"])
-					self.save()
-
-				Status.message = "Era added."
-
-			else:
-				Status = ExecutionError(-2, "incorrect_era_id")
 
 		except:
 			Status = ERROR_UNKNOWN
@@ -547,31 +566,6 @@ class BattleTech_Books_Note:
 
 		except IndexError:
 			Status = ExecutionError(1, "incorrect_another_name_index")
-
-		except:
-			Status = ERROR_UNKNOWN
-
-		return Status
-
-	def delete_era(self, era: int) -> ExecutionStatus:
-		"""
-		Удаляет эру.
-			era – ID эры.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-
-			if era in self.__Table.eras.keys():
-
-				if era in self.__Data["eras"]:
-					self.__Data["eras"].remove(era)
-					self.save()
-					Status.message = "Era removed."
-
-			else:
-				Status = ExecutionError(-2, "incorrect_era_id")
 
 		except:
 			Status = ERROR_UNKNOWN
@@ -606,48 +600,16 @@ class BattleTech_Books_Note:
 
 		try:
 
-			if estimation <= self.__Table.options["max_estimation"]:
+			if estimation <= self.__Module.manifest["max_estimation"]:
 				self.__Data["estimation"] = estimation
 				self.save()
 				Status.message = "Estimation updated."
 
-			else:
-				Status = ExecutionError(1, "max_estimation_exceeded")
+			else: Status = ExecutionError(1, "max_estimation_exceeded")
 
-		except:
-			Status = ERROR_UNKNOWN
+		except: Status = ERROR_UNKNOWN
 
 		return Status
-
-	def rename(self, name: str, localized: bool = False) -> ExecutionStatus:
-		"""
-		Переименовывает запись.
-			name – название записи.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			
-			if localized:
-				self.__Data["localized_name"] = name
-				Status.message = "Localized name updated."
-
-			else:
-				self.__Data["name"] = name
-				Status.message = "Name updated."
-				
-			self.save()
-
-		except:
-			Status = ERROR_UNKNOWN
-
-		return Status
-
-	def save(self):
-		"""Сохраняет запись в локальный файл."""
-
-		WriteJSON(self.__Path, self.__Data)
 
 	def set_bookmark(self, bookmark: int) -> ExecutionStatus:
 		"""
@@ -687,6 +649,38 @@ class BattleTech_Books_Note:
 
 		return Status
 
+	def set_era(self, era: str) -> ExecutionStatus:
+		"""
+		Задаёт эру.
+			era – ID или название эры.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			era = str(era)
+
+			if era.isdigit():
+				era = int(era)
+
+				if era in self.__Module.eras.keys():
+					self.__Data["era"] = era
+					self.save()
+					Status.message = "Era updated."
+
+				else: Status = ExecutionError(-2, "incorrect_era")
+
+			elif era in self.__Module.eras.values:
+				self.__Data["era"] = list(self.__Module.eras.values).index(era)
+				self.save()
+				Status.message = "Era updated."
+
+			else: Status = ExecutionError(-2, "incorrect_era")
+
+		except:	Status = ERROR_UNKNOWN
+
+		return Status
+
 	def set_link(self, link: str) -> ExecutionStatus:
 		"""
 		Задаёт ссылку.
@@ -716,7 +710,7 @@ class BattleTech_Books_Note:
 		Status = ExecutionStatus(0)
 
 		try:
-			if key in self.__Table.metainfo_rules.keys() and self.__Table.metainfo_rules[key] and metainfo not in self.__Table.metainfo_rules[key]: raise MetainfoBlocked()
+			if key in self.__Module.metainfo_rules.keys() and self.__Module.metainfo_rules[key] and metainfo not in self.__Module.metainfo_rules[key]: raise MetainfoBlocked()
 			self.__Data["metainfo"][key] = metainfo
 			self.__Data["metainfo"] = dict(sorted(self.__Data["metainfo"].items()))
 			self.save()
@@ -743,6 +737,9 @@ class BattleTech_Books_Note:
 			"c": "completed",
 			"d": "dropped",
 			"i": "collected",
+			"n": "web",
+			"w": "wishlist",
+			"o": "ordered",
 			"s": "skipped",
 			"*": None
 		}
@@ -758,66 +755,50 @@ class BattleTech_Books_Note:
 
 		return Status
 
-class BattleTech_Books_Table:
+class BattleTech_Books_Module:
 	"""Таблица прочтения книг по вселенной BattleTech."""
 
 	#==========================================================================================#
 	# >>>>> СТАТИЧЕСКИЕ АТРИБУТЫ <<<<< #
 	#==========================================================================================#
 
-	type = "battletech:books"
+	TYPE = "battletech:books"
+	MANIFEST: dict = {
+		"version": 1,
+		"type": "battletech:books",
+		"recycle_id": True,
+		"max_estimation": 10,
+		"viewer": {
+			"colorize": True
+		},
+		"metainfo_rules": {
+			"author": None,
+			"publisher": None,
+			"series": None
+		}
+	}
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
+	# >>>>> ОБЯЗАТЕЛЬНЫЕ СВОЙСТВА <<<<< #
 	#==========================================================================================#
-
-	@property
-	def eras(self) -> list[str]:
-		"""Эпохи BattleTech."""
-
-		return self.__Eras
 
 	@property
 	def cli(self) -> BattleTech_Books_TableCLI:
 		"""Обработчик CLI таблицы."""
 
-		return self.__TableCLI
-
+		return self.__ModuleCLI
+	
 	@property
-	def directory(self) -> str:
-		"""Путь к каталогу таблицы."""
+	def manifest(self) -> dict:
+		"""Манифест таблицы."""
 
-		return self.__StorageDirectory
-
+		return self.__Manifest.copy()	
+	
 	@property
-	def id(self) -> list[BattleTech_Books_Note]:
-		"""Идентификатор таблицы."""
-
-		return self.__Notes.values()
-
-	@property
-	def max_estimation(self) -> int:
-		"""Максимальная допустимая оценка."""
-
-		return self.__Options["max_estimation"]
-
-	@property
-	def metainfo_rules(self) -> dict:
-		"""Правила метаданных."""
-
-		return self.__Options["metainfo_rules"]
-
-	@property
-	def module(self) -> str:
-		"""Название модуля."""
+	def name(self) -> str | None:
+		"""Название модуля таблицы."""
 
 		return self.__Module
-
-	@property
-	def name(self) -> str:
-		"""Название таблицы."""
-
-		return self.__Name
 
 	@property
 	def notes(self) -> list[BattleTech_Books_Note]:
@@ -830,12 +811,40 @@ class BattleTech_Books_Table:
 		"""Список ID записей."""
 
 		return self.__Notes.keys()
+	
+	@property
+	def storage(self) -> str:
+		"""Путь к хранилищу таблиц."""
+
+		return self.__StorageDirectory
 
 	@property
-	def options(self) -> dict:
-		"""Словарь опций таблицы."""
+	def table_name(self) -> str:
+		"""Название таблицы."""
 
-		return self.__Options.copy()	
+		return self.__TableName
+
+	#==========================================================================================#
+	# >>>>> ДОПОЛНИТЕЛЬНЫЕ СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def eras(self) -> dict:
+		"""Эпохи BattleTech."""
+
+		return self.__Eras
+
+	@property
+	def max_estimation(self) -> int:
+		"""Максимальная допустимая оценка."""
+
+		return self.__Manifest["max_estimation"]
+
+	@property
+	def metainfo_rules(self) -> dict:
+		"""Правила метаданных."""
+
+		return self.__Manifest["metainfo_rules"]
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -845,7 +854,7 @@ class BattleTech_Books_Table:
 		"""Создаёт каталог и манифест таблицы."""
 
 		if not os.path.exists(self.__Path): os.makedirs(self.__Path)
-		WriteJSON(f"{self.__Path}/manifest.json", self.__Options)
+		WriteJSON(f"{self.__Path}/manifest.json", self.MANIFEST)
 
 	def __GetNewID(self, container: dict) -> int:
 		"""
@@ -855,7 +864,7 @@ class BattleTech_Books_Table:
 
 		NewID = None
 
-		if self.__Options["recycle_id"]:
+		if self.__Manifest["recycle_id"]:
 			ListID = container.keys()
 
 			for ID in range(1, len(ListID) + 1):
@@ -873,7 +882,7 @@ class BattleTech_Books_Table:
 		"""Возвращает список ID записей в таблице, полученный путём сканирования файлов JSON."""
 
 		ListID = list()
-		Files = os.listdir(f"{self.__StorageDirectory}/{self.__Name}")
+		Files = os.listdir(self.__Path)
 		Files = list(filter(lambda File: File.endswith(".json"), Files))
 
 		for File in Files: 
@@ -898,36 +907,29 @@ class BattleTech_Books_Table:
 		for ID in ListID: self.__ReadNote(ID)
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ОБЯЗАТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 	
-	def __init__(self, storage_path: str, name: str, autocreation: bool = True):
+	def __init__(self, storage: str, table: "BattleTech_Table", module: str, autocreation: bool = True):
 		"""
 		Таблица прочтения книг по вселенной BattleTech.
 			storage_path – директория хранения таблиц;\n
-			name – название таблицы;\n
+			table – таблица, к которой привязан модуль;\n
+			module – название модуля таблицы;\n
 			autocreation – указывает, нужно ли создавать таблицу при отсутствии таковой. 
 		"""
 		
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
-		self.__StorageDirectory = storage_path.rstrip("/\\")
-		self.__Name = name
-		self.__Path = f"{storage_path}/{name}/books"
+		self.__StorageDirectory = NormalizePath(storage)
+		self.__TableName = table.name
+		self.__Module = module
+		self.__Path = f"{self.__StorageDirectory}/{self.__TableName}" + (f"/{module}" if module else "")
 		self.__Notes = dict()
-		self.__Options = {
-			"version": 1,
-			"type": self.type,
-			"recycle_id": False,
-			"max_estimation": 10,
-			"viewer": {
-				"colorize": True
-			},
-			"metainfo_rules": {
-				"author": None,
-				"publisher": None
-			}
-		}
+		self.__ModuleCLI = BattleTech_Books_TableCLI(self)
+		self.__Manifest = None
+		self.__Table = table
+
 		self.__Eras = {
 			0: "Pre–Star League",
 			1: "Star League",
@@ -938,17 +940,17 @@ class BattleTech_Books_Table:
 			6: "Dark Age",
 			7: "ilClan"
 		}
-		self.__TableCLI = BattleTech_Books_TableCLI(self)
 
-		if os.path.exists(self.__Path):
-			self.__Options = ReadJSON(f"{self.__Path}/manifest.json")
-			if self.__Options["type"] != self.type: raise TypeError(f"Only \"{self.type}\" type tables supported.")
-			self.__ReadNotes()
+		#---> Проверка существования или создание таблицы.
+		#==========================================================================================#
+		if not os.path.exists(f"{self.__Path}/manifest.json") and autocreation: self.__Create()
+		elif not os.path.exists(f"{self.__Path}/manifest.json"): raise FileNotFoundError(f"{self.__Path}/manifest.json")
 
-		elif autocreation:
-			self.__Create()
-
-		else: raise FileExistsError("manifest.json")
+		#---> Загрузка данных.
+		#==========================================================================================#
+		self.__Manifest = ReadJSON(f"{self.__Path}/manifest.json")
+		if self.__Manifest["type"] != self.TYPE: raise TypeError(f"Only \"{self.TYPE}\" type tables supported.")
+		self.__ReadNotes()
 
 	def create_note(self) -> ExecutionStatus:
 		"""Создаёт запись."""
@@ -957,35 +959,16 @@ class BattleTech_Books_Table:
 
 		try:
 			ID = self.__GetNewID(self.__Notes)
-			WriteJSON(f"{self.__StorageDirectory}/{self.__Name}/{ID}.json", BattleTech_Books_Note.BASE_NOTE)
+			WriteJSON(f"{self.__Path}/{ID}.json", BattleTech_Books_Note.BASE_NOTE)
 			self.__ReadNote(ID)
 			Status["note_id"] = ID
 			Status.message = f"Note #{ID} created."
 
-		except:
-			Status = ERROR_UNKNOWN
+		except: Status = ERROR_UNKNOWN
 
 		return Status
 
-	def rename(self, name: str) -> ExecutionStatus:
-		"""
-		Переименовывает таблицу.
-			name – новое название.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			os.rename(f"{self.__Path}", f"{self.__Path}")
-			self.__Name = name
-			Status.message = "Table renamed."
-
-		except:
-			Status = ERROR_UNKNOWN
-
-		return Status
-
-	def remove_note(self, note_id: int) -> ExecutionStatus:
+	def delete_note(self, note_id: int) -> ExecutionStatus:
 		"""
 		Удаляет запись из таблицы. 
 			note_id – идентификатор записи.
@@ -996,11 +979,10 @@ class BattleTech_Books_Table:
 		try:
 			note_id = int(note_id)
 			del self.__Notes[note_id]
-			os.remove(f"{self.__StorageDirectory}/{self.__Name}/{note_id}.json")
-			Status.message = "Note removed."
+			os.remove(f"{self.__Path}/{note_id}.json")
+			Status.message = f"Note #{note_id} deleted."
 
-		except:
-			Status = ERROR_UNKNOWN
+		except FileExistsError: Status = ERROR_UNKNOWN
 
 		return Status
 
@@ -1014,14 +996,9 @@ class BattleTech_Books_Table:
 
 		try:
 			note_id = int(note_id)
+			if note_id in self.__Notes.keys(): Status.value = self.__Notes[note_id]
+			else: Status = TABLE_ERROR_MISSING_NOTE
 
-			if note_id in self.__Notes.keys():
-				Status.value = self.__Notes[note_id]
-
-			else:
-				Status = ExecutionError(-1, "note_not_found")
-
-		except:
-			Status = ExecutionError(-1, "unkonwn_error")
+		except: Status = ERROR_UNKNOWN
 
 		return Status

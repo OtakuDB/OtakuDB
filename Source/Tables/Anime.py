@@ -90,7 +90,6 @@ class Anime_NoteCLI:
 
 		Com = Command("set", "Set note values.")
 		Com.add_key("altname", description = "Alternative name.")
-		Com.add_key("estimation", ParametersTypes.Number, "Note estimation.")
 		Com.add_key("group", ParametersTypes.Number, description = "Group ID.")
 		Com.add_key("name", description = "Note name.")
 		Com.add_key("status", description = "View status.")
@@ -120,7 +119,7 @@ class Anime_NoteCLI:
 		Group = self.__Table.get_group(self.__Note.group_id) if self.__Note.group_id else None
 		GroupName = Group["name"] if Group and Group["name"] else None
 		Parts = self.__Note.parts
-		Options = self.__Table.options["viewer"]
+		Options = self.__Table.manifest["viewer"]
 
 		#---> Объявление литералов.
 		#==========================================================================================#
@@ -417,7 +416,7 @@ class Anime_TableCLI:
 				
 				for Note in Notes:
 					Name = Note.name if Note.name else ""
-					GroupName = f"@{Note.group_id}" if not self.__Table.get_group(Note.group_id) else self.__Table.get_group(Note.group_id)["name"]
+					GroupName = self.__Table.get_group(Note.group_id)["name"] if self.__Table.get_group(Note.group_id) else f"@{Note.group_id}"
 					if GroupName == "@None": GroupName = ""
 					Status = Note.status
 					if Status == "announced": Status = TextStyler(Status, text_color = Styles.Colors.Purple)
@@ -505,7 +504,29 @@ class Anime_Note:
 	}
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
+	# >>>>> ОБЯЗАТЕЛЬНЫЕ СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def cli(self) -> Anime_NoteCLI:
+		"""Класс-обработчик CLI записи."""
+
+		return self.__NoteCLI
+	
+	@property
+	def id(self) -> int:
+		"""Идентификатор."""
+
+		return self.__ID
+	
+	@property
+	def name(self) -> str | None:
+		"""Название."""
+
+		return self.__Data["name"]
+
+	#==========================================================================================#
+	# >>>>> ДОПОЛНИТЕЛЬНЫЕ СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
@@ -514,12 +535,6 @@ class Anime_Note:
 
 		return self.__Data["another_names"]
 	
-	@property
-	def cli(self) -> Anime_NoteCLI:
-		"""Обработчик CLI записи."""
-
-		return self.__NoteCLI
-
 	@property
 	def emoji_status(self) -> str:
 		"""Статус просмотра в видзе эмодзи."""
@@ -548,22 +563,10 @@ class Anime_Note:
 		return self.__Data["group"]
 
 	@property
-	def id(self) -> int:
-		"""Идентификатор."""
-
-		return self.__ID
-
-	@property
 	def metainfo(self) -> dict:
 		"""Метаданные."""
 
 		return self.__Data["metainfo"]
-
-	@property
-	def name(self) -> str | None:
-		"""Название."""
-
-		return self.__Data["name"]
 
 	@property
 	def parts(self) -> list[dict]:
@@ -686,7 +689,7 @@ class Anime_Note:
 					break
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ОБЯЗАТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def __init__(self, table: "Anime_Table", note_id: int):
@@ -695,15 +698,50 @@ class Anime_Note:
 			table – объектное представление таблицы;\n
 			note_id – идентификатор записи.
 		"""
-		
+
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		self.__ID = note_id
 		self.__Table = table
-		self.__Path = f"{table.directory}/{table.name}/{self.__ID}.json"
+		module = f"{table.module_name}/" if table.module_name else ""
+		self.__Path = f"{table.storage}/{table.name}/{module}{self.__ID}.json"
 		self.__Data = ReadJSON(self.__Path)
 		self.__NoteCLI = Anime_NoteCLI(table, self)
-	
+
+	def rename(self, name: str) -> ExecutionStatus:
+		"""
+		Переименовывает запись.
+			name – название записи.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			self.__Data["name"] = name
+			self.save()
+			Status.message = "Name updated."
+
+		except:
+			Status = ERROR_UNKNOWN
+
+		return Status
+
+	def save(self) -> ExecutionStatus:
+		"""Сохраняет запись в локальный файл."""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			WriteJSON(self.__Path, self.__Data)
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+
+	#==========================================================================================#
+	# >>>>> ДОПОЛНИТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
 	def add_another_name(self, another_name: str) -> ExecutionStatus:
 		"""
 		Добавляет альтернативное название.
@@ -910,41 +948,16 @@ class Anime_Note:
 
 		try:
 
-			if estimation <= self.__Table.options["max_estimation"]:
+			if estimation <= self.__Table.manifest["max_estimation"]:
 				self.__Data["estimation"] = estimation
 				self.save()
 				Status.message = "Estimation updated."
 
-			else:
-				Status = ExecutionError(1, "max_estimation_exceeded")
+			else: Status = ExecutionError(1, "max_estimation_exceeded")
 
-		except:
-			Status = ERROR_UNKNOWN
+		except: Status = ERROR_UNKNOWN
 
 		return Status
-
-	def rename(self, name: str) -> ExecutionStatus:
-		"""
-		Переименовывает запись.
-			name – название записи.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			self.__Data["name"] = name
-			self.save()
-			Status.message = "Name updated."
-
-		except:
-			Status = ERROR_UNKNOWN
-
-		return Status
-
-	def save(self):
-		"""Сохраняет запись в локальный файл."""
-
-		WriteJSON(self.__Path, self.__Data)
 
 	def set_group(self, group_id: int) -> ExecutionStatus:
 		"""
@@ -1101,36 +1114,30 @@ class Anime_Table:
 
 	TYPE: str = "anime"
 	MANIFEST: dict = {
-			"version": 1,
-			"type": TYPE,
-			"recycle_id": False,
-			"max_estimation": 10,
-			"viewer": {
-				"links": True,
-				"comments": True,
-				"colorize": True,
-				"hide_single_series": True
-			},
-			"metainfo_rules": {
-				"base": ["game", "manga", "novel", "original", "ranobe"]
-			}
+		"version": 1,
+		"type": TYPE,
+		"recycle_id": False,
+		"max_estimation": 10,
+		"viewer": {
+			"links": True,
+			"comments": True,
+			"colorize": True,
+			"hide_single_series": True
+		},
+		"metainfo_rules": {
+			"base": ["game", "manga", "novel", "original", "ranobe"]
 		}
+	}
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
+	# >>>>> ОБЯЗАТЕЛЬНЫЕ СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
 	def cli(self) -> Anime_TableCLI:
-		"""Обработчик CLI таблицы."""
+		"""Класс-обработчик CLI таблицы."""
 
 		return self.__TableCLI
-
-	@property
-	def directory(self) -> str:
-		"""Путь к каталогу таблицы."""
-
-		return self.__StorageDirectory
 
 	@property
 	def manifest(self) -> dict:
@@ -1139,16 +1146,22 @@ class Anime_Table:
 		return self.__Manifest.copy()	
 
 	@property
-	def max_estimation(self) -> int:
-		"""Максимальная допустимая оценка."""
+	def modules(self) -> list[str]:
+		"""Список типов модулей таблицы."""
 
-		return self.__Manifest["max_estimation"]
+		Modules = list()
+		Manifest = self.manifest
+
+		if "modules" in Manifest.keys():
+			for Module in Manifest["modules"]: Modules.append(Module["type"])
+
+		return Modules
 
 	@property
-	def metainfo_rules(self) -> dict:
-		"""Правила метаданных."""
+	def module_name(self) -> str | None:
+		"""Название модуля таблицы."""
 
-		return self.__Manifest["metainfo_rules"]
+		return self.__Module
 
 	@property
 	def name(self) -> str:
@@ -1167,6 +1180,28 @@ class Anime_Table:
 		"""Список ID записей."""
 
 		return self.__Notes.keys()
+
+	@property
+	def storage(self) -> str:
+		"""Путь к хранилищу таблиц."""
+
+		return self.__StorageDirectory
+
+	#==========================================================================================#
+	# >>>>> ДОПОЛНИТЕЛЬНЫЕ СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def max_estimation(self) -> int:
+		"""Максимальная допустимая оценка."""
+
+		return self.__Manifest["max_estimation"]
+
+	@property
+	def metainfo_rules(self) -> dict:
+		"""Правила метаданных."""
+
+		return self.__Manifest["metainfo_rules"]
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -1239,22 +1274,24 @@ class Anime_Table:
 			os.remove(f"{self.__Path}/groups.json")
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ОБЯЗАТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 	
-	def __init__(self, storage: str, name: str, autocreation: bool = True):
+	def __init__(self, storage: str, name: str, module: str | None = None, autocreation: bool = True):
 		"""
 		Таблица просмотров аниме.
 			storage_path – директория хранения таблиц;\n
 			name – название таблицы;\n
+			module – название модуля таблицы;\n
 			autocreation – указывает, нужно ли создавать таблицу при отсутствии таковой. 
 		"""
 		
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
-		self.__StorageDirectory = NormalizePath(storage, separator_at_end = False)
+		self.__StorageDirectory = NormalizePath(storage)
 		self.__Name = name
-		self.__Path = f"{self.__StorageDirectory}/{name}"
+		self.__Module = module
+		self.__Path = f"{self.__StorageDirectory}/{name}" + (f"/{module}" if module else "")
 		self.__Notes = dict()
 		self.__Groups = dict()
 		self.__TableCLI = Anime_TableCLI(self)
@@ -1272,16 +1309,111 @@ class Anime_Table:
 		self.__ReadNotes()
 		if os.path.exists(f"{self.__Path}/groups.json"): self.__Groups = ReadJSON(f"{self.__Path}/groups.json")
 
-	def add_group_element(self, group_id: int, note_id: int):
+	def create_note(self) -> ExecutionStatus:
+		"""Создаёт запись."""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			ID = self.__GenerateNewID(self.__Notes.keys())
+			WriteJSON(f"{self.__Path}/{ID}.json", Anime_Note.BASE_NOTE)
+			self.__ReadNote(ID)
+			Status["note_id"] = ID
+			Status.message = f"Note #{ID} created."
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+	
+	def delete_note(self, note_id: int) -> ExecutionStatus:
+		"""
+		Удаляет запись из таблицы. 
+			note_id – идентификатор записи.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			note_id = int(note_id)
+			del self.__Notes[note_id]
+			os.remove(f"{self.__Path}/{note_id}.json")
+			Status.message = f"Note #{note_id} deleted."
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+
+	def get_note(self, note_id: int) -> ExecutionStatus:
+		"""
+		Возвращает запись.
+			note_id – идентификатор записи.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			note_id = int(note_id)
+			if note_id in self.__Notes.keys(): Status.value = self.__Notes[note_id]
+			else: Status = TABLE_ERROR_MISSING_NOTE
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+
+	def rename(self, name: str) -> ExecutionStatus:
+		"""
+		Переименовывает таблицу.
+			name – новое название.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			OldPath = self.__Path
+			NewPath = self.__Path.split("/")
+			NewPath[-1] = name
+			self.__Path = "/".join(NewPath)
+			os.rename(f"{OldPath}", f"{self.__Path}")
+			self.__Name = name
+			Status.message = "Table renamed."
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+
+	def save_manifest(self) -> ExecutionStatus:
+		"""Обновляет файл манифеста."""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			WriteJSON(f"{self.__Path}/manifest.json", self.__Manifest)
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+
+	#==========================================================================================#
+	# >>>>> ДОПОЛНИТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def add_group_element(self, group_id: int, note_id: int) -> ExecutionStatus:
 		"""
 		Добавляет идентификатор записи в элементы группы.
 			group_id – идентификатор группы;\n
 			note_id – идентификатор записи.
 		"""
 
-		Group = self.get_group(group_id)
-		if note_id not in Group["elements"]: Group["elements"].append(note_id)
-		self.__SaveGroups()
+		Status = ExecutionStatus(0)
+
+		try:
+			Group = self.get_group(group_id)
+			if note_id not in Group["elements"]: Group["elements"].append(note_id)
+			self.__SaveGroups()
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
 
 	def create_group(self, name: str) -> ExecutionStatus:
 		"""
@@ -1305,22 +1437,6 @@ class Anime_Table:
 			Status = ERROR_UNKNOWN
 
 		return Status
-
-	def create_note(self) -> ExecutionStatus:
-		"""Создаёт запись."""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			ID = self.__GenerateNewID(self.__Notes.keys())
-			WriteJSON(f"{self.__Path}/{ID}.json", Anime_Note.BASE_NOTE)
-			self.__ReadNote(ID)
-			Status["note_id"] = ID
-			Status.message = f"Note #{ID} created."
-
-		except: Status = ERROR_UNKNOWN
-
-		return Status
 		
 	def delete_group(self, group_id: int) -> ExecutionStatus:
 		"""
@@ -1341,41 +1457,6 @@ class Anime_Table:
 
 		return Status
 
-	def delete_note(self, note_id: int) -> ExecutionStatus:
-		"""
-		Удаляет запись из таблицы. 
-			note_id – идентификатор записи.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			note_id = int(note_id)
-			del self.__Notes[note_id]
-			os.remove(f"{self.__Path}/{note_id}.json")
-			Status.message = "Note deleted."
-
-		except:	Status = ERROR_UNKNOWN
-
-		return Status
-
-	def rename(self, name: str) -> ExecutionStatus:
-		"""
-		Переименовывает таблицу.
-			name – новое название.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			os.rename(f"{self.__Path}", f"{self.__StorageDirectory}/{name}")
-			self.__Name = name
-			Status.message = "Table renamed."
-
-		except FileExistsError: Status = ERROR_UNKNOWN
-
-		return Status
-
 	def get_group(self, group_id: int) -> dict | None:
 		"""
 		Возвращает словарное представление группы.
@@ -1388,37 +1469,22 @@ class Anime_Table:
 
 		return Group
 
-	def get_group_notes(self, group_id: int) -> list[Anime_Note]:
+	def get_group_notes(self, group_id: int) -> ExecutionStatus:
 		"""
 		Возвращает словарное представление группы.
 			group_id – идентификатор группы.
 		"""
 
-		NotesList = list()
-		
-		for Note in self.notes:
-			if Note.group == group_id: NotesList.append(Note)
-
-		return NotesList
-
-	def get_note(self, note_id: int) -> ExecutionStatus:
-		"""
-		Возвращает запись.
-			note_id – идентификатор записи.
-		"""
-
 		Status = ExecutionStatus(0)
 
 		try:
-			note_id = int(note_id)
+			NotesList = list()
+			
+			for Note in self.notes:
+				if Note.group == group_id: NotesList.append(Note)
 
-			if note_id in self.__Notes.keys():
-				Status.value = self.__Notes[note_id]
+			Status.value = NotesList
+		
+		except: Status = ERROR_UNKNOWN
 
-			else:
-				Status = ExecutionError(-1, "note_not_found")
-
-		except:
-			Status = ExecutionError(-1, "unkonwn_error")
-
-		return Status
+		return NotesList
