@@ -1158,12 +1158,6 @@ class Anime_Table:
 		return Modules
 
 	@property
-	def module_name(self) -> str | None:
-		"""Название модуля таблицы."""
-
-		return self.__Module
-
-	@property
 	def name(self) -> str:
 		"""Название таблицы."""
 
