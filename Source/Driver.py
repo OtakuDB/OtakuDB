@@ -1,3 +1,4 @@
+from Source.Core.Base import Manifest, Table
 from Source.Core.Errors import *
 
 import Source.Tables as TablesTypes
@@ -5,7 +6,6 @@ import Source.Tables as TablesTypes
 from dublib.Methods.JSON import ReadJSON, WriteJSON
 from dublib.Engine.Bus import ExecutionStatus
 
-import shutil
 import os
 
 #==========================================================================================#
@@ -21,9 +21,10 @@ class Tables:
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		self.__TablesTypes = {
-			TablesTypes.Anime_Table.TYPE: TablesTypes.Anime_Table,
-			TablesTypes.BattleTech_Table.TYPE: TablesTypes.BattleTech_Table,
-			TablesTypes.BattleTech_Books_Module.TYPE: TablesTypes.BattleTech_Books_Module
+			Table.TYPE: Table,
+			TablesTypes.Anime.TYPE: TablesTypes.Anime,
+			TablesTypes.BattleTech.TYPE: TablesTypes.BattleTech,
+			TablesTypes.BattleTech_Books.TYPE: TablesTypes.BattleTech_Books
 		}
 
 	def __getitem__(self, table_type: str) -> any:
@@ -105,7 +106,7 @@ class Modules:
 #==========================================================================================#
 
 class Driver:
-	"""Менеджер таблиц."""
+	"""Драйвер таблиц."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -162,7 +163,7 @@ class Driver:
 
 	def __init__(self, mount: bool = False):
 		"""
-		Менеджер таблиц.
+		Драйвер таблиц.
 			mount – указывает, следует ли монтировать директорию хранилища.
 		"""
 		
@@ -177,58 +178,49 @@ class Driver:
 		self.__ReadSession()
 		if mount: self.mount()
 
-	def create_module(self, table: any, name: str) -> ExecutionStatus:
+	def create(self, name: str, type: str | None = None, table: Table = None) -> ExecutionStatus:
 		"""
-		Создаёт модуль таблицы.
-			table – таблица, к которой привязывается модуль;\n
-			name – название модуля.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			Status = table.get_module_info(name)
-			Module = None 
-
-			if Status.code != 0: return Status
-			else: Module = Status.value
-
-			if Module["active"]:
-				Status = DRIVER_ERROR_MODULE_ALREADY_INITIALIZED
-				Status["print"] = name
-				return Status
-			
-			ModuleType = Module["type"]
-			self.__Tables[ModuleType](self.__StorageDirectory, table, name, autocreation = True)
-			table.set_module_status(Module["name"], True)
-			Status.message = "Module initialized."
-
-		except FileExistsError: Status = ERROR_UNKNOWN
-
-		return Status
-
-	def create_table(self, name: str, table_type: str) -> ExecutionStatus:
-		"""
-		Создаёт таблицу.
-			name – название таблицы;
-			table_type – тип таблицы.
+		Создаёт таблицу или модуль.
+			name – название;\n
+			type – тип;\n
+			table – таблица, к которой привязывается модуль.
 		"""
 
 		Status = ExecutionStatus(0)
 
 		try:
-			self.__Tables[table_type](self.__StorageDirectory, name, autocreation = True)
-			Status.message = "Created."
+			NewTable = None
+			Manifest: Manifest = None
+
+			if table:
+				Status = self.load_manifest(table.name, name)
+				if Status.code == 0: Manifest = Status.value
+				else: return Status
+				NewTable: Table = self.__Tables[Manifest.type](self.__StorageDirectory, table, name)
+				NewTable.create()
+				
+			else:
+				NewTable: Table = self.__Tables[type](self.__StorageDirectory, name)
+				NewTable.create()
+
+			Status: ExecutionStatus = NewTable.create()
+
+			if Manifest:
+				for Module in Manifest.modules:
+					if Module.name == name: Module.activate()
+
+			if Status.code == 0 and table: Status.message = "Module initialized."
+			elif Status.code == 0: Status.message = "Table created."
 
 		except KeyError:
 			Status = DRIVER_ERROR_NO_TYPE
-			Status["print"] = table_type
+			Status["print"] = type
 
-		except FileExistsError: Status = ERROR_UNKNOWN
+		except: Status = ERROR_UNKNOWN
 
 		return Status
 	
-	def get_manifest(self, name: str, module: str | None = None) -> ExecutionStatus:
+	def load_manifest(self, name: str, module: str | None = None) -> ExecutionStatus:
 		"""
 		Считывает манифест таблицы.
 			name – название таблицы;\n
@@ -239,7 +231,8 @@ class Driver:
 
 		try:
 			module = ("/" + module) if module else ""
-			Status.value = ReadJSON(f"{self.__StorageDirectory}/{name}{module}/manifest.json")
+			Path = f"{self.__StorageDirectory}/{name}{module}/manifest.json"
+			Status.value = Manifest(Path, ReadJSON(Path))
 
 		except FileExistsError: Status = DRIVER_ERROR_BAD_MANIFEST
 
@@ -269,89 +262,30 @@ class Driver:
 
 		return Status
 
-	def open_module(self, table: any, module: str) -> ExecutionStatus:
+	def open(self, name: str, table: Table = None) -> ExecutionStatus:
 		"""
-		Открывает таблицу. Возвращает объектное представление таблицы.
-			table – таблица, к которой привязан модуль;\n
-			module – название модуля.
-		"""
-
-		Status = ExecutionStatus(0)
-		
-		try:
-			Status = self.get_manifest(table.name, module)
-			
-			if Status.code == 0:
-				Manifest = Status.value
-				ModuleType = Manifest["type"]
-				Table = self.__Tables[ModuleType](self.__StorageDirectory, table, module)
-				Status.value = Table
-
-			else: Status = Manifest
-
-		except FileNotFoundError: Status = DRIVER_ERROR_NO_MODULE
-
-		except KeyError: Status = DRIVER_ERROR_NO_TYPE
-
-		except ImportError: Status = ERROR_UNKNOWN
-
-		return Status
-
-	def open_table(self, name: str) -> ExecutionStatus:
-		"""
-		Открывает таблицу. Возвращает объектное представление таблицы.
-			name – название таблицы.
+		Открывает таблицу или модуль.
+			name – название таблицы или модуля;\n
+			table – таблица, к которой привязан модуль.
 		"""
 
 		Status = ExecutionStatus(0)
 		
 		try:
-			Status = self.get_manifest(name)
+			Status = None
+			if table: Status = self.load_manifest(table.name, name)
+			else: Status = self.load_manifest(name)
 			
 			if Status.code == 0:
-				Manifest = Status.value
-				Type = Manifest["type"]
-				Table = self.__Tables[Type](self.__StorageDirectory, name)
-				Status.value = Table
-
-			else: Status = Manifest
+				TableManifest: Manifest = Status.value
+				TableToOpen = None
+				if table: TableToOpen = self.__Tables[TableManifest.type](self.__StorageDirectory, table, name)
+				else: TableToOpen: TableToOpen = self.__Tables[TableManifest.type](self.__StorageDirectory, name)
+				Status = TableToOpen.open()
+				if Status.code == 0: Status.value = TableToOpen
 
 		except FileNotFoundError: Status = DRIVER_ERROR_NO_TABLE
-
 		except KeyError: Status = DRIVER_ERROR_NO_TYPE
-
 		except ImportError: Status = ERROR_UNKNOWN
-
-		return Status
-
-	def delete_module(self, table: any, module: str) -> ExecutionStatus:
-		"""
-		Удаляет модуль.
-			table – таблица, к которой привязан модуль;\n
-			module – название модуля.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			shutil.rmtree(f"{self.__StorageDirectory}/{table.name}/{module}")
-			table.set_module_status(module, False)
-
-		except FileNotFoundError: Status = DRIVER_ERROR_NO_MODULE
-
-		return Status
-
-	def delete_table(self, name: str) -> ExecutionStatus:
-		"""
-		Удаляет таблицу.
-			name – название таблицы.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			shutil.rmtree(f"{self.__StorageDirectory}/{name}")
-
-		except FileNotFoundError: Status = DRIVER_ERROR_NO_TABLE
 
 		return Status

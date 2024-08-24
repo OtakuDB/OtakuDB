@@ -1,3 +1,4 @@
+from Source.Core.Base import Module, ModuleCLI, Note, NoteCLI
 from Source.CLI.Templates import Columns
 from Source.Core.Exceptions import *
 from Source.Core.Errors import *
@@ -5,45 +6,20 @@ from Source.Core.Errors import *
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.StyledPrinter import Styles, StyledPrinter, TextStyler
 from dublib.Engine.Bus import ExecutionError, ExecutionStatus
-from dublib.Methods.Filesystem import NormalizePath
-from dublib.Methods.JSON import ReadJSON, WriteJSON
-
-import os
 
 #==========================================================================================#
 # >>>>> ОБРАБОТЧИКИ ВЗАИМОДЕЙСТВИЙ С ТАБЛИЦЕЙ <<<<< #
 #==========================================================================================#
 
-class BattleTech_Books_NoteCLI:
+class BattleTech_Books_NoteCLI(NoteCLI):
 	"""Обработчик взаимодействий с записью через CLI."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
+	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	@property
-	def commands(self) -> list[Command]:
-		"""Список дескрипторов команд."""
-
-		return self.__Commands
-
-	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __ErasToNames(self, eras_id: list[int]) -> list[str]:
-		"""
-		Преобразует список ID эпох BattleTech в список названий.
-			eras_id – список ID.
-		"""
-
-		Names = list()
-		for EraID in eras_id: Names.append(self.__Module.eras[EraID])
-
-		return Names
-
-	def __GenerateCommands(self) -> list[Command]:
-		"""Генерирует список команд."""
+	def _GenereateCustomCommands(self) -> list[Command]:
+		"""Генерирует дексрипторы дополнительных команд."""
 
 		CommandsList = list()
 
@@ -94,6 +70,80 @@ class BattleTech_Books_NoteCLI:
 
 		return CommandsList
 
+	def _ExecuteCustomCommands(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
+		"""
+		Обрабатывает дополнительные команды.
+			parsed_command – описательная структура команды.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		if parsed_command.name == "comment":
+			Status = self._Note.set_comment(parsed_command.arguments[0])
+
+		if parsed_command.name == "era":
+			Status = self._Note.set_era(parsed_command.arguments[0])
+
+		if parsed_command.name == "estimate":
+			Status = self._Note.estimate(parsed_command.arguments[0])
+
+		if parsed_command.name == "link":
+			Status = self._Note.set_link(parsed_command.arguments[0])
+
+		if parsed_command.name == "mark":
+			Status = self._Note.set_bookmark(parsed_command.arguments[0])
+
+		if parsed_command.name == "meta":
+			Status = ExecutionStatus(0)
+			
+			if "set" in parsed_command.flags:
+				Status = self._Note.set_metainfo(parsed_command.arguments[0],  parsed_command.arguments[1])
+
+			if parsed_command.check_flag("unset"):
+				Status = self._Note.delete_metainfo(parsed_command.arguments[0])
+
+		if parsed_command.name == "set":
+
+			if "altname" in parsed_command.keys.keys():
+				Status = self._Note.add_another_name(parsed_command.keys["altname"])
+
+			if parsed_command.check_key("era"):
+				Status = self._Note.add_era(parsed_command.get_key_value("era"))
+
+			if "localname" in parsed_command.keys.keys():
+				Status = self._Note.rename(parsed_command.keys["localname"], localized = True)
+
+			if "name" in parsed_command.keys.keys():
+				Status = self._Note.rename(parsed_command.keys["name"])
+
+			if "status" in parsed_command.keys.keys():
+				Status = self._Note.set_status(parsed_command.keys["status"])
+
+		if parsed_command.name == "unset":
+
+			if parsed_command.check_key("altname"):
+				Status = self._Note.delete_another_name(parsed_command.get_key_value("altname"))
+
+		if parsed_command.name == "view":
+			self.__View()
+
+		return Status
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __ErasToNames(self, eras_id: list[int]) -> list[str]:
+		"""
+		Преобразует список ID эпох BattleTech в список названий.
+			eras_id – список ID.
+		"""
+
+		Names = list()
+		for EraID in eras_id: Names.append(self._Table.eras[EraID])
+
+		return Names
+
 	def __View(self):
 		"""Выводит форматированные данные записи."""
 
@@ -102,133 +152,47 @@ class BattleTech_Books_NoteCLI:
 		UsedName = None
 		AnotherNames = list()
 
-		if self.__Note.localized_name:
-			UsedName = self.__Note.localized_name
-			AnotherNames.append(self.__Note.name)
+		if self._Note.localized_name:
+			UsedName = self._Note.localized_name
+			AnotherNames.append(self._Note.name)
 
 		else:
-			UsedName = self.__Note.name
+			UsedName = self._Note.name
 
-		AnotherNames += self.__Note.another_names
+		AnotherNames += self._Note.another_names
 
 		#---> Вывод описания записи.
 		#==========================================================================================#
 		if UsedName: StyledPrinter(UsedName, decorations = [Styles.Decorations.Bold], end = False)
-		print(f" {self.__Note.emoji_status}")
-		if self.__Note.era: print(f"⏳ " + self.__Module.eras[self.__Note.era])
-		if self.__Note.estimation: print(f"⭐ {self.__Note.estimation} / {self.__Module.max_estimation}")
-		if self.__Note.bookmark: print(f"🔖 {self.__Note.bookmark} page")
-		if self.__Note.comment: print(f"💭 {self.__Note.comment}")
-		if self.__Note.link: print(f"🔗 {self.__Note.link}")
+		print(f" {self._Note.emoji_status}")
+		if self._Note.era: print(f"⏳ " + self._Table.eras[self._Note.era])
+		if self._Note.estimation: print(f"⭐ {self._Note.estimation} / {self._Table.max_estimation}")
+		if self._Note.bookmark: print(f"🔖 {self._Note.bookmark} page")
+		if self._Note.comment: print(f"💭 {self._Note.comment}")
+		if self._Note.link: print(f"🔗 {self._Note.link}")
 		if AnotherNames: StyledPrinter(f"ANOTHER NAMES: ", decorations = [Styles.Decorations.Bold])
 		for AnotherName in AnotherNames: StyledPrinter(f"    {AnotherName}", decorations = [Styles.Decorations.Italic])
 
 		#---> Вывод классификаторов записи.
 		#==========================================================================================#
 
-		if self.__Note.metainfo:
+		if self._Note.metainfo:
 			StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
-			MetaInfo = self.__Note.metainfo
+			MetaInfo = self._Note.metainfo
 			
 			for Key in MetaInfo.keys():
-				CustomMetainfoMarker = "" if Key in self.__Module.metainfo_rules.keys() else "*"
+				CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
 				print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
 
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, table: "BattleTech_Books_Table", note: "BattleTech_Books_Note"):
-		"""
-		Обработчик взаимодействий с таблицей через CLI.
-			table – объектное представление таблицы;
-			note – объектное представление записи.
-		"""
-
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
-		self.__Module = table
-		self.__Note = note
-		self.__Commands = self.__GenerateCommands()
-
-	def execute(self, command_data: ParsedCommandData) -> ExecutionStatus:
-		"""
-		Обрабатывает команду.
-			command_data – описательная структура команды.
-		"""
-
-		Status = None
-
-		if command_data.name == "comment":
-			Status = self.__Note.set_comment(command_data.arguments[0])
-
-		if command_data.name == "era":
-			Status = self.__Note.set_era(command_data.arguments[0])
-
-		if command_data.name == "estimate":
-			Status = self.__Note.estimate(command_data.arguments[0])
-
-		if command_data.name == "link":
-			Status = self.__Note.set_link(command_data.arguments[0])
-
-		if command_data.name == "mark":
-			Status = self.__Note.set_bookmark(command_data.arguments[0])
-
-		if command_data.name == "meta":
-			Status = ExecutionStatus(0)
-			
-			if "set" in command_data.flags:
-				Status = self.__Note.set_metainfo(command_data.arguments[0],  command_data.arguments[1])
-
-			if command_data.check_flag("unset"):
-				Status = self.__Note.delete_metainfo(command_data.arguments[0])
-
-		if command_data.name == "set":
-
-			if "altname" in command_data.keys.keys():
-				Status = self.__Note.add_another_name(command_data.keys["altname"])
-
-			if command_data.check_key("era"):
-				Status = self.__Note.add_era(command_data.get_key_value("era"))
-
-			if "localname" in command_data.keys.keys():
-				Status = self.__Note.rename(command_data.keys["localname"], localized = True)
-
-			if "name" in command_data.keys.keys():
-				Status = self.__Note.rename(command_data.keys["name"])
-
-			if "status" in command_data.keys.keys():
-				Status = self.__Note.set_status(command_data.keys["status"])
-
-		if command_data.name == "unset":
-
-			if command_data.check_key("altname"):
-				Status = self.__Note.delete_another_name(command_data.get_key_value("altname"))
-
-		if command_data.name == "view":
-			self.__View()
-
-		return Status
-
-class BattleTech_Books_TableCLI:
-	"""Обработчик взаимодействий с таблицей через CLI."""
+class BattleTech_Books_ModuleCLI(ModuleCLI):
+	"""CLI модуля."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
+	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	@property
-	def commands(self) -> list[Command]:
-		"""Список дескрипторов команд."""
-
-		return self.__Commands
-
-	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __GenerateCommands(self) -> list[Command]:
-		"""Генерирует список команд."""
+	def _GenereateCustomCommands(self) -> list[Command]:
+		"""Генерирует дексрипторы дополнительных команд."""
 
 		CommandsList = list()
 
@@ -242,17 +206,37 @@ class BattleTech_Books_TableCLI:
 		Com.add_key("search", description = "Part of note name.")
 		CommandsList.append(Com)
 
-		Com = Command("new", "Create new note.")
-		Com.add_flag("o", "Open new note.")
-		CommandsList.append(Com)
-
 		Com = Command("search", "Search notes by part of name.")
 		Com.add_argument(description = "Search query.", important = True)
 		CommandsList.append(Com)
 
 		return CommandsList
 
-	def __List(self, command_data: ParsedCommandData, search: str | None = None):
+	def _ExecuteCustomCommands(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
+		"""
+		Обрабатывает дополнительные команды.
+			parsed_command – описательная структура команды.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		if parsed_command.name == "eras":
+			Eras = self._Module.eras
+			for EraID in Eras.keys(): print(f"    {EraID}: {Eras[EraID]}")
+
+		if parsed_command.name == "list":
+			self.__List(parsed_command)
+
+		if parsed_command.name == "search":
+			self.__List(parsed_command, parsed_command.arguments[0])
+
+		return Status
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __List(self, parsed_command: ParsedCommandData, search: str | None = None):
 			Notes = list()
 			Content = {
 				"ID": [],
@@ -261,13 +245,13 @@ class BattleTech_Books_TableCLI:
 				"Author": [],
 				"Estimation": []
 			}
-			SortBy = command_data.keys["sort"].title() if "sort" in command_data.keys.keys() else "ID"
+			SortBy = parsed_command.keys["sort"].title() if "sort" in parsed_command.keys.keys() else "ID"
 			if SortBy == "Id": SortBy = SortBy.upper()
 			if SortBy not in Content.keys(): return ExecutionError(-1, "bad_sorting_parameter")
-			Reverse = command_data.check_flag("r")
+			Reverse = parsed_command.check_flag("r")
 			
-			if self.__Module.notes:
-				Notes = self.__Module.notes
+			if self._Module.notes:
+				Notes = self._Module.notes
 
 				if search:
 					print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
@@ -309,51 +293,12 @@ class BattleTech_Books_TableCLI:
 
 			else:
 				print("Table is empty.")
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, table: "BattleTech_Books_Table"):
-		"""
-		Обработчик взаимодействий с таблицей через CLI.
-			table – объектное представление таблицы.
-		"""
-
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
-		self.__Module = table
-		self.__Commands = self.__GenerateCommands()
-
-	def execute(self, command_data: ParsedCommandData) -> ExecutionStatus:
-		"""
-		Обрабатывает команду.
-			command_data – описательная структура команды.
-		"""
-
-		Status = None
-
-		if command_data.name == "eras":
-			Eras = self.__Module.eras
-			for EraID in Eras.keys(): print(f"    {EraID}: {Eras[EraID]}")
-
-		if command_data.name == "list":
-			self.__List(command_data)
-
-		if command_data.name == "new":
-			Status = self.__Module.create_note()
-			if command_data.check_flag("o"): Status["open_note"] = True
-
-		if command_data.name == "search":
-			self.__List(command_data, command_data.arguments[0])
-
-		return Status
 	
 #==========================================================================================#
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
 #==========================================================================================#
 
-class BattleTech_Books_Note:
+class BattleTech_Books_Note(Note):
 	"""Запись о прочтении книги по вселенной BattleTech."""
 
 	#==========================================================================================#
@@ -374,28 +319,6 @@ class BattleTech_Books_Note:
 	}
 
 	#==========================================================================================#
-	# >>>>> ОБЯЗАТЕЛЬНЫЕ СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def cli(self) -> BattleTech_Books_NoteCLI:
-		"""Класс-обработчик CLI записи."""
-
-		return self.__NoteCLI
-	
-	@property
-	def id(self) -> int:
-		"""Идентификатор."""
-
-		return self.__ID
-	
-	@property
-	def name(self) -> str | None:
-		"""Название."""
-
-		return self.__Data["name"]
-
-	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
@@ -403,25 +326,25 @@ class BattleTech_Books_Note:
 	def another_names(self) -> list[str]:
 		"""Список альтернативных названий."""
 
-		return self.__Data["another_names"]
+		return self._Data["another_names"]
 
 	@property
 	def bookmark(self) -> int | None:
 		"""Закладка."""
 
-		return self.__Data["bookmark"]
+		return self._Data["bookmark"]
 
 	@property
 	def comment(self) -> str | None:
 		"""Комментарий."""
 
-		return self.__Data["comment"]
+		return self._Data["comment"]
 
 	@property
 	def era(self) -> list[int]:
 		"""Список ID эпох BattleTech."""
 
-		return self.__Data["era"]
+		return self._Data["era"]
 
 	@property
 	def emoji_status(self) -> str:
@@ -440,87 +363,47 @@ class BattleTech_Books_Note:
 			None: ""
 		}
 
-		return Statuses[self.__Data["status"]]
+		return Statuses[self._Data["status"]]
 
 	@property
 	def estimation(self) -> int | None:
 		"""Оценка."""
 
-		return self.__Data["estimation"]
+		return self._Data["estimation"]
 
 	@property
 	def link(self) -> str | None:
 		"""Ссылка."""
 
-		return self.__Data["link"]
+		return self._Data["link"]
 
 	@property
 	def localized_name(self) -> str | None:
 		"""Локализованное название."""
 
-		return self.__Data["localized_name"]
-
+		return self._Data["localized_name"]
+	
 	@property
 	def metainfo(self) -> dict:
 		"""Метаданные."""
 
-		return self.__Data["metainfo"]
+		return self._Data["metainfo"]
 	
 	@property
 	def status(self) -> str | None:
 		"""Статус просмотра."""
 
-		return self.__Data["status"]
+		return self._Data["status"]
 
 	#==========================================================================================#
-	# >>>>> ОБЯЗАТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
+	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#	
 
-	def __init__(self, module: "BattleTech_Books_Module", note_id: int):
-		"""
-		Запись просмотра медиаконтента.
-			module – модуль таблицы;
-			note_id – идентификатор записи.
-		"""
-		
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
-		self.__ID = note_id
-		self.__Module = module
-		self.__Path = f"{module.storage}/{module.table_name}/{module.name}/{self.__ID}.json"
-		self.__Data = ReadJSON(self.__Path)
-		self.__NoteCLI = BattleTech_Books_NoteCLI(module, self)
-	
-	def rename(self, name: str, localized: bool = False) -> ExecutionStatus:
-		"""
-		Переименовывает запись.
-			name – название записи.
-		"""
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации класса."""
 
-		Status = ExecutionStatus(0)
+		self._CLI = BattleTech_Books_NoteCLI
 
-		try:
-			
-			if localized:
-				self.__Data["localized_name"] = name
-				Status.message = "Localized name updated."
-
-			else:
-				self.__Data["name"] = name
-				Status.message = "Name updated."
-				
-			self.save()
-
-		except:
-			Status = ERROR_UNKNOWN
-
-		return Status
-
-	def save(self):
-		"""Сохраняет запись в локальный файл."""
-
-		WriteJSON(self.__Path, self.__Data)
-	
 	#==========================================================================================#
 	# >>>>> ДОПОЛНИТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -545,7 +428,7 @@ class BattleTech_Books_Note:
 
 		return Status
 
-	def delete_another_name(self, another_name: int | str) -> ExecutionStatus:
+	def remove_another_name(self, another_name: int | str) -> ExecutionStatus:
 		"""
 		Удаляет альтернативное название.
 			another_name – альтернативное название или его индекс.
@@ -572,24 +455,6 @@ class BattleTech_Books_Note:
 
 		return Status
 
-	def delete_metainfo(self, key: str) -> ExecutionStatus:
-		"""
-		Удаляет метаданные.
-			key – ключ метаданных.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			del self.__Data["metainfo"][key]
-			self.save()
-			Status.message = "Metainfo updated."
-
-		except:
-			Status = ERROR_UNKNOWN
-
-		return Status
-
 	def estimate(self, estimation: int) -> ExecutionStatus:
 		"""
 		Выставляет оценку.
@@ -600,7 +465,7 @@ class BattleTech_Books_Note:
 
 		try:
 
-			if estimation <= self.__Module.manifest["max_estimation"]:
+			if estimation <= self._Module.manifest["max_estimation"]:
 				self.__Data["estimation"] = estimation
 				self.save()
 				Status.message = "Estimation updated."
@@ -663,15 +528,15 @@ class BattleTech_Books_Note:
 			if era.isdigit():
 				era = int(era)
 
-				if era in self.__Module.eras.keys():
+				if era in self._Module.eras.keys():
 					self.__Data["era"] = era
 					self.save()
 					Status.message = "Era updated."
 
 				else: Status = ExecutionError(-2, "incorrect_era")
 
-			elif era in self.__Module.eras.values:
-				self.__Data["era"] = list(self.__Module.eras.values).index(era)
+			elif era in self._Module.eras.values:
+				self.__Data["era"] = list(self._Module.eras.values).index(era)
 				self.save()
 				Status.message = "Era updated."
 
@@ -694,30 +559,6 @@ class BattleTech_Books_Note:
 			self.__Data["link"] = link
 			self.save()
 			Status.message = "Link updated."
-
-		except:
-			Status = ERROR_UNKNOWN
-
-		return Status
-
-	def set_metainfo(self, key: str, metainfo: str) -> ExecutionStatus:
-		"""
-		Задаёт метаданные.
-			key – ключ метаданных;
-			metainfo – значение метаданных.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			if key in self.__Module.metainfo_rules.keys() and self.__Module.metainfo_rules[key] and metainfo not in self.__Module.metainfo_rules[key]: raise MetainfoBlocked()
-			self.__Data["metainfo"][key] = metainfo
-			self.__Data["metainfo"] = dict(sorted(self.__Data["metainfo"].items()))
-			self.save()
-			Status.message = "Metainfo updated."
-
-		except MetainfoBlocked:
-			Status = NOTE_ERROR_METAINFO_BLOCKED
 
 		except:
 			Status = ERROR_UNKNOWN
@@ -755,250 +596,55 @@ class BattleTech_Books_Note:
 
 		return Status
 
-class BattleTech_Books_Module:
+class BattleTech_Books(Module):
 	"""Таблица прочтения книг по вселенной BattleTech."""
 
 	#==========================================================================================#
 	# >>>>> СТАТИЧЕСКИЕ АТРИБУТЫ <<<<< #
 	#==========================================================================================#
 
-	TYPE = "battletech:books"
+	TYPE: str = "battletech:books"
 	MANIFEST: dict = {
-		"version": 1,
-		"type": "battletech:books",
-		"recycle_id": True,
-		"max_estimation": 10,
-		"viewer": {
-			"colorize": True
+		"object": "module",
+		"type": TYPE,
+		"common": {
+			"recycle_id": True
 		},
 		"metainfo_rules": {
 			"author": None,
 			"publisher": None,
 			"series": None
+		},
+		"viewer": {
+			"colorize": True
+		},
+		"custom": {
+			"max_estimation": 10
 		}
 	}
 
 	#==========================================================================================#
-	# >>>>> ОБЯЗАТЕЛЬНЫЕ СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def cli(self) -> BattleTech_Books_TableCLI:
-		"""Обработчик CLI таблицы."""
-
-		return self.__ModuleCLI
-	
-	@property
-	def manifest(self) -> dict:
-		"""Манифест таблицы."""
-
-		return self.__Manifest.copy()	
-	
-	@property
-	def name(self) -> str | None:
-		"""Название модуля таблицы."""
-
-		return self.__Module
-
-	@property
-	def notes(self) -> list[BattleTech_Books_Note]:
-		"""Список записей."""
-
-		return self.__Notes.values()
-	
-	@property
-	def notes_id(self) -> list[int]:
-		"""Список ID записей."""
-
-		return self.__Notes.keys()
-	
-	@property
-	def storage(self) -> str:
-		"""Путь к хранилищу таблиц."""
-
-		return self.__StorageDirectory
-
-	@property
-	def table_name(self) -> str:
-		"""Название таблицы."""
-
-		return self.__TableName
-
-	#==========================================================================================#
 	# >>>>> ДОПОЛНИТЕЛЬНЫЕ СВОЙСТВА <<<<< #
 	#==========================================================================================#
-
+	
 	@property
 	def eras(self) -> dict:
 		"""Эпохи BattleTech."""
 
-		return self.__Eras
+		return self._Table.eras
 
 	@property
 	def max_estimation(self) -> int:
 		"""Максимальная допустимая оценка."""
 
-		return self.__Manifest["max_estimation"]
-
-	@property
-	def metainfo_rules(self) -> dict:
-		"""Правила метаданных."""
-
-		return self.__Manifest["metainfo_rules"]
-
-	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __Create(self):
-		"""Создаёт каталог и манифест таблицы."""
-
-		if not os.path.exists(self.__Path): os.makedirs(self.__Path)
-		WriteJSON(f"{self.__Path}/manifest.json", self.MANIFEST)
-
-	def __GetNewID(self, container: dict) -> int:
-		"""
-		Генерирует ID для новой записи или группы.
-			container – контейнер записи или группы.
-		"""
-
-		NewID = None
-
-		if self.__Manifest["recycle_id"]:
-			ListID = container.keys()
-
-			for ID in range(1, len(ListID) + 1):
-
-				if ID not in ListID:
-					NewID = ID
-					break
-
-		if not NewID:
-			NewID = int(max(container.keys())) + 1 if len(container.keys()) > 0 else 1
-
-		return NewID
-
-	def __GetNotesListID(self) -> list[int]:
-		"""Возвращает список ID записей в таблице, полученный путём сканирования файлов JSON."""
-
-		ListID = list()
-		Files = os.listdir(self.__Path)
-		Files = list(filter(lambda File: File.endswith(".json"), Files))
-
-		for File in Files: 
-			if not File.replace(".json", "").isdigit(): Files.remove(File)
-
-		for File in Files: ListID.append(int(File.replace(".json", "")))
-		
-		return ListID
-
-	def __ReadNote(self, note_id: int):
-		"""
-		Считывает содержимое записи.
-			note_id – идентификатор записи.
-		"""
-
-		self.__Notes[note_id] = BattleTech_Books_Note(self, note_id)
-
-	def __ReadNotes(self):
-		"""Считывает содержимое всех записей."""
-
-		ListID = self.__GetNotesListID()
-		for ID in ListID: self.__ReadNote(ID)
-
-	#==========================================================================================#
-	# >>>>> ОБЯЗАТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
+		return self._Manifest.custom["max_estimation"]
 	
-	def __init__(self, storage: str, table: "BattleTech_Table", module: str, autocreation: bool = True):
-		"""
-		Таблица прочтения книг по вселенной BattleTech.
-			storage_path – директория хранения таблиц;\n
-			table – таблица, к которой привязан модуль;\n
-			module – название модуля таблицы;\n
-			autocreation – указывает, нужно ли создавать таблицу при отсутствии таковой. 
-		"""
-		
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
-		self.__StorageDirectory = NormalizePath(storage)
-		self.__TableName = table.name
-		self.__Module = module
-		self.__Path = f"{self.__StorageDirectory}/{self.__TableName}" + (f"/{module}" if module else "")
-		self.__Notes = dict()
-		self.__ModuleCLI = BattleTech_Books_TableCLI(self)
-		self.__Manifest = None
-		self.__Table = table
+	#==========================================================================================#
+	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#	
 
-		self.__Eras = {
-			0: "Pre–Star League",
-			1: "Star League",
-			2: "Succession Wars",
-			3: "Clan Invasion",
-			4: "Civil War",
-			5: "Jihad",
-			6: "Dark Age",
-			7: "ilClan"
-		}
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации класса."""
 
-		#---> Проверка существования или создание таблицы.
-		#==========================================================================================#
-		if not os.path.exists(f"{self.__Path}/manifest.json") and autocreation: self.__Create()
-		elif not os.path.exists(f"{self.__Path}/manifest.json"): raise FileNotFoundError(f"{self.__Path}/manifest.json")
-
-		#---> Загрузка данных.
-		#==========================================================================================#
-		self.__Manifest = ReadJSON(f"{self.__Path}/manifest.json")
-		if self.__Manifest["type"] != self.TYPE: raise TypeError(f"Only \"{self.TYPE}\" type tables supported.")
-		self.__ReadNotes()
-
-	def create_note(self) -> ExecutionStatus:
-		"""Создаёт запись."""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			ID = self.__GetNewID(self.__Notes)
-			WriteJSON(f"{self.__Path}/{ID}.json", BattleTech_Books_Note.BASE_NOTE)
-			self.__ReadNote(ID)
-			Status["note_id"] = ID
-			Status.message = f"Note #{ID} created."
-
-		except: Status = ERROR_UNKNOWN
-
-		return Status
-
-	def delete_note(self, note_id: int) -> ExecutionStatus:
-		"""
-		Удаляет запись из таблицы. 
-			note_id – идентификатор записи.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			note_id = int(note_id)
-			del self.__Notes[note_id]
-			os.remove(f"{self.__Path}/{note_id}.json")
-			Status.message = f"Note #{note_id} deleted."
-
-		except FileExistsError: Status = ERROR_UNKNOWN
-
-		return Status
-
-	def get_note(self, note_id: int) -> ExecutionStatus:
-		"""
-		Возвращает объектное представление записи.
-			note_id – идентификатор записи.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			note_id = int(note_id)
-			if note_id in self.__Notes.keys(): Status.value = self.__Notes[note_id]
-			else: Status = TABLE_ERROR_MISSING_NOTE
-
-		except: Status = ERROR_UNKNOWN
-
-		return Status
+		self._Note = BattleTech_Books_Note
+		self._CLI = BattleTech_Books_ModuleCLI
