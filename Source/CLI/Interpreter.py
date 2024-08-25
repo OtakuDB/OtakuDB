@@ -4,10 +4,9 @@ from Source.Core.Errors import *
 from Source.Driver import Driver
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData, Terminalyzer
-from dublib.CLI.Templates import Confirmation, PrintExecutionStatus
+from dublib.CLI.Templates import PrintExecutionStatus
 from dublib.Engine.Bus import ExecutionError, ExecutionWarning, ExecutionStatus
 from dublib.CLI.StyledPrinter import Styles, TextStyler
-from dublib.CLI.Templates import Confirmation
 from dublib.Methods.System import Clear
 from dublib.Exceptions.CLI import *
 

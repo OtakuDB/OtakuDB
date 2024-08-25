@@ -639,7 +639,7 @@ class ModuleCLI:
 		elif parsed_command.name == "open":
 
 			if parsed_command.check_flag("m"):
-				NoteID = max(self._Table.notes_id)
+				NoteID = max(self._Module.notes_id)
 				Status["open_note"] = NoteID
 
 			else:
