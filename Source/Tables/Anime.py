@@ -83,9 +83,6 @@ class Anime_NoteCLI(NoteCLI):
 		Com.add_argument(ParametersTypes.Number, "Part index.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("view", "View note in console.")
-		CommandsList.append(Com)
-
 		return CommandsList
 
 	def _ExecuteCustomCommands(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
@@ -182,95 +179,98 @@ class Anime_NoteCLI(NoteCLI):
 
 		return Status
 
-	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __View(self):
+	def _View(self) -> ExecutionStatus:
 		"""Выводит форматированные данные записи."""
 
-		#---> Получение данных.
-		#==========================================================================================#
-		Parts = self._Note.parts
-		Options = self._Table.manifest.viewer
+		Status = ExecutionStatus(0)
 
-		#---> Объявление литералов.
-		#==========================================================================================#
-		MSG_TotalProgress = f" ({self._Note.progress}% viewed)" if self._Note.progress else ""
+		try:
+			#---> Получение данных.
+			#==========================================================================================#
+			Parts = self._Note.parts
+			Options = self._Table.manifest.viewer
 
-		#---> Вывод описания записи.
-		#==========================================================================================#
-		if self._Note.name: StyledPrinter(self._Note.name, decorations = [Styles.Decorations.Bold], end = False)
-		print(f"{MSG_TotalProgress} {self._Note.emoji_status}")
-		if self._Note.estimation: print(f"⭐ {self._Note.estimation} / {self._Table.max_estimation}")
-		if self._Note.another_names: StyledPrinter(f"ANOTHER NAMES: ", decorations = [Styles.Decorations.Bold])
-		for AnotherName in self._Note.another_names: StyledPrinter(f"    {AnotherName}", decorations = [Styles.Decorations.Italic])
+			#---> Объявление литералов.
+			#==========================================================================================#
+			MSG_TotalProgress = f" ({self._Note.progress}% viewed)" if self._Note.progress else ""
 
-		#---> Вывод классификаторов записи.
-		#==========================================================================================#
+			#---> Вывод описания записи.
+			#==========================================================================================#
+			if self._Note.name: StyledPrinter(self._Note.name, decorations = [Styles.Decorations.Bold], end = False)
+			print(f"{MSG_TotalProgress} {self._Note.emoji_status}")
+			if self._Note.estimation: print(f"⭐ {self._Note.estimation} / {self._Table.max_estimation}")
+			if self._Note.another_names: StyledPrinter(f"ANOTHER NAMES: ", decorations = [Styles.Decorations.Bold])
+			for AnotherName in self._Note.another_names: StyledPrinter(f"    {AnotherName}", decorations = [Styles.Decorations.Italic])
 
-		if self._Note.metainfo:
-			StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
-			MetaInfo = self._Note.metainfo
-			
-			for Key in MetaInfo.keys():
-				CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
-				print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
+			#---> Вывод классификаторов записи.
+			#==========================================================================================#
 
-		if self._Note.tags:
-			StyledPrinter(f"TAGS: ", decorations = [Styles.Decorations.Bold], end = False)
-			print(", ".join(self._Note.tags))
+			if self._Note.metainfo:
+				StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
+				MetaInfo = self._Note.metainfo
+				
+				for Key in MetaInfo.keys():
+					CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
+					print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
 
-		#---> Вывод частей записи.
-		#==========================================================================================#
+			if self._Note.tags:
+				StyledPrinter(f"TAGS: ", decorations = [Styles.Decorations.Bold], end = False)
+				print(", ".join(self._Note.tags))
 
-		if Parts:
-			StyledPrinter(f"PARTS:", decorations = [Styles.Decorations.Bold])
+			#---> Вывод частей записи.
+			#==========================================================================================#
 
-			for PartIndex in range(0, len(Parts)):
+			if Parts:
+				StyledPrinter(f"PARTS:", decorations = [Styles.Decorations.Bold])
 
-				#---> Объявление литералов.
-				#==========================================================================================#
-				MSG_PartStatus = ""
-				if "watched" in Parts[PartIndex].keys(): MSG_PartStatus = " ✅"
-				if "announced" in Parts[PartIndex].keys(): MSG_PartStatus = " ℹ️"
-				if "skipped" in Parts[PartIndex].keys(): MSG_PartStatus = " 🚫"
-				MSG_Name = " " + Parts[PartIndex]["name"] if "name" in Parts[PartIndex].keys() and Parts[PartIndex]["name"] else ""
-				MSG_Number = " " + str(Parts[PartIndex]["number"]) if "number" in Parts[PartIndex].keys() and Parts[PartIndex]["number"] else ""
-				MSG_Indent = " " * len(str(PartIndex))
-				MSG_Type = Parts[PartIndex]["type"]
-
-				#---> Определение цвета части.
-				#==========================================================================================#
-				TextColor = None
-				if Options["colorize"] and "✅" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Green)
-				if Options["colorize"] and "ℹ️" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Cyan)
-				if Options["colorize"] and "🚫" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Blue)
-
-				if "series" in Parts[PartIndex].keys():
+				for PartIndex in range(0, len(Parts)):
 
 					#---> Объявление литералов.
 					#==========================================================================================#
-					MSG_Mark = str(Parts[PartIndex]["mark"]) + " / " if "mark" in Parts[PartIndex] else ""
-					MSG_MarkIndicator = " ⏳" if MSG_Mark else ""
-					MSG_Progress = " (" + str(int(Parts[PartIndex]["mark"] / Parts[PartIndex]["series"] * 100)) + "% viewed)" if MSG_Mark else ""
-					MSG_Series = Parts[PartIndex]["series"]
+					MSG_PartStatus = ""
+					if "watched" in Parts[PartIndex].keys(): MSG_PartStatus = " ✅"
+					if "announced" in Parts[PartIndex].keys(): MSG_PartStatus = " ℹ️"
+					if "skipped" in Parts[PartIndex].keys(): MSG_PartStatus = " 🚫"
+					MSG_Name = " " + Parts[PartIndex]["name"] if "name" in Parts[PartIndex].keys() and Parts[PartIndex]["name"] else ""
+					MSG_Number = " " + str(Parts[PartIndex]["number"]) if "number" in Parts[PartIndex].keys() and Parts[PartIndex]["number"] else ""
+					MSG_Indent = " " * len(str(PartIndex))
+					MSG_Type = Parts[PartIndex]["type"]
 
 					#---> Определение цвета части.
 					#==========================================================================================#
-					if Options["colorize"] and "⏳" in MSG_MarkIndicator: TextColor = StylesGroup(text_color = Styles.Colors.Yellow)
+					TextColor = None
+					if Options["colorize"] and "✅" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Green)
+					if Options["colorize"] and "ℹ️" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Cyan)
+					if Options["colorize"] and "🚫" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Blue)
 
-					#---> Вывод части.
-					#==========================================================================================#
-					StyledPrinter(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}{MSG_MarkIndicator}", styles = TextColor)
-					if not Options["hide_single_series"] or Options["hide_single_series"] and MSG_Series and MSG_Series > 1: StyledPrinter(f"    {MSG_Indent}       {MSG_Mark}{MSG_Series} series{MSG_Progress}", styles = TextColor)
+					if "series" in Parts[PartIndex].keys():
 
-				else:
-					StyledPrinter(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}", styles = TextColor)
+						#---> Объявление литералов.
+						#==========================================================================================#
+						MSG_Mark = str(Parts[PartIndex]["mark"]) + " / " if "mark" in Parts[PartIndex] else ""
+						MSG_MarkIndicator = " ⏳" if MSG_Mark else ""
+						MSG_Progress = " (" + str(int(Parts[PartIndex]["mark"] / Parts[PartIndex]["series"] * 100)) + "% viewed)" if MSG_Mark else ""
+						MSG_Series = Parts[PartIndex]["series"]
 
-				if Options["links"] and "link" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
-				if Options["comments"] and "comment" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       💭 " + Parts[PartIndex]["comment"])
+						#---> Определение цвета части.
+						#==========================================================================================#
+						if Options["colorize"] and "⏳" in MSG_MarkIndicator: TextColor = StylesGroup(text_color = Styles.Colors.Yellow)
 
+						#---> Вывод части.
+						#==========================================================================================#
+						StyledPrinter(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}{MSG_MarkIndicator}", styles = TextColor)
+						if not Options["hide_single_series"] or Options["hide_single_series"] and MSG_Series and MSG_Series > 1: StyledPrinter(f"    {MSG_Indent}       {MSG_Mark}{MSG_Series} series{MSG_Progress}", styles = TextColor)
+
+					else:
+						StyledPrinter(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}", styles = TextColor)
+
+					if Options["links"] and "link" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
+					if Options["comments"] and "comment" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       💭 " + Parts[PartIndex]["comment"])
+		
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+	
 class Anime_TableCLI(TableCLI):
 	"""CLI таблицы."""
 
@@ -278,92 +278,71 @@ class Anime_TableCLI(TableCLI):
 	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _GenereateCustomCommands(self) -> list[Command]:
-		"""Генерирует дексрипторы дополнительных команд."""
+	def _List(self, parsed_command: ParsedCommandData, search: str | None = None) -> ExecutionStatus:
+			"""
+			Выводит список записей.
+				parsed_command – описательная структура команды;\n
+				search – поисковый запрос.
+			"""
 
-		CommandsList = list()
+			Status = ExecutionStatus(0)
 
-		Com = Command("list", "Show list of notes.")
-		Com.add_flag("r", "Reverse list.")
-		Com.add_key("group", ParametersTypes.Number, "Group ID.")
-		Com.add_key("sort", ParametersTypes.Text, "Column name.")
-		Com.add_key("search", description = "Part of note name.")
-		CommandsList.append(Com)
+			try:
+				Content = {
+					"ID": [],
+					"Status": [],
+					"Name": [],
+					"Estimation": []
+				}
+				SortBy = parsed_command.keys["sort"].title() if "sort" in parsed_command.keys.keys() else "ID"
+				if SortBy == "Id": SortBy = SortBy.upper()
 
-		Com = Command("search", "Search notes by part of name.")
-		Com.add_argument(description = "Search query.", important = True)
-		CommandsList.append(Com)
-
-		return CommandsList
-
-	def _ExecuteCustomCommands(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
-		"""
-		Обрабатывает дополнительные команды.
-			parsed_command – описательная структура команды.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		if parsed_command.name == "list":
-			self.__List(parsed_command)
-
-		if parsed_command.name == "search":
-			self.__List(parsed_command, parsed_command.arguments[0])
-
-		return Status
-
-	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __List(self, parsed_command: ParsedCommandData, search: str | None = None):
-			Content = {
-				"ID": [],
-				"Status": [],
-				"Name": [],
-				"Estimation": []
-			}
-			SortBy = parsed_command.keys["sort"].title() if "sort" in parsed_command.keys.keys() else "ID"
-			if SortBy == "Id": SortBy = SortBy.upper()
-			if SortBy not in Content.keys(): return ExecutionError(-1, "bad_sorting_parameter")
-			Reverse = parsed_command.check_flag("r")
-			
-			if self._Table.notes:
-				Notes = self._Table.notes
-
-				if search:
-					print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
-					NotesCopy = list(Notes)
-					SearchBuffer = list()
-
-					for Note in NotesCopy:
-						Names = list()
-						if Note.name: Names.append(Note.name)
-						if Note.another_names: Names += Note.another_names
-
-						for Name in Names:
-							if search.lower() in Name.lower(): SearchBuffer.append(Note)
-
-					Notes = SearchBuffer
+				if SortBy not in Content.keys():
+					Status = ExecutionError(-1, "no_column_to_sort")
+					return Status
 				
-				for Note in Notes:
-					Name = Note.name if Note.name else ""
-					Status = Note.status
-					if Status == "announced": Status = TextStyler(Status, text_color = Styles.Colors.Purple)
-					if Status == "planned": Status = TextStyler(Status, text_color = Styles.Colors.Cyan)
-					if Status == "watching": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
-					if Status == "completed": Status = TextStyler(Status, text_color = Styles.Colors.Green)
-					if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
-					Content["ID"].append(Note.id)
-					Content["Status"].append(Status if Status else "")
-					Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
-					Content["Estimation"].append(Note.estimation if Note.estimation else "")
+				Reverse = parsed_command.check_flag("r")
+				
+				if self._Table.notes:
+					Notes = self._Table.notes
 
-				if len(Notes): Columns(Content, sort_by = SortBy, reverse = Reverse)
-				else: print("Notes not found.")
+					if search:
+						print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
+						NotesCopy = list(Notes)
+						SearchBuffer = list()
 
-			else:
-				print("Table is empty.")
+						for Note in NotesCopy:
+							Names = list()
+							if Note.name: Names.append(Note.name)
+							if Note.another_names: Names += Note.another_names
+
+							for Name in Names:
+								if search.lower() in Name.lower(): SearchBuffer.append(Note)
+
+						Notes = SearchBuffer
+					
+					for Note in Notes:
+						Name = Note.name if Note.name else ""
+						NoteStatus = Note.status
+						if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Purple)
+						if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Cyan)
+						if NoteStatus == "watching": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow)
+						if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green)
+						if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Red)
+						Content["ID"].append(Note.id)
+						Content["Status"].append(NoteStatus if NoteStatus else "")
+						Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
+						Content["Estimation"].append(Note.estimation if Note.estimation else "")
+
+					if len(Notes): Columns(Content, sort_by = SortBy, reverse = Reverse)
+					else: Status.message = "Notes not found."
+
+				else:
+					Status.message = "Table is empty."
+
+			except: Status = ERROR_UNKNOWN
+
+			return Status
 	
 #==========================================================================================#
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #

@@ -65,9 +65,6 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		Com.add_key("era", ParametersTypes.Number, description = "Era ID.")
 		CommandsList.append(Com)
 
-		Com = Command("view", "View note in console.")
-		CommandsList.append(Com)
-
 		return CommandsList
 
 	def _ExecuteCustomCommands(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
@@ -124,65 +121,54 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			if parsed_command.check_key("altname"):
 				Status = self._Note.delete_another_name(parsed_command.get_key_value("altname"))
 
-		if parsed_command.name == "view":
-			self.__View()
-
 		return Status
 
-	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __ErasToNames(self, eras_id: list[int]) -> list[str]:
-		"""
-		Преобразует список ID эпох BattleTech в список названий.
-			eras_id – список ID.
-		"""
-
-		Names = list()
-		for EraID in eras_id: Names.append(self._Table.eras[EraID])
-
-		return Names
-
-	def __View(self):
+	def _View(self) -> ExecutionStatus:
 		"""Выводит форматированные данные записи."""
 
-		#---> Получение данных.
-		#==========================================================================================#
-		UsedName = None
-		AnotherNames = list()
+		Status = ExecutionStatus(0)
 
-		if self._Note.localized_name:
-			UsedName = self._Note.localized_name
-			AnotherNames.append(self._Note.name)
+		try:
+			#---> Получение данных.
+			#==========================================================================================#
+			UsedName = None
+			AnotherNames = list()
 
-		else:
-			UsedName = self._Note.name
+			if self._Note.localized_name:
+				UsedName = self._Note.localized_name
+				AnotherNames.append(self._Note.name)
 
-		AnotherNames += self._Note.another_names
+			else:
+				UsedName = self._Note.name
 
-		#---> Вывод описания записи.
-		#==========================================================================================#
-		if UsedName: StyledPrinter(UsedName, decorations = [Styles.Decorations.Bold], end = False)
-		print(f" {self._Note.emoji_status}")
-		if self._Note.era: print(f"⏳ " + self._Table.eras[self._Note.era])
-		if self._Note.estimation: print(f"⭐ {self._Note.estimation} / {self._Table.max_estimation}")
-		if self._Note.bookmark: print(f"🔖 {self._Note.bookmark} page")
-		if self._Note.comment: print(f"💭 {self._Note.comment}")
-		if self._Note.link: print(f"🔗 {self._Note.link}")
-		if AnotherNames: StyledPrinter(f"ANOTHER NAMES: ", decorations = [Styles.Decorations.Bold])
-		for AnotherName in AnotherNames: StyledPrinter(f"    {AnotherName}", decorations = [Styles.Decorations.Italic])
+			AnotherNames += self._Note.another_names
 
-		#---> Вывод классификаторов записи.
-		#==========================================================================================#
+			#---> Вывод описания записи.
+			#==========================================================================================#
+			if UsedName: StyledPrinter(UsedName, decorations = [Styles.Decorations.Bold], end = False)
+			print(f" {self._Note.emoji_status}")
+			if self._Note.era: print(f"⏳ " + self._Table.eras[self._Note.era])
+			if self._Note.estimation: print(f"⭐ {self._Note.estimation} / {self._Table.max_estimation}")
+			if self._Note.bookmark: print(f"🔖 {self._Note.bookmark} page")
+			if self._Note.comment: print(f"💭 {self._Note.comment}")
+			if self._Note.link: print(f"🔗 {self._Note.link}")
+			if AnotherNames: StyledPrinter(f"ANOTHER NAMES: ", decorations = [Styles.Decorations.Bold])
+			for AnotherName in AnotherNames: StyledPrinter(f"    {AnotherName}", decorations = [Styles.Decorations.Italic])
 
-		if self._Note.metainfo:
-			StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
-			MetaInfo = self._Note.metainfo
-			
-			for Key in MetaInfo.keys():
-				CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
-				print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
+			#---> Вывод классификаторов записи.
+			#==========================================================================================#
+
+			if self._Note.metainfo:
+				StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
+				MetaInfo = self._Note.metainfo
+				
+				for Key in MetaInfo.keys():
+					CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
+					print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
 
 class BattleTech_Books_ModuleCLI(ModuleCLI):
 	"""CLI модуля."""
@@ -199,17 +185,6 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 		Com = Command("eras", "Show list of BattleTech eras.")
 		CommandsList.append(Com)
 
-		Com = Command("list", "Show list of notes.")
-		Com.add_flag("r", "Reverse list.")
-		Com.add_key("group", ParametersTypes.Number, "Group ID.")
-		Com.add_key("sort", ParametersTypes.Text, "Column name.")
-		Com.add_key("search", description = "Part of note name.")
-		CommandsList.append(Com)
-
-		Com = Command("search", "Search notes by part of name.")
-		Com.add_argument(description = "Search query.", important = True)
-		CommandsList.append(Com)
-
 		return CommandsList
 
 	def _ExecuteCustomCommands(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
@@ -224,75 +199,86 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 			Eras = self._Module.eras
 			for EraID in Eras.keys(): print(f"    {EraID}: {Eras[EraID]}")
 
-		if parsed_command.name == "list":
-			self.__List(parsed_command)
-
-		if parsed_command.name == "search":
-			self.__List(parsed_command, parsed_command.arguments[0])
-
 		return Status
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __List(self, parsed_command: ParsedCommandData, search: str | None = None):
-			Notes = list()
-			Content = {
-				"ID": [],
-				"Status": [],
-				"Name": [],
-				"Author": [],
-				"Estimation": []
-			}
-			SortBy = parsed_command.keys["sort"].title() if "sort" in parsed_command.keys.keys() else "ID"
-			if SortBy == "Id": SortBy = SortBy.upper()
-			if SortBy not in Content.keys(): return ExecutionError(-1, "bad_sorting_parameter")
-			Reverse = parsed_command.check_flag("r")
-			
-			if self._Module.notes:
-				Notes = self._Module.notes
+	def _List(self, parsed_command: ParsedCommandData, search: str | None = None) -> ExecutionStatus:
+			"""
+			Выводит список записей.
+				parsed_command – описательная структура команды;\n
+				search – поисковый запрос.
+			"""
 
-				if search:
-					print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
-					NotesCopy = list(Notes)
-					SearchBuffer = list()
+			Status = ExecutionStatus(0)
 
-					for Note in NotesCopy:
-						Names = list()
-						if Note.name: Names.append(Note.name)
-						if Note.another_names: Names += Note.another_names
+			try:
+				Notes = list()
+				Content = {
+					"ID": [],
+					"Status": [],
+					"Name": [],
+					"Author": [],
+					"Estimation": []
+				}
+				SortBy = parsed_command.keys["sort"].title() if "sort" in parsed_command.keys.keys() else "ID"
+				if SortBy == "Id": SortBy = SortBy.upper()
 
-						for Name in Names:
-							if search.lower() in Name.lower(): SearchBuffer.append(Note)
-
-					Notes = SearchBuffer
+				if SortBy not in Content.keys():
+					Status = ExecutionError(-1, "no_column_to_sort")
+					return Status
 				
-				for Note in Notes:
-					Name = Note.localized_name if Note.localized_name else Note.name
-					if not Name: Name = ""
-					Author = Note.metainfo["author"] if "author" in Note.metainfo.keys() else ""
-					Status = Note.status
-					if Status == "announced": Status = TextStyler(Status, text_color = Styles.Colors.Purple)
-					if Status == "collected": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
-					if Status == "web": Status = TextStyler(Status, text_color = Styles.Colors.Blue)
-					if Status == "ordered": Status = TextStyler(Status, text_color = Styles.Colors.White)
-					if Status == "wishlist": Status = TextStyler(Status, text_color = Styles.Colors.White)
-					if Status == "reading": Status = TextStyler(Status, text_color = Styles.Colors.Yellow)
-					if Status == "completed": Status = TextStyler(Status, text_color = Styles.Colors.Green)
-					if Status == "dropped": Status = TextStyler(Status, text_color = Styles.Colors.Red)
-					if Status == "skipped": Status = TextStyler(Status, text_color = Styles.Colors.Cyan)
-					Content["ID"].append(Note.id)
-					Content["Status"].append(Status if Status else "–")
-					Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
-					Content["Author"].append(Author)
-					Content["Estimation"].append(Note.estimation if Note.estimation else "")
+				Reverse = parsed_command.check_flag("r")
+				
+				if self._Module.notes:
+					Notes = self._Module.notes
 
-				if len(Notes): Columns(Content, sort_by = SortBy, reverse = Reverse)
-				else: print("Notes not found.")
+					if search:
+						print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
+						NotesCopy = list(Notes)
+						SearchBuffer = list()
 
-			else:
-				print("Table is empty.")
+						for Note in NotesCopy:
+							Names = list()
+							if Note.name: Names.append(Note.name)
+							if Note.another_names: Names += Note.another_names
+
+							for Name in Names:
+								if search.lower() in Name.lower(): SearchBuffer.append(Note)
+
+						Notes = SearchBuffer
+					
+					for Note in Notes:
+						Name = Note.localized_name if Note.localized_name else Note.name
+						if not Name: Name = ""
+						Author = Note.metainfo["author"] if "author" in Note.metainfo.keys() else ""
+						NoteStatus = Note.status
+						if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Purple)
+						if NoteStatus == "collected": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue)
+						if NoteStatus == "web": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue)
+						if NoteStatus == "ordered": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.White)
+						if NoteStatus == "wishlist": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.White)
+						if NoteStatus == "reading": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow)
+						if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green)
+						if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Red)
+						if NoteStatus == "skipped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Cyan)
+						Content["ID"].append(Note.id)
+						Content["Status"].append(NoteStatus if NoteStatus else "–")
+						Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
+						Content["Author"].append(Author)
+						Content["Estimation"].append(Note.estimation if Note.estimation else "")
+
+					if len(Notes): Columns(Content, sort_by = SortBy, reverse = Reverse)
+					else: Status.message = "Notes not found."
+
+				else:
+					Status.message = "Table is empty."
+
+			except: Status = ERROR_UNKNOWN
+
+			return Status
 	
 #==========================================================================================#
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #

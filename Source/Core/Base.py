@@ -4,7 +4,7 @@ from Source.Core.Warnings import *
 from Source.Core.Errors import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.CLI.StyledPrinter import Styles, TextStyler 
+from dublib.CLI.StyledPrinter import StyledPrinter, Styles, TextStyler 
 from dublib.Methods.Filesystem import NormalizePath
 from dublib.Methods.JSON import ReadJSON, WriteJSON
 from dublib.CLI.Templates import Confirmation
@@ -291,6 +291,9 @@ class NoteCLI:
 		Com.add_argument(description = "New name.", important = True)
 		CommandsList.append(Com)
 
+		Com = Command("view", "View note in console.")
+		CommandsList.append(Com)
+
 		return CommandsList + self._GenereateCustomCommands()
 
 	#==========================================================================================#
@@ -313,6 +316,31 @@ class NoteCLI:
 		"""
 
 		Status = ExecutionStatus(0)
+
+		return Status
+
+	def _View(self) -> ExecutionStatus:
+		"""Выводит форматированное представление записи."""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			#---> Вывод описания записи.
+			#==========================================================================================#
+			if self._Note.name: StyledPrinter(self._Note.name, decorations = [Styles.Decorations.Bold], end = False)
+
+			#---> Вывод классификаторов записи.
+			#==========================================================================================#
+
+			if self._Note.metainfo:
+				StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
+				MetaInfo = self._Note.metainfo
+				
+				for Key in MetaInfo.keys():
+					CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
+					print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
+
+		except: Status = ERROR_UNKNOWN
 
 		return Status
 
@@ -366,6 +394,9 @@ class NoteCLI:
 		elif parsed_command.name == "rename":
 			Status = self._Note.rename(parsed_command.arguments[0])
 
+		elif parsed_command.name == "view":
+			self._View()
+
 		else:
 			Status = self._ExecuteCustomCommands(parsed_command)
 
@@ -401,6 +432,11 @@ class TableCLI:
 		Com.add_argument(description = "Module name.", important = True)
 		CommandsList.append(Com)
 
+		Com = Command("list", "Show list of notes.")
+		Com.add_flag("r", "Reverse list.")
+		Com.add_key("sort", description = "Set sort by column name.")
+		CommandsList.append(Com)
+
 		Com = Command("modules", "List of modules.")
 		CommandsList.append(Com)
 
@@ -416,6 +452,11 @@ class TableCLI:
 
 		Com = Command("rename", "Rename table.")
 		Com.add_argument(description = "Table name.", important = True)
+		CommandsList.append(Com)
+
+		Com = Command("search", "Search notes by part of name.")
+		Com.add_argument(description = "Search query.", important = True)
+		Com.add_key("sort", description = "Set sort by column name.")
 		CommandsList.append(Com)
 
 		return CommandsList + self._GenereateCustomCommands()
@@ -442,6 +483,64 @@ class TableCLI:
 		Status = ExecutionStatus(0)
 
 		return Status
+
+	def _List(self, parsed_command: ParsedCommandData, search: str | None = None) -> ExecutionStatus:
+			"""
+			Выводит список записей.
+				parsed_command – описательная структура команды;\n
+				search – поисковый запрос.
+			"""
+
+			Status = ExecutionStatus(0)
+
+			try:
+				Content = {
+					"ID": [],
+					"Name": []
+				}
+				SortBy = None
+				IsReverse = parsed_command.check_flag("r")
+				Notes = self._Table.notes
+
+				if parsed_command.check_key("sort"):
+					SortBuffer = parsed_command.get_key_value("sort").lower()
+					if SortBuffer == "id": SortBy = "ID"
+					if SortBuffer == "name": SortBy = "Name"
+
+					if not SortBy:
+						Status = ExecutionError(-1, "no_column_to_sort")
+						return Status
+
+				if Notes:
+
+					if search:
+						print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
+						NotesCopy = list(Notes)
+						SearchBuffer = list()
+
+						for Note in NotesCopy:
+							Names = list()
+							if Note.name: Names.append(Note.name)
+
+							for Name in Names:
+								if search.lower() in Name.lower(): SearchBuffer.append(Note)
+
+						Notes = SearchBuffer
+					
+					for Note in Notes:
+						Name = Note.name if Note.name else ""
+						Content["ID"].append(Note.id)
+						Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
+
+					if len(Notes): Columns(Content, sort_by = SortBy, reverse = IsReverse)
+					else: Status.message = "Notes not found."
+
+				else:
+					Status.message = "Table is empty."
+
+			except: Status = ERROR_UNKNOWN
+
+			return Status
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -479,6 +578,9 @@ class TableCLI:
 		elif parsed_command.name == "init":
 			Status["initialize_module"] = parsed_command.arguments[0]
 
+		elif parsed_command.name == "list":
+			Status = self._List(parsed_command)
+
 		elif parsed_command.name == "modules":
 			Modules = self._Table.manifest.modules
 
@@ -499,7 +601,7 @@ class TableCLI:
 
 		elif parsed_command.name == "new":
 			Status = self._Table.create_note()
-			if parsed_command.check_flag("o") and Status.code == 0: Status["open_note"] = True
+			if parsed_command.check_flag("o") and Status.code == 0: Status["open_note"] = Status["note_id"]
 
 		elif parsed_command.name == "open":
 
@@ -527,6 +629,9 @@ class TableCLI:
 
 		elif parsed_command.name == "rename":
 			Status = self._Table.rename(parsed_command.arguments[0])
+
+		elif parsed_command.name == "search":
+			Status = self._List(parsed_command, parsed_command.arguments[0])
 
 		else:
 			Status = self._ExecuteCustomCommands(parsed_command)
