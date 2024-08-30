@@ -500,7 +500,7 @@ class TableCLI:
 				}
 				SortBy = None
 				IsReverse = parsed_command.check_flag("r")
-				Notes = self._Table.notes
+				Notes = self._Module.notes if self._Module else self._Table.notes
 
 				if parsed_command.check_key("sort"):
 					SortBuffer = parsed_command.get_key_value("sort").lower()
@@ -557,6 +557,7 @@ class TableCLI:
 		#==========================================================================================#
 		self._Driver = driver
 		self._Table = table
+		self._Module = None
 
 	def execute(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
 		"""
@@ -638,7 +639,7 @@ class TableCLI:
 
 		return Status
 	
-class ModuleCLI:
+class ModuleCLI(TableCLI):
 	"""CLI модуля."""
 
 	#==========================================================================================#
@@ -668,7 +669,9 @@ class ModuleCLI:
 		Com.add_argument(description = "Module name.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("modules", "List of modules.")
+		Com = Command("list", "Show list of notes.")
+		Com.add_flag("r", "Reverse list.")
+		Com.add_key("sort", description = "Set sort by column name.")
 		CommandsList.append(Com)
 
 		Com = Command("open", "Open note or module.")
@@ -740,6 +743,9 @@ class ModuleCLI:
 
 		elif parsed_command.name == "exit":
 			exit(0)
+
+		elif parsed_command.name == "list":
+			Status = self._List(parsed_command)
 
 		elif parsed_command.name == "open":
 
