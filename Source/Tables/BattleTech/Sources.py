@@ -11,7 +11,7 @@ from dublib.Engine.Bus import ExecutionError, ExecutionStatus
 # >>>>> ОБРАБОТЧИКИ ВЗАИМОДЕЙСТВИЙ С ТАБЛИЦЕЙ <<<<< #
 #==========================================================================================#
 
-class BattleTech_Books_NoteCLI(NoteCLI):
+class BattleTech_Sources_NoteCLI(NoteCLI):
 	"""Обработчик взаимодействий с записью через CLI."""
 
 	#==========================================================================================#
@@ -22,6 +22,10 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		"""Генерирует дексрипторы дополнительных команд."""
 
 		CommandsList = list()
+
+		Com = Command("code", "Set code.")
+		Com.add_argument(description = "Code of sourcebook.", important = True)
+		CommandsList.append(Com)
 
 		Com = Command("comment", "Set comment to note.")
 		Com.add_argument(description = "Comment text or * to remove.", important = True)
@@ -37,10 +41,6 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 		Com = Command("link", "Attach link to note.")
 		Com.add_argument(description = "URL or * to remove.", important = True)
-		CommandsList.append(Com)
-
-		Com = Command("mark", "Set bookmark.")
-		Com.add_argument(ParametersTypes.Number, description = "Page number or * to remove.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("meta", "Manage note metainfo fields.")
@@ -75,22 +75,25 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 		Status = ExecutionStatus(0)
 
-		if parsed_command.name == "comment":
+		if parsed_command.name == "code":
+			Status = self._Note.set_code(parsed_command.arguments[0])
+
+		elif parsed_command.name == "comment":
 			Status = self._Note.set_comment(parsed_command.arguments[0])
 
-		if parsed_command.name == "era":
+		elif parsed_command.name == "era":
 			Status = self._Note.set_era(parsed_command.arguments[0])
 
-		if parsed_command.name == "estimate":
+		elif parsed_command.name == "estimate":
 			Status = self._Note.estimate(parsed_command.arguments[0])
 
-		if parsed_command.name == "link":
+		elif parsed_command.name == "link":
 			Status = self._Note.set_link(parsed_command.arguments[0])
 
-		if parsed_command.name == "mark":
+		elif parsed_command.name == "mark":
 			Status = self._Note.set_bookmark(parsed_command.arguments[0])
 
-		if parsed_command.name == "meta":
+		elif parsed_command.name == "meta":
 			Status = ExecutionStatus(0)
 			
 			if "set" in parsed_command.flags:
@@ -99,16 +102,10 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			if parsed_command.check_flag("unset"):
 				Status = self._Note.delete_metainfo(parsed_command.arguments[0])
 
-		if parsed_command.name == "set":
-
-			if "altname" in parsed_command.keys.keys():
-				Status = self._Note.add_another_name(parsed_command.keys["altname"])
-
-			if parsed_command.check_key("era"):
-				Status = self._Note.add_era(parsed_command.get_key_value("era"))
+		elif parsed_command.name == "set":
 
 			if "localname" in parsed_command.keys.keys():
-				Status = self._Note.set_localized_name(parsed_command.get_key_value("localname"))
+				Status = self._Note.set_localized_name(parsed_command.keys["localname"])
 
 			if "name" in parsed_command.keys.keys():
 				Status = self._Note.rename(parsed_command.keys["name"])
@@ -116,7 +113,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			if "status" in parsed_command.keys.keys():
 				Status = self._Note.set_status(parsed_command.keys["status"])
 
-		if parsed_command.name == "unset":
+		elif parsed_command.name == "unset":
 
 			if parsed_command.check_key("altname"):
 				Status = self._Note.delete_another_name(parsed_command.get_key_value("altname"))
@@ -131,7 +128,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		try:
 			#---> Получение данных.
 			#==========================================================================================#
-			UsedName = None
+			UsedName = ""
 			AnotherNames = list()
 
 			if self._Note.localized_name:
@@ -141,14 +138,12 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			else:
 				UsedName = self._Note.name
 
-			AnotherNames += self._Note.another_names
+			if len(UsedName) and self._Note.code: UsedName = f"{UsedName} [{self._Note.code}]"
 
 			#---> Вывод описания записи.
 			#==========================================================================================#
 			if UsedName: StyledPrinter(UsedName, decorations = [Styles.Decorations.Bold], end = False)
 			print(f" {self._Note.emoji_status}")
-			if self._Note.era: print(f"⏳ " + self._Table.eras[self._Note.era]["name"])
-			if self._Note.estimation: print(f"⭐ {self._Note.estimation} / {self._Table.max_estimation}")
 			if self._Note.bookmark: print(f"🔖 {self._Note.bookmark} page")
 			if self._Note.comment: print(f"💭 {self._Note.comment}")
 			if self._Note.link: print(f"🔗 {self._Note.link}")
@@ -170,7 +165,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 		return Status
 
-class BattleTech_Books_ModuleCLI(ModuleCLI):
+class BattleTech_Sources_ModuleCLI(ModuleCLI):
 	"""CLI модуля."""
 
 	#==========================================================================================#
@@ -197,16 +192,10 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 
 		if parsed_command.name == "eras":
 			Eras = self._Module.eras
-
-			for EraID in range(len(Eras)):
-				Name = Eras[EraID]["name"]
-				StartYear = Eras[EraID]["start_year"] if Eras[EraID]["start_year"] else "earlier"
-				EndYear = Eras[EraID]["end_year"] if Eras[EraID]["end_year"] else "now"
-
-				print(f"    {EraID}: {Name} [{StartYear} – {EndYear}]")
+			for EraID in Eras.keys(): print(f"    {EraID}: {Eras[EraID]}")
 
 		return Status
-
+	
 	def _List(self, parsed_command: ParsedCommandData, search: str | None = None) -> ExecutionStatus:
 			"""
 			Выводит список записей.
@@ -222,8 +211,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 					"ID": [],
 					"Status": [],
 					"Name": [],
-					"Author": [],
-					"Estimation": []
+					"Type": []
 				}
 				SortBy = parsed_command.keys["sort"].title() if "sort" in parsed_command.keys.keys() else "ID"
 				if SortBy == "Id": SortBy = SortBy.upper()
@@ -245,7 +233,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 						for Note in NotesCopy:
 							Names = list()
 							if Note.name: Names.append(Note.name)
-							if Note.another_names: Names += Note.another_names
+							if Note.localized_name: Names.append(Note.localized_name)
 
 							for Name in Names:
 								if search.lower() in Name.lower(): SearchBuffer.append(Note)
@@ -255,7 +243,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 					for Note in Notes:
 						Name = Note.localized_name if Note.localized_name else Note.name
 						if not Name: Name = ""
-						Author = Note.metainfo["author"] if "author" in Note.metainfo.keys() else ""
+						Type = Note.metainfo["type"] if "type" in Note.metainfo.keys() else ""
 						NoteStatus = Note.status
 						if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Purple)
 						if NoteStatus == "collected": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue)
@@ -269,8 +257,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 						Content["ID"].append(Note.id)
 						Content["Status"].append(NoteStatus if NoteStatus else "–")
 						Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
-						Content["Author"].append(Author)
-						Content["Estimation"].append(Note.estimation if Note.estimation else "")
+						Content["Type"].append(Type)
 
 					if len(Notes): Columns(Content, sort_by = SortBy, reverse = Reverse)
 					else: Status.message = "Notes not found."
@@ -281,13 +268,13 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 			except: Status = ERROR_UNKNOWN
 
 			return Status
-	
+
 #==========================================================================================#
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
 #==========================================================================================#
 
-class BattleTech_Books_Note(Note):
-	"""Запись о прочтении книги по вселенной BattleTech."""
+class BattleTech_Sources_Note(Note):
+	"""Запись о соурсбуке BattleTech."""
 
 	#==========================================================================================#
 	# >>>>> СТАТИЧЕСКИЕ АТРИБУТЫ <<<<< #
@@ -296,9 +283,7 @@ class BattleTech_Books_Note(Note):
 	BASE_NOTE = {
 		"name": None,
 		"localized_name": None,
-		"another_names": [],
-		"era": None,
-		"estimation": None,
+		"code": None,
 		"comment": None,
 		"link": None,
 		"bookmark": None,
@@ -311,28 +296,22 @@ class BattleTech_Books_Note(Note):
 	#==========================================================================================#
 
 	@property
-	def another_names(self) -> list[str]:
-		"""Список альтернативных названий."""
-
-		return self._Data["another_names"]
-
-	@property
 	def bookmark(self) -> int | None:
 		"""Закладка."""
 
 		return self._Data["bookmark"]
 
 	@property
+	def code(self) -> int | None:
+		"""Код."""
+
+		return self._Data["code"]
+
+	@property
 	def comment(self) -> str | None:
 		"""Комментарий."""
 
 		return self._Data["comment"]
-
-	@property
-	def era(self) -> list[int]:
-		"""Список ID эпох BattleTech."""
-
-		return self._Data["era"]
 
 	@property
 	def emoji_status(self) -> str:
@@ -352,12 +331,6 @@ class BattleTech_Books_Note(Note):
 		}
 
 		return Statuses[self._Data["status"]]
-
-	@property
-	def estimation(self) -> int | None:
-		"""Оценка."""
-
-		return self._Data["estimation"]
 
 	@property
 	def link(self) -> str | None:
@@ -390,79 +363,11 @@ class BattleTech_Books_Note(Note):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации класса."""
 
-		self._CLI = BattleTech_Books_NoteCLI
+		self._CLI = BattleTech_Sources_NoteCLI
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< # Natural Selection
+	# >>>>> ДОПОЛНИТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-
-	def add_another_name(self, another_name: str) -> ExecutionStatus:
-		"""
-		Добавляет альтернативное название.
-			another_name – альтернативное название.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-
-			if another_name not in self._Data["another_names"]:
-				self._Data["another_names"].append(another_name)
-				self.save()
-				Status.message = "Another name added."
-
-		except:
-			Status = ERROR_UNKNOWN
-
-		return Status
-
-	def remove_another_name(self, another_name: int | str) -> ExecutionStatus:
-		"""
-		Удаляет альтернативное название.
-			another_name – альтернативное название или его индекс.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-
-			if another_name.isdigit() and another_name not in self._Data["another_names"]:
-				self._Data["another_names"].pop(int(another_name))
-
-			else:
-				self._Data["another_names"].remove(another_name)
-
-			self.save()
-			Status.message = "Another name removed."
-
-		except IndexError:
-			Status = ExecutionError(1, "incorrect_another_name_index")
-
-		except:
-			Status = ERROR_UNKNOWN
-
-		return Status
-
-	def estimate(self, estimation: int) -> ExecutionStatus:
-		"""
-		Выставляет оценку.
-			estimation – оценка.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-
-			if estimation <= self._Table.manifest.custom["max_estimation"]:
-				self._Data["estimation"] = estimation
-				self.save()
-				Status.message = "Estimation updated."
-
-			else: Status = ExecutionError(1, "max_estimation_exceeded")
-
-		except: Status = ERROR_UNKNOWN
-
-		return Status
 
 	def set_bookmark(self, bookmark: int) -> ExecutionStatus:
 		"""
@@ -483,6 +388,31 @@ class BattleTech_Books_Note(Note):
 
 		return Status
 
+	def set_code(self, code: str) -> ExecutionStatus:
+		"""
+		Задаёт код соурсбука.
+			code – код.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		try:
+
+			if code == "*":
+				code = None
+				Status.message = "Code removed."
+
+			else:
+				code = int(code)
+				Status.message = "Code updated."
+
+			self._Data["code"] = code
+			self.save()
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+
 	def set_comment(self, comment: str) -> ExecutionStatus:
 		"""
 		Задаёт комментарий.
@@ -499,33 +429,6 @@ class BattleTech_Books_Note(Note):
 
 		except:
 			Status = ERROR_UNKNOWN
-
-		return Status
-
-	def set_era(self, era: str) -> ExecutionStatus:
-		"""
-		Задаёт эру.
-			era – ID или название эры.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			era = str(era)
-
-			if era.isdigit():
-				era = int(era)
-
-				if era in range(len(self._Table.eras)):
-					self._Data["era"] = era
-					self.save()
-					Status.message = "Era updated."
-
-				else: Status = ExecutionError(-2, "incorrect_era")
-
-			else: Status = ExecutionError(-2, "incorrect_era")
-
-		except:	Status = ERROR_UNKNOWN
 
 		return Status
 
@@ -603,14 +506,14 @@ class BattleTech_Books_Note(Note):
 
 		return Status
 
-class BattleTech_Books(Module):
-	"""Таблица прочтения книг по вселенной BattleTech."""
+class BattleTech_Sources(Module):
+	"""Таблица соурсбуков BattleTech."""
 
 	#==========================================================================================#
 	# >>>>> СТАТИЧЕСКИЕ АТРИБУТЫ <<<<< #
 	#==========================================================================================#
 
-	TYPE: str = "battletech:books"
+	TYPE: str = "battletech:sources"
 	MANIFEST: dict = {
 		"object": "module",
 		"type": TYPE,
@@ -618,33 +521,23 @@ class BattleTech_Books(Module):
 			"recycle_id": True
 		},
 		"metainfo_rules": {
-			"author": None,
-			"publisher": None,
-			"series": None
+			"type": ["handbook", "sourcebook"]
 		},
 		"viewer": {
 			"colorize": True
 		},
-		"custom": {
-			"max_estimation": 10
-		}
+		"custom": {}
 	}
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
+	# >>>>> ДОПОЛНИТЕЛЬНЫЕ СВОЙСТВА <<<<< #
 	#==========================================================================================#
 	
 	@property
-	def eras(self) -> list[dict]:
+	def eras(self) -> dict:
 		"""Эпохи BattleTech."""
 
 		return self._Table.eras
-
-	@property
-	def max_estimation(self) -> int:
-		"""Максимальная допустимая оценка."""
-
-		return self._Manifest.custom["max_estimation"]
 	
 	#==========================================================================================#
 	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
@@ -653,5 +546,5 @@ class BattleTech_Books(Module):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации класса."""
 
-		self._Note = BattleTech_Books_Note
-		self._CLI = BattleTech_Books_ModuleCLI
+		self._Note = BattleTech_Sources_Note
+		self._CLI = BattleTech_Sources_ModuleCLI

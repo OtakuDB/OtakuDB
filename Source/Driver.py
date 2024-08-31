@@ -23,8 +23,10 @@ class Tables:
 		self.__TablesTypes = {
 			Table.TYPE: Table,
 			TablesTypes.Anime.TYPE: TablesTypes.Anime,
+
 			TablesTypes.BattleTech.TYPE: TablesTypes.BattleTech,
-			TablesTypes.BattleTech_Books.TYPE: TablesTypes.BattleTech_Books
+			TablesTypes.BattleTech_Books.TYPE: TablesTypes.BattleTech_Books,
+			TablesTypes.BattleTech_Sources.TYPE: TablesTypes.BattleTech_Sources
 		}
 
 	def __getitem__(self, table_type: str) -> any:
@@ -190,24 +192,21 @@ class Driver:
 
 		try:
 			NewTable = None
-			Manifest: Manifest = None
 
 			if table:
-				Status = self.load_manifest(table.name, name)
-				if Status.code == 0: Manifest = Status.value
-				else: return Status
-				NewTable: Table = self.__Tables[Manifest.type](self.__StorageDirectory, table, name)
-				NewTable.create()
+
+				for Module in table.manifest.modules:
+
+					if Module.name == name:
+						Module.activate()
+						NewTable: Table = self.__Tables[Module.type](self.__StorageDirectory, table, name)
+						NewTable.create()
 				
 			else:
 				NewTable: Table = self.__Tables[type](self.__StorageDirectory, name)
 				NewTable.create()
 
 			Status: ExecutionStatus = NewTable.create()
-
-			if Manifest:
-				for Module in Manifest.modules:
-					if Module.name == name: Module.activate()
 
 			if Status.code == 0 and table: Status.message = "Module initialized."
 			elif Status.code == 0: Status.message = "Table created."
@@ -216,7 +215,7 @@ class Driver:
 			Status = DRIVER_ERROR_NO_TYPE
 			Status["print"] = type
 
-		except: Status = ERROR_UNKNOWN
+		except ZeroDivisionError: Status = ERROR_UNKNOWN
 
 		return Status
 	

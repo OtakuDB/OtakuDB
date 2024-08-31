@@ -49,6 +49,16 @@ class BattleTech(Table):
 				"name": "mechs",
 				"type": "battletech:mechs",
 				"is_active": False
+			},
+			{
+				"name": "sheets",
+				"type": "battletech:sheets",
+				"is_active": False
+			},
+			{
+				"name": "sources",
+				"type": "battletech:sources",
+				"is_active": False
 			}
 		],
 		"common": {
@@ -61,19 +71,66 @@ class BattleTech(Table):
 	#==========================================================================================#
 
 	@property
-	def eras(self) -> dict:
+	def eras(self) -> list[dict]:
 		"""Эпохи BattleTech."""
 
-		return {
-			0: "Pre–Star League",
-			1: "Star League",
-			2: "Succession Wars",
-			3: "Clan Invasion",
-			4: "Civil War",
-			5: "Jihad",
-			6: "Dark Age",
-			7: "ilClan"
-		}
+		return [
+			{
+				"name": "Pre–Star League",
+				"start_year": None,
+				"end_year": 2570
+			},
+			{
+				"name": "Star League",
+				"start_year": 2571,
+				"end_year": 2780
+			},
+			{
+				"name": "Early Succession Wars",
+				"start_year": 2781,
+				"end_year": 2900
+			},
+			{
+				"name": "Late Succession Wars",
+				"start_year": 2901,
+				"end_year": 3019
+			},
+			{
+				"name": "Succession Wars. Renaissance",
+				"start_year": 3020,
+				"end_year": 3049
+			},
+			{
+				"name": "Clan Invasion",
+				"start_year": 3050,
+				"end_year": 3061
+			},
+			{
+				"name": "Civil War",
+				"start_year": 3062,
+				"end_year": 3067
+			},
+			{
+				"name": "Jihad",
+				"start_year": 3068,
+				"end_year": 3080
+			},
+			{
+				"name": "Republic Age",
+				"start_year": 3081,
+				"end_year": 3130
+			},
+			{
+				"name": "Dark Age",
+				"start_year": 3131,
+				"end_year": 3150
+			},
+			{
+				"name": "IlClan",
+				"start_year": 3151,
+				"end_year": None
+			}
+		]
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #

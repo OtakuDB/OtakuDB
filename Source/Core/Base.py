@@ -22,7 +22,7 @@ class ModuleData:
 	"""Данные модуля."""
 
 	@property
-	def is_active(self) -> str:
+	def is_active(self) -> bool:
 		"""Состояние: активирован ли модуль."""
 
 		return self.__Data["is_active"]
@@ -34,12 +34,18 @@ class ModuleData:
 		return self.__Data["name"]
 	
 	@property
+	def requirements(self) -> list[str]:
+		"""Список зависимостей модуля."""
+
+		return self.__Data["requirements"]
+
+	@property
 	def type(self) -> str:
 		"""Тип модуля."""
 
 		return self.__Data["type"]
 
-	def __init__(self, data: dict, manifest: "TableManifest"):
+	def __init__(self, data: dict, manifest: "Manifest"):
 		"""
 		Данные модуля.
 			data – словарь описания;\n
@@ -49,18 +55,21 @@ class ModuleData:
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		self.__Data = data
+		self.__Requirements = list()
 		self.__Manifest = manifest
+
+		if "requirements" in self.__Data.keys(): self.__Requirements = self.__Data["requirements"]
 
 	def activate(self):
 		"""Активирует модуль."""
 
-		self.__Data["is_activate"] = True
+		self.__Data["is_active"] = True
 		self.__Manifest.save()
 
 	def deactivate(self):
 		"""Деактивирует модуль."""
 
-		self.__Data["is_activate"] = False
+		self.__Data["is_active"] = False
 		self.__Manifest.save()
 
 #==========================================================================================#
@@ -208,7 +217,7 @@ class Manifest:
 		Modules = list()
 
 		if "modules" in self.__Data.keys():
-			for Module in self.__Data["modules"]: Modules.append(ModuleData(Module, self.__Data))
+			for Module in self.__Data["modules"]: Modules.append(ModuleData(Module, self))
 
 		return Modules
 
@@ -241,10 +250,10 @@ class Manifest:
 
 		try:
 			ModulesBuffer = list()
-			for Module in self.modules: ModulesBuffer.append({"name": Module.name, "type": Module.type, "is_active": Module.is_active})
+			for Module in self.__Modules: ModulesBuffer.append({"name": Module.name, "type": Module.type, "is_active": Module.is_active})
 			self.__Data["modules"] = ModulesBuffer
-			WriteJSON(f"{self.__Path}/manifest.json", self.__Data)
-
+			WriteJSON(self.__Path, self.__Data)
+			
 		except: Status = ERROR_UNKNOWN
 
 		return Status
@@ -327,7 +336,7 @@ class NoteCLI:
 		try:
 			#---> Вывод описания записи.
 			#==========================================================================================#
-			if self._Note.name: StyledPrinter(self._Note.name, decorations = [Styles.Decorations.Bold], end = False)
+			if self._Note.name: StyledPrinter(self._Note.name, decorations = [Styles.Decorations.Bold])
 
 			#---> Вывод классификаторов записи.
 			#==========================================================================================#
@@ -374,7 +383,7 @@ class NoteCLI:
 			Clear()
 
 		elif parsed_command.name == "close":
-			Status["interpreter"] = "table"
+			Status["interpreter"] = "module" if self._Table.is_module else "table"
 
 		elif parsed_command.name == "exit":
 			exit(0)
@@ -385,7 +394,7 @@ class NoteCLI:
 			
 			if Response:
 				Status = self._Table.delete_note(self._Note.id)
-				if Status.code == 0: Status["interpreter"] = "table"
+				if Status.code == 0: Status["interpreter"] = "module" if self._Table.is_module else "table"
 
 		elif parsed_command.name == "meta":
 			if parsed_command.check_flag("set"): Status = self._Note.set_metainfo(parsed_command.arguments[0], parsed_command.arguments[1])
@@ -498,7 +507,7 @@ class TableCLI:
 					"ID": [],
 					"Name": []
 				}
-				SortBy = None
+				SortBy = "ID"
 				IsReverse = parsed_command.check_flag("r")
 				Notes = self._Module.notes if self._Module else self._Table.notes
 
@@ -538,7 +547,7 @@ class TableCLI:
 				else:
 					Status.message = "Table is empty."
 
-			except: Status = ERROR_UNKNOWN
+			except ZeroDivisionError: Status = ERROR_UNKNOWN
 
 			return Status
 
@@ -577,6 +586,19 @@ class TableCLI:
 			exit(0)
 
 		elif parsed_command.name == "init":
+			Modules = self._Table.manifest.modules
+
+			if Modules:
+				Type = None
+
+				for Module in Modules:
+					if Module.name == parsed_command.arguments[0]: Type = Module.type
+
+				if Type: Status["initialize_module"] = Type
+				else: Status = DRIVER_ERROR_NO_TYPE
+
+			else: Status = DRIVER_ERROR_NO_MODULES_IN_TABLE
+
 			Status["initialize_module"] = parsed_command.arguments[0]
 
 		elif parsed_command.name == "list":
@@ -674,6 +696,10 @@ class ModuleCLI(TableCLI):
 		Com.add_key("sort", description = "Set sort by column name.")
 		CommandsList.append(Com)
 
+		Com = Command("new", "Create new note.")
+		Com.add_flag("o", "Open new note.")
+		CommandsList.append(Com)
+
 		Com = Command("open", "Open note or module.")
 		ComPos = Com.create_position("TARGET", "Target for opening.", important = True)
 		ComPos.add_argument(description = "Note ID or module name.")
@@ -746,6 +772,10 @@ class ModuleCLI(TableCLI):
 
 		elif parsed_command.name == "list":
 			Status = self._List(parsed_command)
+
+		elif parsed_command.name == "new":
+			Status = self._Module.create_note()
+			if parsed_command.check_flag("o") and Status.code == 0: Status["open_note"] = Status["note_id"]
 
 		elif parsed_command.name == "open":
 
@@ -1112,7 +1142,7 @@ class Table:
 			Status["note_id"] = ID
 			Status.message = f"Note #{ID} created."
 
-		except ZeroDivisionError: Status = ERROR_UNKNOWN
+		except: Status = ERROR_UNKNOWN
 
 		return Status
 
@@ -1271,7 +1301,7 @@ class Module(Table):
 		Базовый модуль.
 			storage_path – директория хранения таблиц;\n
 			table – таблица, к которой привязан модуль;\n
-			name – название таблицы.
+			name – название модуля.
 		"""
 		
 		#---> Генерация динамичкских атрибутов.
