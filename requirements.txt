@@ -1,2 +1,2 @@
 prettytable
-dublib==0.12.1
+dublib==0.13.0

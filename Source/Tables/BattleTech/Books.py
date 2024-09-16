@@ -57,19 +57,19 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		CommandsList.append(Com)
 
 		Com = Command("meta", "Manage note metainfo fields.")
-		Com.add_argument(ParametersTypes.All, description = "Field name.", important = True)
-		Com.add_argument(ParametersTypes.All, description = "Field value.")
+		Com.add_argument(description = "Field name.", important = True)
+		Com.add_argument(description = "Field value.")
 		ComPos = Com.create_position("OPERATION", "Type of operation with metainfo.", important = True)
 		ComPos.add_flag("set", description = "Create new or update exists field.")
 		ComPos.add_flag("del", description = "Remove field.")
 		CommandsList.append(Com)
 
 		Com = Command("status", "Set reading status.")
-		Com.add_argument(ParametersTypes.Text, description = "Status: announced (a), reading (r), completed (c), dropped (d), skipped (s).", important = True)
+		Com.add_argument(description = "Status: announced (a), reading (r), completed (c), dropped (d), skipped (s).", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("type", "[METAINFO] Set type of book.")
-		Com.add_argument(ParametersTypes.Text, description = "Type of book: novel, story.", important = True)
+		Com.add_argument(description = "Type of book: novel, story.", important = True)
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -152,12 +152,18 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			print("")
 			for AnotherName in AnotherNames: StyledPrinter(f"    {AnotherName}", decorations = [Styles.Decorations.Italic])
 			StyledPrinter("PROPERTIES:", decorations = [Styles.Decorations.Bold])
-			if self._Note.type: print("✒️  Type: " + self._Note.type.title())
-			if self._Note.era: print("🏺 Era: " + self._Table.eras[self._Note.era]["name"])
-			if self._Note.estimation: print(f"⭐ Estimation:{self._Note.estimation}")
-			if self._Note.bookmark: print(f"🔖 Bookmark: {self._Note.bookmark} page")
-			if self._Note.comment: print(f"💭 Comment: {self._Note.comment}")
-			if self._Note.link: print(f"🔗 Link: {self._Note.link}")
+			if self._Note.type: print("    ✒️  Type: " + self._Note.type.title())
+			if self._Note.era: print("    🏺 Era: " + self._Table.eras[self._Note.era]["name"])
+			if self._Note.estimation: print(f"    ⭐ Estimation:{self._Note.estimation}")
+			if self._Note.bookmark: print(f"    🔖 Bookmark: {self._Note.bookmark} page")
+			if self._Note.comment: print(f"    💭 Comment: {self._Note.comment}")
+			if self._Note.link: print(f"    🔗 Link: {self._Note.link}")
+
+			Attachments = self._Note.attachments
+
+			if Attachments:
+				StyledPrinter("ATTACHMENTS:", decorations = [Styles.Decorations.Bold])
+				for Slot in Attachments.slots: print(f"    {Slot}: " + TextStyler(Attachments.get_slot_filename(Slot), decorations = [Styles.Decorations.Italic]))
 
 			#---> Вывод классификаторов записи.
 			#==========================================================================================#
@@ -264,7 +270,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 
 						if Note.estimation:
 							Estimation = "★ " * Note.estimation
-							if Note.estimation == 5: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Green)
+							if Note.estimation in [5]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Green)
 							if Note.estimation in [3, 4]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Yellow)
 							if Note.estimation in [1, 2]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Red)
 
@@ -320,7 +326,12 @@ class BattleTech_Books_Note(Note):
 		"bookmark": None,
 		"status": None,
 		"collection_status": None,
-		"metainfo": {}
+		"metainfo": {},
+		"attachments": {
+			"slots": {
+				"ebook": None
+			}
+		}
 	}
 
 	#==========================================================================================#

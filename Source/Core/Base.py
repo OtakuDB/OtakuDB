@@ -72,6 +72,135 @@ class ModuleData:
 		self.__Data["is_active"] = False
 		self.__Manifest.save()
 
+class Attachments:
+	"""Вложения."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def dictionary(self) -> dict:
+		"""Словарное представление вложений."""
+
+		Dictionary = {"slots": self.__Slots, "other": self.__Other}
+		if self.__Slots == None: del Dictionary["slots"]
+		if self.__Other == None: del Dictionary["other"]
+
+		return Dictionary
+
+	@property
+	def other(self) -> list[str] | None:
+		"""Список других вложений."""
+
+		return self.__Other
+
+	@property
+	def slots(self) -> list[str] | None:
+		"""Список слотов."""
+
+		Slots = self.__Slots.keys() if self.__Slots != None else None
+
+		return Slots
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __CheckDirectoryForEmpty(self):
+		"""Проверяет, пустая ли директория, и удаляет её в случае истинности."""
+
+		if not os.listdir(self.__Path): os.rmdir(self.__Path)
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, path: str, data: dict):
+		"""
+		Вложения.
+			path – путь к каталогу вложений записи;\n
+			data – словарь вложений.
+		"""
+
+		#---> Генерация динамичкских атрибутов.
+		#==========================================================================================#
+		self.__Path = path
+		self.__Slots = data["slots"] if "slots" in data.keys() else None
+		self.__Other = data["other"] if "other" in data.keys() else None
+
+	def attach(self, path: str, force: bool = False):
+		"""
+		Прикрепляет файл к записи.
+			force – включает перезапись существующего файла.
+		"""
+
+		if self.__Other == None: raise AttachmentsDenied(slot = False)
+		path = NormalizePath(path)
+		Filename = path.split("/")[-1]
+		TargetPath = f"{self.__Path}/{Filename}"
+		IsFileExists = os.path.exists(TargetPath)
+		if IsFileExists and force: os.remove(TargetPath)
+		elif IsFileExists: raise FileExistsError(TargetPath)
+		self.__Other.append(Filename)
+		os.replace(path, TargetPath)
+
+	def attach_to_slot(self, path: str, slot: str, force: bool = False):
+		"""
+		Помещает файл в слот.
+			slot – слот;\n
+			force – включает перезапись существующего файла.
+		"""
+
+		if self.__Slots == None: raise AttachmentsDenied(slot = True)
+		path = NormalizePath(path)
+		Filename = path.split("/")[-1]
+		TargetPath = f"{self.__Path}/{Filename}"
+		IsFileExists = os.path.exists(TargetPath)
+		if IsFileExists and force: os.remove(TargetPath)
+		elif IsFileExists: raise FileExistsError(TargetPath)
+		os.replace(path, f"{self.__Path}/{Filename}")
+		self.__Slots[slot] = Filename
+
+	def clear_slot(self, slot: str):
+		"""
+		Очищает слот.
+			slot – слот.
+		"""
+
+		if self.check_slot_occupation(slot):
+			os.remove(f"{self.__Path}/{self.__Slots[slot]}")
+			self.__Slots[slot] = None
+			self.__CheckDirectoryForEmpty()
+
+	def check_slot_occupation(self, slot: str) -> bool:
+		"""
+		Проверяет, занят ли слот файлом.
+			slot – слот.
+		"""
+
+		if not self.__Slots[slot]: return False
+
+		return True
+
+	def get_slot_filename(self, slot: str) -> str:
+		"""
+		Возвращает название файла в слоте.
+			slot – слот.
+		"""
+
+		return self.__Slots[slot]
+
+	def unattach(self, filename: str):
+		"""
+		Удаляет вложение.
+			filename – имя файла.
+		"""
+
+		os.remove(f"{self.__Path}/{filename}")
+		self.__Other.remove(filename)
+		self.__CheckDirectoryForEmpty()
+
 #==========================================================================================#
 # >>>>> МАНИФЕСТ <<<<< #
 #==========================================================================================#
@@ -80,10 +209,16 @@ class CommonOptions:
 	"""Общие опции таблицы."""
 
 	@property
+	def is_attachments_enabled(self) -> bool:
+		"""Указывает, разрешено ли прикреплять файлы к записям."""
+
+		return self.__Data["attachments"]
+
+	@property
 	def recycle_id(self) -> bool:
 		"""Указывает, необходимо ли занимать освободившиеся ID."""
 
-		self.__Data["recycle_id"]
+		return self.__Data["recycle_id"]
 
 	def __init__(self, data: dict):
 		"""
@@ -275,6 +410,13 @@ class NoteCLI:
 
 		CommandsList = list()
 
+		Com = Command("attach", "Attach files to note.")
+		ComPos = Com.create_position("FILE", important = True)
+		ComPos.add_argument(ParametersTypes.ValidPath, description = "Path to file.")
+		Com.add_flag("f", "Enable attachments overwrite.")
+		Com.add_key("slot", ParametersTypes.Text, "Name of slot for attachment.")
+		CommandsList.append(Com)
+
 		Com = Command("clear", "Clear console.")
 		CommandsList.append(Com)
 
@@ -298,6 +440,12 @@ class NoteCLI:
 
 		Com = Command("rename", "Rename note.")
 		Com.add_argument(description = "New name.", important = True)
+		CommandsList.append(Com)
+
+		Com = Command("unattach", "Unattach files from note.")
+		ComPos = Com.create_position("FILE", important = True)
+		ComPos.add_argument(description = "Attachment name.")
+		ComPos.add_key("slot", ParametersTypes.Text, "Name of attachment slot.")
 		CommandsList.append(Com)
 
 		Com = Command("view", "View note in console.")
@@ -334,11 +482,24 @@ class NoteCLI:
 		Status = ExecutionStatus(0)
 
 		try:
-			#---> Вывод описания записи.
+			#---> Вывод описания.
 			#==========================================================================================#
 			if self._Note.name: StyledPrinter(self._Note.name, decorations = [Styles.Decorations.Bold])
 
-			#---> Вывод классификаторов записи.
+			#---> Вывод вложений.
+			#==========================================================================================#
+			Attachments = self._Note.attachments
+
+			if Attachments.slots or Attachments.other:
+				StyledPrinter("ATTACHMENTS:", decorations = [Styles.Decorations.Bold])
+
+				if Attachments.slots != None:
+					for Slot in Attachments.slots: print(f"    {Slot}: " + TextStyler(Attachments.get_slot_filename(Slot), decorations = [Styles.Decorations.Italic]))
+
+				if Attachments.other != None:
+					for Filename in Attachments.other: print("    " + TextStyler(Filename, decorations = [Styles.Decorations.Italic]))
+
+			#---> Вывод метаданных.
 			#==========================================================================================#
 
 			if self._Note.metainfo:
@@ -379,7 +540,12 @@ class NoteCLI:
 
 		Status = ExecutionStatus(0)
 
-		if parsed_command.name == "clear":
+		if parsed_command.name == "attach":
+			Slot = parsed_command.get_key_value("slot")
+			Force = parsed_command.check_flag("f")
+			Status = self._Note.attach(parsed_command.arguments[0], Slot, Force)
+
+		elif parsed_command.name == "clear":
 			Clear()
 
 		elif parsed_command.name == "close":
@@ -403,6 +569,11 @@ class NoteCLI:
 		elif parsed_command.name == "rename":
 			Status = self._Note.rename(parsed_command.arguments[0])
 
+		elif parsed_command.name == "unattach":
+			Slot = parsed_command.get_key_value("slot")
+			Filename = parsed_command.arguments[0] if len(parsed_command.arguments) else None
+			Status = self._Note.unattach(Filename, Slot)
+
 		elif parsed_command.name == "view":
 			self._View()
 
@@ -423,6 +594,17 @@ class TableCLI:
 		"""Список дескрипторов команд."""
 
 		CommandsList = list()
+
+		Com = Command("chid", "Change ID of note.")
+		ComPos = Com.create_position("NOTE", important = True)
+		ComPos.add_argument(ParametersTypes.Number, "Exists note ID.")
+		ComPos = Com.create_position("ID", important = True)
+		ComPos.add_argument(ParametersTypes.Number, "New note ID")
+		ComPos = Com.create_position("MODE", "Mode of ID changing.")
+		ComPos.add_flag("o", "Overwtite exists note.")
+		ComPos.add_flag("s", "Swipe with exists note.")
+		ComPos.add_flag("i", "Insert to exists note place.")
+		CommandsList.append(Com)
 
 		Com = Command("clear", "Clear console.")
 		CommandsList.append(Com)
@@ -576,7 +758,14 @@ class TableCLI:
 
 		Status = ExecutionStatus(0)
 
-		if parsed_command.name == "clear":
+		if parsed_command.name == "chid":
+			Mode = None
+			if parsed_command.check_flag("i"): Mode = "i"
+			elif parsed_command.check_flag("o"): Mode = "o"
+			elif parsed_command.check_flag("s"): Mode = "s"
+			Status = self._Table.change_note_id(parsed_command.arguments[0], parsed_command.arguments[1], Mode)
+
+		elif parsed_command.name == "clear":
 			Clear()
 
 		elif parsed_command.name == "close":
@@ -674,6 +863,17 @@ class ModuleCLI(TableCLI):
 
 		CommandsList = list()
 
+		Com = Command("chid", "Change ID of note.")
+		ComPos = Com.create_position("NOTE", important = True)
+		ComPos.add_argument(ParametersTypes.Number, "Exists note ID.")
+		ComPos = Com.create_position("ID", important = True)
+		ComPos.add_argument(ParametersTypes.Number, "New note ID")
+		ComPos = Com.create_position("MODE", "Mode of ID changing.")
+		ComPos.add_flag("o", "Overwtite exists note.")
+		ComPos.add_flag("s", "Swipe with exists note.")
+		ComPos.add_flag("i", "Insert to exists note place.")
+		CommandsList.append(Com)
+
 		Com = Command("clear", "Clear console.")
 		CommandsList.append(Com)
 
@@ -761,7 +961,14 @@ class ModuleCLI(TableCLI):
 
 		Status = ExecutionStatus(0)
 
-		if parsed_command.name == "clear":
+		if parsed_command.name == "chid":
+			Mode = None
+			if parsed_command.check_flag("i"): Mode = "i"
+			elif parsed_command.check_flag("o"): Mode = "o"
+			elif parsed_command.check_flag("s"): Mode = "s"
+			Status = self._Module.change_note_id(parsed_command.arguments[0], parsed_command.arguments[1], Mode)
+
+		elif parsed_command.name == "clear":
 			Clear()
 
 		elif parsed_command.name == "close":
@@ -820,6 +1027,18 @@ class Note:
 	#==========================================================================================#
 
 	@property
+	def attachments(self) -> Attachments:
+		"""Данные вложений."""
+
+		AttachmentsData = None
+		Path = self.__GeneratePath(point = f".attachments/{self._ID}")
+		AttachmentsDictionary = dict()
+		if "attachments" in self._Data: AttachmentsDictionary = self._Data["attachments"]
+		AttachmentsData = Attachments(Path, AttachmentsDictionary)
+
+		return AttachmentsData
+
+	@property
 	def cli(self) -> NoteCLI:
 		"""Класс-обработчик CLI записи."""
 
@@ -847,12 +1066,17 @@ class Note:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __GeneratePath(self) -> str:
-		"""Генерирует путь к файлу записи."""
+	def __GeneratePath(self, point: str | None = None) -> str:
+		"""
+		Генерирует используемый путь.
+			point – добавляемое к пути таблицы значение.
+		"""
 
 		Path = None
-		if self._Table.is_module: Path = f"{self._Table.storage}/{self._Table.table.name}/{self._Table.name}/{self._ID}.json"
-		else: Path = f"{self._Table.storage}/{self._Table.name}/{self._ID}.json"
+		if not point: point = ""
+		if self._Table.is_module: Path = f"{self._Table.storage}/{self._Table.table.name}/{self._Table.name}/{point}"
+		else: Path = f"{self._Table.storage}/{self._Table.name}/{point}"
+		Path = NormalizePath(Path)
 
 		return Path
 
@@ -880,13 +1104,56 @@ class Note:
 		#==========================================================================================#
 		self._Table = table
 		self._ID = note_id
-		self._Path = self.__GeneratePath()
+		self._Path = self.__GeneratePath(point = f"{note_id}.json")
 		self._Data = ReadJSON(self._Path)
 		self._CLI = None
 
 		#---> Пост-процессинг.
 		#==========================================================================================#
 		self._PostInitMethod()
+
+	def attach(self, path: str, slot: str | None = None, force: bool = False) -> ExecutionStatus:
+		"""
+		Прикрепляет файл к записи.
+			path – путь к файлу;\n
+			slot – именной слот для файла;\n
+			force – включает режим перезаписи.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			if not self._Table.manifest.common.is_attachments_enabled: return NOTE_ERROR_ATTACHMENTS_BLOCKED
+			path = NormalizePath(path)
+
+			if not os.path.exists(path):
+				Status = NOTE_ERROR_BAD_ATTACHMENT_PATH
+				Status["print"] = path
+				return Status
+			
+			Path = self.__GeneratePath(point = f".attachments/{self._ID}")
+			if not os.path.exists(Path): os.makedirs(Path)
+			AttachmentsData = self._Data["attachments"] if "attachments" in self._Data.keys() else None
+			AttachmentsObject = Attachments(Path, AttachmentsData)
+
+			if slot:
+				AttachmentsObject.attach_to_slot(path, slot, force)
+				Status.message = f"File \"{path}\" attached to #{self._ID} note on slot \"{slot}\"."
+
+			else:
+				AttachmentsObject.attach(path, force)
+				Status.message = f"File \"{path}\" attached to #{self._ID} note."
+
+			self._Data["attachments"] = AttachmentsObject.dictionary
+			self.save()
+			
+		except AttachmentsDenied:
+			if slot: Status = NOTE_ERROR_SLOT_ATTACHMENTS_DENIED
+			else: Status = NOTE_ERROR_OTHER_ATTACHMENTS_DENIED
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
 
 	def remove_metainfo(self, key: str) -> ExecutionStatus:
 		"""
@@ -928,8 +1195,25 @@ class Note:
 
 		Status = ExecutionStatus(0)
 
+		try: WriteJSON(self._Path, self._Data)
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+
+	def set_id(self, id: int) -> ExecutionStatus:
+		"""
+		Задаёт новое значение ID.
+			id – идентификатор.
+		"""
+
+		Status = ExecutionStatus(0)
+
 		try:
-			WriteJSON(self._Path, self._Data)
+			self._ID = id
+			OldPath = self._Path
+			self._Path = self.__GeneratePath()
+			os.rename(OldPath, self._Path)
+			Status.message = "ID changed."
 
 		except: Status = ERROR_UNKNOWN
 
@@ -947,12 +1231,49 @@ class Note:
 		try:
 			Rules = self._Table.manifest.metainfo_rules
 			if key in Rules.fields and Rules[key] and data not in Rules[key]: raise MetainfoBlocked()
+			if data.isdigit(): data = int(data)
 			self._Data["metainfo"][key] = data
 			self._Data["metainfo"] = dict(sorted(self._Data["metainfo"].items()))
 			self.save()
 			Status.message = "Metainfo field updated."
 
 		except MetainfoBlocked: Status = NOTE_ERROR_METAINFO_BLOCKED
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+
+	def unattach(self, filename: str | None = None, slot: str | None = None) -> ExecutionStatus:
+		"""
+		Удаляет вложение по имени файла или слоту.
+			filename – имя файла;\n
+			slot – слот.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		if not filename and not slot:
+			Status = ExecutionError(-1, "no_filename_or_slot_to_unattach")
+			return Status
+
+		try:
+			Path = self.__GeneratePath(point = f".attachments/{self._ID}")
+			AttachmentsData = self._Data["attachments"] if "attachments" in self._Data.keys() else None
+			AttachmentsObject = Attachments(Path, AttachmentsData)
+
+			if filename:
+				AttachmentsObject.unattach(filename)
+				Status.message = f"File \"{filename}\" unattached."
+
+			else: 
+				AttachmentsObject.clear_slot(slot)
+				Status.message = f"Attachment slot \"{slot}\" cleared."
+
+			self._Data["attachments"] = AttachmentsObject.dictionary
+			self.save()
+
+			AttachmentsDirectory = self.__GeneratePath(point = ".attachments")
+			if not os.listdir(AttachmentsDirectory): os.rmdir(AttachmentsDirectory)
+
 		except: Status = ERROR_UNKNOWN
 
 		return Status
@@ -970,7 +1291,8 @@ class Table:
 		"type": TYPE,
 		"modules": [],
 		"common": {
-			"recycle_id": True
+			"recycle_id": True,
+			"attachments": False
 		},
 		"metainfo_rules": {},
 		"viewer": {},
@@ -1106,7 +1428,7 @@ class Table:
 		self._StorageDirectory = NormalizePath(storage)
 		self._Name = name
 		self._Path = f"{self._StorageDirectory}/{name}"
-		self._Notes = dict()
+		self._Notes: list[Note] = dict()
 		self._Manifest = None
 		self._IsModule = False
 		self._Note = None
@@ -1115,6 +1437,94 @@ class Table:
 		#---> Пост-процессинг.
 		#==========================================================================================#
 		self._PostInitMethod()
+
+	def change_note_id(self, note: int, new_id: int, mode: str | None = None) -> ExecutionStatus:
+		"""
+		Изменяет ID записи согласно указанному режиму.
+			note – ID существующей записи;\n
+			new_id – новый ID;\n
+			mode – режим: i – вставка, o – перезапись, s – обмен.
+		"""
+
+		Status = ExecutionStatus(0)
+		IsTargetNoteExists = new_id in self._Notes.keys()
+		
+		if note not in self._Notes.keys():
+			Status = TABLE_ERROR_MISSING_NOTE
+			Status["print"] = note
+			return Status
+
+		if IsTargetNoteExists and not mode:
+			Status = TABLE_ERROR_NOTE_ALREADY_EXISTS
+			Status["print"] = new_id
+			return Status
+		
+		if mode not in [None, "i", "o", "s"]:
+			Status = ExecutionError(-1, "unknown_mode")
+			Status["print"] = mode
+			return Status
+		
+		if IsTargetNoteExists:
+			
+			if mode == "i":
+				NotesID = list(self._Notes.keys())
+				NotesID = sorted(NotesID)
+				Buffer = list(NotesID)
+
+				for ID in Buffer:
+					if ID < new_id: NotesID.remove(ID)
+
+				Buffer = list(NotesID)
+				NewBuffer = list()
+				IsFirst = True
+
+				for ID in Buffer:
+
+					if ID + 1 in Buffer:
+						NewBuffer.append(ID)
+
+					elif IsFirst: 
+						NewBuffer.append(ID)
+						break
+
+				NotesID = NewBuffer
+				if note in NotesID: NotesID.remove(note)
+				NotesID.reverse()
+				input(NotesID)
+				self.change_note_id(note, 0)
+				for ID in NotesID:
+					Status = self.change_note_id(ID, ID + 1)
+					if Status.code != 0: return Status
+
+				self.change_note_id(0, new_id)
+				Status.message = f"Note #{note} inserted to position #{new_id}."
+
+			elif mode == "o":
+				self.delete_note(new_id)
+				self._Notes[note].set_id(new_id)
+				Status.message = f"Note #{new_id} overwritten."
+
+			elif mode == "s":
+				self._Notes[0] = self._Notes[new_id]
+				self._Notes[0].set_id(0)
+
+				self._Notes[new_id] = self._Notes[note]
+				self._Notes[new_id].set_id(new_id)
+				
+				self._Notes[note] = self._Notes[0]
+				self._Notes[note].set_id(note)
+
+				del self._Notes[0]
+
+				Status.message = f"Note #{note} and #{new_id} swiped."
+
+		else:
+			self._Notes[new_id] = self._Notes[note]
+			self._Notes[new_id].set_id(new_id)
+			del self._Notes[note]
+			Status.message = f"Note #{note} changed ID to #{new_id}."
+
+		return Status
 
 	def create(self) -> ExecutionStatus:
 		"""Создаёт таблицу."""
@@ -1137,7 +1547,9 @@ class Table:
 
 		try:
 			ID = self._GenerateNewID(self._Notes.keys())
-			WriteJSON(f"{self._Path}/{ID}.json", self._Note.BASE_NOTE)
+			BaseNoteStruct = self._Note.BASE_NOTE.copy()
+			if self.manifest.common.is_attachments_enabled: BaseNoteStruct["attachments"] = {"slots": {}, "other": []}
+			WriteJSON(f"{self._Path}/{ID}.json", BaseNoteStruct)
 			self._ReadNote(ID)
 			Status["note_id"] = ID
 			Status.message = f"Note #{ID} created."
@@ -1203,9 +1615,12 @@ class Table:
 			self._Manifest = Manifest(self._Path, ReadJSON(f"{self._Path}/manifest.json"))
 			ListID = self._GetNotesID()
 			for ID in ListID: self._ReadNote(ID)
+			AttachmentsDirectory = f"{self._Path}/.attachments"
+			if not os.path.exists(AttachmentsDirectory) and self._Manifest.common.is_attachments_enabled: os.makedirs(AttachmentsDirectory)
+			elif not os.listdir(AttachmentsDirectory): os.rmdir(AttachmentsDirectory)
 			self._PostOpenMethod()
 
-		except: Status = ERROR_UNKNOWN
+		except ZeroDivisionError: Status = ERROR_UNKNOWN
 
 		return Status
 

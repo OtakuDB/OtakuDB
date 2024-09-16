@@ -9,7 +9,7 @@ from pick import pick
 def Columns(columns: dict[str, list], sort_by: str = "ID", reverse: bool = False):
 	TableObject = PrettyTable()
 	TableObject.set_style(PLAIN_COLUMNS)
-	TableObject.left_padding_width = 3
+	TableObject.left_padding_width = 0
 	TableObject.right_padding_width = 3
 
 	for ColumnName in columns.keys():

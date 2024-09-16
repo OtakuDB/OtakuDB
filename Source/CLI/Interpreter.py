@@ -232,7 +232,10 @@ class Interpreter:
 			Status = ExecutionError(-7, "unknown_key")
 			Status["print"] = Key
 
-		except ZeroDivisionError: Status = ExecutionError(-1, "unknown_terminalyzer_error")
+		except InvalidPositionalArgumentTypes:
+			Status = ExecutionError(-8, "invalid_positional_argument_types")
+
+		except: Status = ExecutionError(-1, "unknown_terminalyzer_error")
 
 		return Status
 
