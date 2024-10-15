@@ -1617,10 +1617,10 @@ class Table:
 			for ID in ListID: self._ReadNote(ID)
 			AttachmentsDirectory = f"{self._Path}/.attachments"
 			if not os.path.exists(AttachmentsDirectory) and self._Manifest.common.is_attachments_enabled: os.makedirs(AttachmentsDirectory)
-			elif not os.listdir(AttachmentsDirectory): os.rmdir(AttachmentsDirectory)
+			if os.path.exists(AttachmentsDirectory) and not os.listdir(AttachmentsDirectory): os.rmdir(AttachmentsDirectory)
 			self._PostOpenMethod()
 
-		except ZeroDivisionError: Status = ERROR_UNKNOWN
+		except: Status = ERROR_UNKNOWN
 
 		return Status
 
