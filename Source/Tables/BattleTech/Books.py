@@ -29,7 +29,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		CommandsList.append(Com)
 
 		Com = Command("collection", "Set collection status.")
-		Com.add_argument(description = "Comment text or * to remove.", important = True)
+		Com.add_argument(description = "Status: collected (c), ebook (e), whishlist (w), ordered (o).", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("comment", "Set comment to note.")
