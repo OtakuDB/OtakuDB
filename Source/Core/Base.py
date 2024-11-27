@@ -4,9 +4,8 @@ from Source.Core.Warnings import *
 from Source.Core.Errors import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.CLI.StyledPrinter import StyledPrinter, Styles, TextStyler 
-from dublib.Methods.Filesystem import NormalizePath
-from dublib.Methods.JSON import ReadJSON, WriteJSON
+from dublib.Methods.Filesystem import NormalizePath, ReadJSON, WriteJSON
+from dublib.CLI.TextStyler import Styles, TextStyler 
 from dublib.CLI.Templates import Confirmation
 from dublib.Engine.Bus import ExecutionStatus
 from dublib.Methods.System import Clear
@@ -78,6 +77,15 @@ class Attachments:
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def count(self) -> int:
+		"""Количество вложений."""
+
+		Count = 0
+		if os.path.exists(self.__Path): Count = len(os.listdir(self.__Path))
+
+		return Count
 
 	@property
 	def dictionary(self) -> dict:
@@ -205,6 +213,82 @@ class Attachments:
 # >>>>> МАНИФЕСТ <<<<< #
 #==========================================================================================#
 
+class ColumnsOptions:
+	"""Опции отображения колонок таблицы."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def important_columns(self) -> list[str]:
+		"""Список обязательных колонок."""
+
+		return ["ID", "Name"]
+
+	@property
+	def is_available(self) -> bool:
+		"""Указывает, доступны ли настройки отображения колонок таблицы."""
+
+		IsAvailable = False
+		if len(list(self.__Data.keys())): IsAvailable = True
+
+		return IsAvailable
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, manifest: "Manifest", data: dict):
+		"""
+		Опции отображения колонок таблицы.
+			manifest – манифест таблицы;\n
+			data – словарь опций.
+		"""
+
+		#---> Генерация динамичкских атрибутов.
+		#==========================================================================================#
+		self.__Manifest = manifest
+		self.__Data: dict[str, bool] = data
+
+		for Command in list(self.__Data.keys()):
+			if Command in self.important_columns: del self.__Data[Command]
+
+	def __getitem__(self, column: str) -> bool | None:
+		"""
+		Возвращает статус отображения колонки.
+			column – название колонки в любом регистре.
+		"""
+
+		IsEnabled = None
+		if column in self.__Data.keys(): IsEnabled = self.__Data[column]
+
+		return IsEnabled
+
+	def check_column(self, column: str) -> bool:
+		"""
+		Проверяет, описано ли правило для колонки.
+			column – название колонки в любом регистре.
+		"""
+
+		return column in self.__Data.keys()
+	
+	def edit_column_status(self, column: str, status: bool):
+		"""
+		Проверяет, описано ли правило для колонки.
+			column – название колонки в любом регистре;\n
+			status – статус опции.
+		"""
+
+		if column not in self.__Data.keys(): raise KeyError(column)
+		self.__Data[column] = status
+		self.__Manifest.save()
+
+	def to_dict(self) -> dict:
+		"""Возвращает словарь опций отображения."""
+
+		return self.__Data.copy()
+
 class CommonOptions:
 	"""Общие опции таблицы."""
 
@@ -281,15 +365,51 @@ class MetainfoRules:
 class ViewerOptions:
 	"""Опции просмоторщика записей."""
 
-	def __init__(self, data: dict):
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def autoclear(self) -> bool | None:
+		"""Указывает, следует ли очищать консоль перед выводом списков и просмотром содержимого."""
+
+		Option = None
+		if "autoclear" in self.__Data.keys(): Option = self.__Data["autoclear"]
+
+		return Option
+	
+	@property
+	def colorize(self) -> bool | None:
+		"""Указывает, следует ли окрашивать элементы консольного интерфейса."""
+
+		Option = None
+		if "colorize" in self.__Data.keys(): Option = self.__Data["colorize"]
+
+		return Option
+
+	@property
+	def columns(self) -> ColumnsOptions:
+		"""Опции отображения колонок таблицы."""
+
+		return self.__Columns
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, manifest: "Manifest", data: dict):
 		"""
 		Опции просмоторщика записей.
+			manifest – манифест таблицы;\n
 			data – словарь опций.
 		"""
 
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		self.__Data = data
+
+		if "columns" not in self.__Data.keys(): self.__Data["columns"] = dict()
+		self.__Columns = ColumnsOptions(manifest, self.__Data["columns"])
 
 	def __getitem__(self, key: str) -> any:
 		"""
@@ -375,7 +495,7 @@ class Manifest:
 		self.__Modules = self.__ParseModules()
 		self.__Common = CommonOptions(data["common"])
 		self.__MetainfoRules = MetainfoRules(data["metainfo_rules"]) if "metainfo_rules" in data.keys() else None
-		self.__ViewerOptions = ViewerOptions(data["viewer"]) if "viewer" in data.keys() else None
+		self.__ViewerOptions = ViewerOptions(self, data["viewer"]) if "viewer" in data.keys() else None
 		self.__Custom = CustomOptions(data["custom"]) if "custom" in data.keys() else None
 
 	def save(self) -> ExecutionStatus:
@@ -387,7 +507,7 @@ class Manifest:
 			ModulesBuffer = list()
 			for Module in self.__Modules: ModulesBuffer.append({"name": Module.name, "type": Module.type, "is_active": Module.is_active})
 			self.__Data["modules"] = ModulesBuffer
-			WriteJSON(self.__Path, self.__Data)
+			WriteJSON(f"{self.__Path}/manifest.json", self.__Data)
 			
 		except: Status = ERROR_UNKNOWN
 
@@ -431,8 +551,8 @@ class NoteCLI:
 		CommandsList.append(Com)
 
 		Com = Command("meta", "Manage note metainfo fields.")
-		Com.add_argument(ParametersTypes.All, description = "Field name.", important = True)
-		Com.add_argument(ParametersTypes.All, description = "Field value.")
+		Com.add_argument(description = "Field name.", important = True)
+		Com.add_argument(description = "Field value.")
 		ComPos = Com.create_position("OPERATION", "Type of operation with metainfo.", important = True)
 		ComPos.add_flag("set", description = "Create new or update exists field.")
 		ComPos.add_flag("del", description = "Remove field.")
@@ -484,14 +604,14 @@ class NoteCLI:
 		try:
 			#---> Вывод описания.
 			#==========================================================================================#
-			if self._Note.name: StyledPrinter(self._Note.name, decorations = [Styles.Decorations.Bold])
+			if self._Note.name: print(TextStyler(self._Note.name).decorate.bold)
 
 			#---> Вывод вложений.
 			#==========================================================================================#
 			Attachments = self._Note.attachments
 
 			if Attachments.slots or Attachments.other:
-				StyledPrinter("ATTACHMENTS:", decorations = [Styles.Decorations.Bold])
+				print(TextStyler("ATTACHMENTS:").decorate.bold)
 
 				if Attachments.slots != None:
 					for Slot in Attachments.slots: print(f"    {Slot}: " + TextStyler(Attachments.get_slot_filename(Slot), decorations = [Styles.Decorations.Italic]))
@@ -503,7 +623,7 @@ class NoteCLI:
 			#==========================================================================================#
 
 			if self._Note.metainfo:
-				StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
+				print(TextStyler(f"METAINFO:").decorate.bold)
 				MetaInfo = self._Note.metainfo
 				
 				for Key in MetaInfo.keys():
@@ -582,19 +702,19 @@ class NoteCLI:
 
 		return Status
 
-class TableCLI:
-	"""CLI таблицы."""
+class BaseTableCLI:
+	"""Базовый CLI таблицы."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
-	def commands(self) -> list[Command]:
+	def base_commands(self) -> list[Command]:
 		"""Список дескрипторов команд."""
 
 		CommandsList = list()
-
+		
 		Com = Command("chid", "Change ID of note.")
 		ComPos = Com.create_position("NOTE", important = True)
 		ComPos.add_argument(ParametersTypes.Number, "Exists note ID.")
@@ -612,6 +732,12 @@ class TableCLI:
 		Com = Command("close", "Close table.")
 		CommandsList.append(Com)
 
+		Com = Command("columns", "Edit columns showing options.")
+		ComPos = Com.create_position("OPERATION", "Type of operation for option. If not specified, prints current options.")
+		ComPos.add_key("disable", description = "Hide column in list of notes.")
+		ComPos.add_key("enable", description = "Show column in list of notes.")
+		CommandsList.append(Com)
+
 		Com = Command("delete", "Delete table.")
 		Com.add_flag("y", "Automatically confirms deletion.")
 		CommandsList.append(Com)
@@ -619,16 +745,9 @@ class TableCLI:
 		Com = Command("exit", "Exit from OtakuDB.")
 		CommandsList.append(Com)
 
-		Com = Command("init", "Initialize module.")
-		Com.add_argument(description = "Module name.", important = True)
-		CommandsList.append(Com)
-
 		Com = Command("list", "Show list of notes.")
 		Com.add_flag("r", "Reverse list.")
 		Com.add_key("sort", description = "Set sort by column name.")
-		CommandsList.append(Com)
-
-		Com = Command("modules", "List of modules.")
 		CommandsList.append(Com)
 
 		Com = Command("new", "Create new note.")
@@ -650,7 +769,114 @@ class TableCLI:
 		Com.add_key("sort", description = "Set sort by column name.")
 		CommandsList.append(Com)
 
-		return CommandsList + self._GenereateCustomCommands()
+		return CommandsList
+
+	@property
+	def base_commands_names(self) -> list[str]:
+		"""Список названий базовых команд."""
+
+		Names = list()
+		for Command in self.base_commands: Names.append(Command.name)
+
+		return Names
+
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def _ExecuteBaseCommands(self, parsed_command: ParsedCommandData) -> ExecutionStatus | None:
+		"""
+		Обрабатывает команды.
+			parsed_command – описательная структура команды.
+		"""
+		
+		if parsed_command.name not in self.base_commands_names: return None
+
+		Status = ExecutionStatus(0)
+
+		if parsed_command.name == "chid":
+			Mode = None
+			if parsed_command.check_flag("i"): Mode = "i"
+			elif parsed_command.check_flag("o"): Mode = "o"
+			elif parsed_command.check_flag("s"): Mode = "s"
+			Status = self._BaseTable.change_note_id(parsed_command.arguments[0], parsed_command.arguments[1], Mode)
+
+		elif parsed_command.name == "clear":
+			Clear()
+
+		elif parsed_command.name == "close":
+			Status["interpreter"] = "driver" if not self._Module else "table"
+
+		elif parsed_command.name == "columns":
+			
+			if parsed_command.check_key("disable"):
+				ColumnName = parsed_command.get_key_value("disable")
+				Status = self._BaseTable.edit_column_status(ColumnName, False)
+
+			elif parsed_command.check_key("enable"):
+				ColumnName = parsed_command.get_key_value("enable")
+				Status = self._BaseTable.edit_column_status(ColumnName, True)
+
+			else:
+				Data = self._BaseTable.manifest.viewer.columns.to_dict()
+				TableData = {
+						"Column": [],
+						"Status": []
+					}
+				
+				for Name in Data.keys():
+					ColumnStatus = Data[Name]
+					ColumnStatus = TextStyler("enabled").colorize.green if ColumnStatus else TextStyler("disabled").colorize.red
+					TableData["Column"].append(Name)
+					TableData["Status"].append(ColumnStatus)
+
+				Columns(TableData, sort_by = "Column")
+
+		elif parsed_command.name == "exit":
+			exit(0)
+
+		elif parsed_command.name == "list":
+			Status = self._List(parsed_command)
+
+		elif parsed_command.name == "new":
+			Status = self._BaseTable.create_note()
+			if parsed_command.check_flag("o") and Status.code == 0: Status["open_note"] = Status["note_id"]
+
+		elif parsed_command.name == "open":
+
+			if parsed_command.check_flag("m"):
+				NoteID = max(self._BaseTable.notes_id)
+				Status["open_note"] = NoteID
+
+			elif parsed_command.arguments[0].isdigit():
+				Status["open_note"] = int(parsed_command.arguments[0])
+
+			else:
+				Status["open_module"] = parsed_command.arguments[0]
+				Status["interpreter"] = "module"
+
+		elif parsed_command.name == "delete":
+			Response = parsed_command.check_flag("y")
+			if not Response: Response = Confirmation("Are you sure to delete \"" + self._BaseTable.name + "\" table?")
+			
+			if Response:
+				Status = self._BaseTable.delete()
+
+				if Status.code == 0 and self._Module:
+					Status.message = "Module deleted."
+					Status["interpreter"] = "table"
+
+				else:
+					Status.message = "Table deleted."
+					Status["interpreter"] = "driver"
+
+		elif parsed_command.name == "rename":
+			Status = self._BaseTable.rename(parsed_command.arguments[0])
+
+		elif parsed_command.name == "search":
+			Status = self._List(parsed_command, parsed_command.arguments[0])
+		
+		return Status
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
@@ -723,32 +949,75 @@ class TableCLI:
 						Content["ID"].append(Note.id)
 						Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
 
-					if len(Notes): Columns(Content, sort_by = SortBy, reverse = IsReverse)
+					if len(Notes): self._PrintNotesList(Content, sort_by = SortBy, reverse = IsReverse)
 					else: Status.message = "Notes not found."
 
-				else:
-					Status.message = "Table is empty."
+				else: Status.message = "Table is empty."
 
-			except ZeroDivisionError: Status = ERROR_UNKNOWN
+			except: Status = ERROR_UNKNOWN
 
 			return Status
+
+	def _PrintNotesList(self, content: dict[str, list], sort_by: str = "ID", reverse: bool = False):
+		"""
+		Выводит в консоль список записей.
+			content – контент таблицы;\n
+			sort_by – название колонки для сортировки;\n
+			reverse – инвертирует порядок записей.
+		"""
+
+		if self._Module.manifest.viewer.autoclear: Clear()
+
+		for ColumnName in list(content.keys()):
+				if self._BaseTable.manifest.viewer.columns[ColumnName] == False: del content[ColumnName]
+
+		Columns(content, sort_by, reverse)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, driver: "Driver", table: "Table"):
+	def __init__(self, driver: "Driver", table: "Table", module: "Module | None" = None):
 		"""
-		CLI таблицы.
+		Базовый CLI таблицы.
 			driver – драйвер таблиц;\n
-			table – таблица.
+			table – таблица;\n
+			module – модуль.
 		"""
 
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
 		self._Driver = driver
 		self._Table = table
-		self._Module = None
+		self._Module = module
+
+		self._BaseTable = module if module else table
+
+class TableCLI(BaseTableCLI):
+	"""CLI таблицы."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def commands(self) -> list[Command]:
+		"""Список дескрипторов команд."""
+
+		CommandsList = list()
+
+		Com = Command("init", "Initialize module.")
+		Com.add_argument(description = "Module name.", important = True)
+		CommandsList.append(Com)
+
+		Com = Command("modules", "List of modules.")
+		CommandsList.append(Com)
+
+		return self.base_commands + CommandsList + self._GenereateCustomCommands()
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
 
 	def execute(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
 		"""
@@ -758,23 +1027,7 @@ class TableCLI:
 
 		Status = ExecutionStatus(0)
 
-		if parsed_command.name == "chid":
-			Mode = None
-			if parsed_command.check_flag("i"): Mode = "i"
-			elif parsed_command.check_flag("o"): Mode = "o"
-			elif parsed_command.check_flag("s"): Mode = "s"
-			Status = self._Table.change_note_id(parsed_command.arguments[0], parsed_command.arguments[1], Mode)
-
-		elif parsed_command.name == "clear":
-			Clear()
-
-		elif parsed_command.name == "close":
-			Status["interpreter"] = "driver"
-
-		elif parsed_command.name == "exit":
-			exit(0)
-
-		elif parsed_command.name == "init":
+		if parsed_command.name == "init":
 			Modules = self._Table.manifest.modules
 
 			if Modules:
@@ -789,9 +1042,6 @@ class TableCLI:
 			else: Status = DRIVER_ERROR_NO_MODULES_IN_TABLE
 
 			Status["initialize_module"] = parsed_command.arguments[0]
-
-		elif parsed_command.name == "list":
-			Status = self._List(parsed_command)
 
 		elif parsed_command.name == "modules":
 			Modules = self._Table.manifest.modules
@@ -811,42 +1061,9 @@ class TableCLI:
 
 			else: Status.message = "No modules in table."
 
-		elif parsed_command.name == "new":
-			Status = self._Table.create_note()
-			if parsed_command.check_flag("o") and Status.code == 0: Status["open_note"] = Status["note_id"]
-
-		elif parsed_command.name == "open":
-
-			if parsed_command.check_flag("m"):
-				NoteID = max(self._Table.notes_id)
-				Status["open_note"] = NoteID
-
-			elif parsed_command.arguments[0].isdigit():
-				Status["open_note"] = int(parsed_command.arguments[0])
-
-			else:
-				Status["open_module"] = parsed_command.arguments[0]
-				Status["interpreter"] = "module"
-
-		elif parsed_command.name == "delete":
-			Response = parsed_command.check_flag("y")
-			if not Response: Response = Confirmation("Are you sure to delete \"" + self._Table.name + "\" table?")
-			
-			if Response:
-				Status = self._Table.delete()
-
-				if Status.code == 0:
-					Status.message = "Table deleted."
-					Status["interpreter"] = "driver"
-
-		elif parsed_command.name == "rename":
-			Status = self._Table.rename(parsed_command.arguments[0])
-
-		elif parsed_command.name == "search":
-			Status = self._List(parsed_command, parsed_command.arguments[0])
-
 		else:
-			Status = self._ExecuteCustomCommands(parsed_command)
+			Status = self._ExecuteBaseCommands(parsed_command)
+			if Status == None: Status = self._ExecuteCustomCommands(parsed_command)
 
 		return Status
 	
@@ -861,97 +1078,11 @@ class ModuleCLI(TableCLI):
 	def commands(self) -> list[Command]:
 		"""Список дескрипторов команд."""
 
-		CommandsList = list()
-
-		Com = Command("chid", "Change ID of note.")
-		ComPos = Com.create_position("NOTE", important = True)
-		ComPos.add_argument(ParametersTypes.Number, "Exists note ID.")
-		ComPos = Com.create_position("ID", important = True)
-		ComPos.add_argument(ParametersTypes.Number, "New note ID")
-		ComPos = Com.create_position("MODE", "Mode of ID changing.")
-		ComPos.add_flag("o", "Overwtite exists note.")
-		ComPos.add_flag("s", "Swipe with exists note.")
-		ComPos.add_flag("i", "Insert to exists note place.")
-		CommandsList.append(Com)
-
-		Com = Command("clear", "Clear console.")
-		CommandsList.append(Com)
-
-		Com = Command("close", "Close table.")
-		CommandsList.append(Com)
-
-		Com = Command("delete", "Delete table.")
-		Com.add_flag("y", "Automatically confirms deletion.")
-		CommandsList.append(Com)
-
-		Com = Command("exit", "Exit from OtakuDB.")
-		CommandsList.append(Com)
-
-		Com = Command("init", "Initialize module.")
-		Com.add_argument(description = "Module name.", important = True)
-		CommandsList.append(Com)
-
-		Com = Command("list", "Show list of notes.")
-		Com.add_flag("r", "Reverse list.")
-		Com.add_key("sort", description = "Set sort by column name.")
-		CommandsList.append(Com)
-
-		Com = Command("new", "Create new note.")
-		Com.add_flag("o", "Open new note.")
-		CommandsList.append(Com)
-
-		Com = Command("open", "Open note or module.")
-		ComPos = Com.create_position("TARGET", "Target for opening.", important = True)
-		ComPos.add_argument(description = "Note ID or module name.")
-		ComPos.add_flag("m", description = "Open note with max ID.")
-		CommandsList.append(Com)
-
-		Com = Command("rename", "Rename table.")
-		Com.add_argument(description = "Table name.", important = True)
-		CommandsList.append(Com)
-
-		return CommandsList + self._GenereateCustomCommands()
-
-	#==========================================================================================#
-	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def _GenereateCustomCommands(self) -> list[Command]:
-		"""Генерирует дексрипторы дополнительных команд."""
-
-		CommandsList = list()
-
-		# Инициализация команд...
-
-		return CommandsList
-
-	def _ExecuteCustomCommands(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
-		"""
-		Обрабатывает дополнительные команды.
-			parsed_command – описательная структура команды.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		return Status
+		return self.base_commands + self._GenereateCustomCommands()
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-
-	def __init__(self, driver: "Driver", table: "Table", module: "Module"):
-		"""
-		CLI таблицы.
-			driver – драйвер таблиц;\n
-			table – таблица, к которой привязан модуль;\n
-			module – модуль.
-		"""
-
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
-		self._Driver = driver
-		self._Table = table
-		self._Module = module
 
 	def execute(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
 		"""
@@ -960,49 +1091,8 @@ class ModuleCLI(TableCLI):
 		"""
 
 		Status = ExecutionStatus(0)
-
-		if parsed_command.name == "chid":
-			Mode = None
-			if parsed_command.check_flag("i"): Mode = "i"
-			elif parsed_command.check_flag("o"): Mode = "o"
-			elif parsed_command.check_flag("s"): Mode = "s"
-			Status = self._Module.change_note_id(parsed_command.arguments[0], parsed_command.arguments[1], Mode)
-
-		elif parsed_command.name == "clear":
-			Clear()
-
-		elif parsed_command.name == "close":
-			Status["interpreter"] = "table"
-
-		elif parsed_command.name == "exit":
-			exit(0)
-
-		elif parsed_command.name == "list":
-			Status = self._List(parsed_command)
-
-		elif parsed_command.name == "new":
-			Status = self._Module.create_note()
-			if parsed_command.check_flag("o") and Status.code == 0: Status["open_note"] = Status["note_id"]
-
-		elif parsed_command.name == "open":
-
-			if parsed_command.check_flag("m"):
-				NoteID = max(self._Module.notes_id)
-				Status["open_note"] = NoteID
-
-			else:
-				Status["open_note"] = int(parsed_command.arguments[0])
-
-		elif parsed_command.name == "delete":
-			Response = parsed_command.check_flag("y")
-			if not Response: Response = Confirmation("Are you sure to delete \"" + self._Table.name + "\" table?")
-			
-			if Response:
-				Status = self._Table.delete()
-				if Status.code == 0: Status["interpreter"] = "driver"
-
-		else:
-			Status = self._ExecuteCustomCommands(parsed_command)
+		Status = self._ExecuteBaseCommands(parsed_command)
+		if Status == None: Status = self._ExecuteCustomCommands(parsed_command)
 
 		return Status
 
@@ -1209,10 +1299,17 @@ class Note:
 		Status = ExecutionStatus(0)
 
 		try:
-			self._ID = id
+			
 			OldPath = self._Path
-			self._Path = self.__GeneratePath()
+			self._Path = self.__GeneratePath(f"{id}.json")
 			os.rename(OldPath, self._Path)
+			
+			if self.attachments.count > 0:
+				OldPath = self.__GeneratePath(f".attachments/{self._ID}")
+				NewPath = self.__GeneratePath(f".attachments/{id}")
+				shutil.move(OldPath, NewPath)
+
+			self._ID = id
 			Status.message = "ID changed."
 
 		except: Status = ERROR_UNKNOWN
@@ -1295,7 +1392,11 @@ class Table:
 			"attachments": False
 		},
 		"metainfo_rules": {},
-		"viewer": {},
+		"viewer": {
+			"autoclear": False,
+			"colorize": True,
+			"columns": {}
+		},
 		"custom": {}
 	}
 
@@ -1490,13 +1591,19 @@ class Table:
 				NotesID = NewBuffer
 				if note in NotesID: NotesID.remove(note)
 				NotesID.reverse()
-				input(NotesID)
 				self.change_note_id(note, 0)
-				for ID in NotesID:
-					Status = self.change_note_id(ID, ID + 1)
-					if Status.code != 0: return Status
 
-				self.change_note_id(0, new_id)
+				if new_id > note:
+					for ID in NotesID:
+						Status = self.change_note_id(ID, ID + 1)
+						if Status.code != 0: return Status
+
+				else:
+					Status = self.change_note_id(new_id, new_id + 1)
+
+				if Status.code != 0: return Status
+				Status = self.change_note_id(0, new_id)
+				if Status.code != 0: return Status
 				Status.message = f"Note #{note} inserted to position #{new_id}."
 
 			elif mode == "o":
@@ -1586,6 +1693,29 @@ class Table:
 
 		except KeyError: Status = TABLE_ERROR_MISSING_NOTE
 		except: Status = ERROR_UNKNOWN
+
+		return Status
+
+	def edit_column_status(self, column: str, status: bool) -> ExecutionStatus:
+		"""
+		Переключает отображение колонки при просмотре списка записей.
+			column – название колонки в любом регистре;\n
+			status – статус отображения.
+		"""
+
+		Status = ExecutionStatus(0)
+		Columns = self._Manifest.viewer.columns
+
+		if Columns.is_available:
+			
+			if Columns.check_column(column):
+				Columns.edit_column_status(column, status)
+
+			else:
+				ColumnBold = TextStyler(column).decorate.bold
+				Status = ExecutionWarning(1, f"Option for {ColumnBold} not available or column missing")
+
+		else: Status.message = "Colums options not available for this table."
 
 		return Status
 

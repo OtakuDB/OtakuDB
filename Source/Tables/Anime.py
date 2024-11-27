@@ -3,9 +3,9 @@ from Source.CLI.Templates import Columns
 from Source.Core.Exceptions import *
 from Source.Core.Errors import *
 
-from dublib.CLI.StyledPrinter import Styles, StylesGroup, StyledPrinter, TextStyler
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.Engine.Bus import ExecutionError, ExecutionWarning, ExecutionStatus
+from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.CLI.Templates import Confirmation
 
 #==========================================================================================#
@@ -196,17 +196,17 @@ class Anime_NoteCLI(NoteCLI):
 
 			#---> Вывод описания записи.
 			#==========================================================================================#
-			if self._Note.name: StyledPrinter(self._Note.name, decorations = [Styles.Decorations.Bold], end = False)
+			if self._Note.name: print(TextStyler(self._Note.name).decorate.bold, end = "")
 			print(f"{MSG_TotalProgress} {self._Note.emoji_status}")
 			if self._Note.estimation: print(f"⭐ {self._Note.estimation} / {self._Table.max_estimation}")
-			if self._Note.another_names: StyledPrinter(f"ANOTHER NAMES: ", decorations = [Styles.Decorations.Bold])
-			for AnotherName in self._Note.another_names: StyledPrinter(f"    {AnotherName}", decorations = [Styles.Decorations.Italic])
+			if self._Note.another_names: print(TextStyler(f"ANOTHER NAMES: ").decorate.bold)
+			for AnotherName in self._Note.another_names: print(TextStyler(f"    {AnotherName}").decorate.italic)
 
 			#---> Вывод классификаторов записи.
 			#==========================================================================================#
 
 			if self._Note.metainfo:
-				StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
+				print(TextStyler(f"METAINFO:").decorate.bold)
 				MetaInfo = self._Note.metainfo
 				
 				for Key in MetaInfo.keys():
@@ -214,14 +214,14 @@ class Anime_NoteCLI(NoteCLI):
 					print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
 
 			if self._Note.tags:
-				StyledPrinter(f"TAGS: ", decorations = [Styles.Decorations.Bold], end = False)
+				print(TextStyler(f"TAGS: ").decorate.bold, end = "")
 				print(", ".join(self._Note.tags))
 
 			#---> Вывод частей записи.
 			#==========================================================================================#
 
 			if Parts:
-				StyledPrinter(f"PARTS:", decorations = [Styles.Decorations.Bold])
+				print(TextStyler(f"PARTS:").decorate.bold)
 
 				for PartIndex in range(0, len(Parts)):
 
@@ -239,9 +239,9 @@ class Anime_NoteCLI(NoteCLI):
 					#---> Определение цвета части.
 					#==========================================================================================#
 					TextColor = None
-					if Options["colorize"] and "✅" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Green)
-					if Options["colorize"] and "ℹ️" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Cyan)
-					if Options["colorize"] and "🚫" in MSG_PartStatus: TextColor = StylesGroup(text_color = Styles.Colors.Blue)
+					if Options["colorize"] and "✅" in MSG_PartStatus: TextColor = Styles.Colors.Green
+					if Options["colorize"] and "ℹ️" in MSG_PartStatus: TextColor = Styles.Colors.Cyan
+					if Options["colorize"] and "🚫" in MSG_PartStatus: TextColor = Styles.Colors.Blue
 
 					if "series" in Parts[PartIndex].keys():
 
@@ -254,15 +254,15 @@ class Anime_NoteCLI(NoteCLI):
 
 						#---> Определение цвета части.
 						#==========================================================================================#
-						if Options["colorize"] and "⏳" in MSG_MarkIndicator: TextColor = StylesGroup(text_color = Styles.Colors.Yellow)
+						if Options["colorize"] and "⏳" in MSG_MarkIndicator: TextColor = Styles.Colors.Yellow
 
 						#---> Вывод части.
 						#==========================================================================================#
-						StyledPrinter(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}{MSG_MarkIndicator}", styles = TextColor)
-						if not Options["hide_single_series"] or Options["hide_single_series"] and MSG_Series and MSG_Series > 1: StyledPrinter(f"    {MSG_Indent}       {MSG_Mark}{MSG_Series} series{MSG_Progress}", styles = TextColor)
+						print(TextStyler(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}{MSG_MarkIndicator}", text_color = TextColor))
+						if not Options["hide_single_series"] or Options["hide_single_series"] and MSG_Series and MSG_Series > 1: print(TextStyler(f"    {MSG_Indent}       {MSG_Mark}{MSG_Series} series{MSG_Progress}", text_color = TextColor))
 
 					else:
-						StyledPrinter(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}", styles = TextColor)
+						print(TextStyler(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}", text_color = TextColor))
 
 					if Options["links"] and "link" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
 					if Options["comments"] and "comment" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       💭 " + Parts[PartIndex]["comment"])
@@ -294,8 +294,7 @@ class Anime_TableCLI(TableCLI):
 					"Name": [],
 					"Estimation": []
 				}
-				SortBy = parsed_command.keys["sort"].title() if "sort" in parsed_command.keys.keys() else "ID"
-				if SortBy == "Id": SortBy = SortBy.upper()
+				SortBy = parsed_command.keys["sort"] if "sort" in parsed_command.keys.keys() else "ID"
 
 				if SortBy not in Content.keys():
 					Status = ExecutionError(-1, "no_column_to_sort")
@@ -334,11 +333,10 @@ class Anime_TableCLI(TableCLI):
 						Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
 						Content["Estimation"].append(Note.estimation if Note.estimation else "")
 
-					if len(Notes): Columns(Content, sort_by = SortBy, reverse = Reverse)
+					if len(Notes): self._PrintNotesList(Content, sort_by = SortBy, reverse = Reverse)
 					else: Status.message = "Notes not found."
 
-				else:
-					Status.message = "Table is empty."
+				else: Status.message = "Table is empty."
 
 			except: Status = ERROR_UNKNOWN
 

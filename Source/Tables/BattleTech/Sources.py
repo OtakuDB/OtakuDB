@@ -4,11 +4,11 @@ from Source.Core.Exceptions import *
 from Source.Core.Errors import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.CLI.StyledPrinter import Styles, StyledPrinter, TextStyler
+from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.Engine.Bus import ExecutionError, ExecutionStatus
 
 #==========================================================================================#
-# >>>>> ОБРАБОТЧИКИ ВЗАИМОДЕЙСТВИЙ С ТАБЛИЦЕЙ <<<<< #
+# >>>>> CLI <<<<< #
 #==========================================================================================#
 
 class BattleTech_Sources_NoteCLI(NoteCLI):
@@ -142,19 +142,19 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 
 			#---> Вывод описания записи.
 			#==========================================================================================#
-			if UsedName: StyledPrinter(UsedName, decorations = [Styles.Decorations.Bold], end = False)
+			if UsedName: print(TextStyler(UsedName).decorate.bold, end = "")
 			print(f" {self._Note.emoji_status}")
 			if self._Note.bookmark: print(f"🔖 {self._Note.bookmark} page")
 			if self._Note.comment: print(f"💭 {self._Note.comment}")
 			if self._Note.link: print(f"🔗 {self._Note.link}")
-			if AnotherNames: StyledPrinter(f"ANOTHER NAMES: ", decorations = [Styles.Decorations.Bold])
-			for AnotherName in AnotherNames: StyledPrinter(f"    {AnotherName}", decorations = [Styles.Decorations.Italic])
+			if AnotherNames: print(TextStyler(f"ANOTHER NAMES: ").decorate.bold)
+			for AnotherName in AnotherNames: print(TextStyler(f"    {AnotherName}").decorate.italic)
 
 			#---> Вывод классификаторов записи.
 			#==========================================================================================#
 
 			if self._Note.metainfo:
-				StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
+				print(TextStyler(f"METAINFO:").decorate.bold)
 				MetaInfo = self._Note.metainfo
 				
 				for Key in MetaInfo.keys():

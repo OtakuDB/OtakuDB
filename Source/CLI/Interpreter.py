@@ -6,7 +6,7 @@ from Source.Driver import Driver
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData, Terminalyzer
 from dublib.CLI.Templates import PrintExecutionStatus
 from dublib.Engine.Bus import ExecutionError, ExecutionWarning, ExecutionStatus
-from dublib.CLI.StyledPrinter import Styles, TextStyler
+from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.Methods.System import Clear
 from dublib.Exceptions.CLI import *
 
@@ -106,7 +106,7 @@ class Interpreter:
 				for Table in self.__Driver.tables:
 					Manifest = self.__Driver.load_manifest(Table).value
 					Content["Table"].append(Table)
-					Content["Type"].append(TextStyler(Manifest.type, decorations = [Styles.Decorations.Italic]))
+					Content["Type"].append(TextStyler(Manifest.type).decorate.italic)
 
 				Columns(Content, sort_by = "Table")
 
@@ -271,6 +271,15 @@ class Interpreter:
 			except KeyboardInterrupt:
 				print("exit")
 				exit()
+
+			except ValueError as ExceptionData:
+
+				if str(ExceptionData) == "No closing quotation":
+					Status = ExecutionError(-1, "no_closing_quotation")
+					InputLine = None
+					PrintExecutionStatus(Status)
+
+				else: raise ValueError(str(ExceptionData))
 
 			if InputLine:
 				Status = self.__ParseCommandData(InputLine)

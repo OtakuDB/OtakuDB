@@ -4,11 +4,12 @@ from Source.Core.Exceptions import *
 from Source.Core.Errors import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.CLI.StyledPrinter import Styles, StyledPrinter, TextStyler
 from dublib.Engine.Bus import ExecutionError, ExecutionStatus
+from dublib.CLI.TextStyler import Styles, TextStyler
+from dublib.Methods.System import Clear
 
 #==========================================================================================#
-# >>>>> ОБРАБОТЧИКИ ВЗАИМОДЕЙСТВИЙ С ТАБЛИЦЕЙ <<<<< #
+# >>>>> CLI <<<<< #
 #==========================================================================================#
 
 class BattleTech_Books_NoteCLI(NoteCLI):
@@ -28,6 +29,10 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		Com.add_flag("d", "Remove exists name.")
 		CommandsList.append(Com)
 
+		Com = Command("author", "[METAINFO] Set author.")
+		Com.add_argument(description = "Author.", important = True)
+		CommandsList.append(Com)
+
 		Com = Command("collection", "Set collection status.")
 		Com.add_argument(description = "Status: collected (c), ebook (e), whishlist (w), ordered (o).", important = True)
 		CommandsList.append(Com)
@@ -36,8 +41,13 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		Com.add_argument(description = "Comment text or * to remove.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("era", "[METAINFO] Set era.")
-		Com.add_argument(description = "Era ID or name.", important = True)
+		Com = Command("era", "Set era by timeline year.")
+		ComPos = Com.create_position("ERA", "Index or timeline error.", important = True)
+		ComPos.add_argument(ParametersTypes.All, "Era index.")
+		ComPos.add_key("year", ParametersTypes.All, "Book timeline year.")
+		CommandsList.append(Com)
+
+		Com = Command("eras", "Show list of BattleTech eras.")
 		CommandsList.append(Com)
 
 		Com = Command("estimate", "Set estimation.")
@@ -56,19 +66,23 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		Com.add_argument(ParametersTypes.Number, description = "Page number or * to remove.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("meta", "Manage note metainfo fields.")
-		Com.add_argument(description = "Field name.", important = True)
-		Com.add_argument(description = "Field value.")
-		ComPos = Com.create_position("OPERATION", "Type of operation with metainfo.", important = True)
-		ComPos.add_flag("set", description = "Create new or update exists field.")
-		ComPos.add_flag("del", description = "Remove field.")
+		Com = Command("pubdate", "[METAINFO] Set publication date.")
+		Com.add_argument(description = "Publication date.", important = True)
+		CommandsList.append(Com)
+
+		Com = Command("publisher", "[METAINFO] Set publisher.")
+		Com.add_argument(description = "Publisher.", important = True)
+		CommandsList.append(Com)
+
+		Com = Command("series", "[METAINFO] Set series.")
+		Com.add_argument(description = "Series.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("status", "Set reading status.")
 		Com.add_argument(description = "Status: announced (a), reading (r), completed (c), dropped (d), skipped (s).", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("type", "[METAINFO] Set type of book.")
+		Com = Command("type", "Set type of book.")
 		Com.add_argument(description = "Type of book: novel, story.", important = True)
 		CommandsList.append(Com)
 
@@ -86,6 +100,11 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			if parsed_command.check_flag("d"): Status = self._Note.remove_another_name(parsed_command.arguments[0])
 			else: Status = self._Note.add_another_name(parsed_command.arguments[0])
 
+		elif parsed_command.name == "author":
+			Value = parsed_command.arguments[0]
+			if Value == "*": Status = self._Note.remove_metainfo("author")
+			else: Status = self._Note.set_metainfo("author", Value)
+
 		elif parsed_command.name == "collection":
 			Status = self._Note.set_collection_status(parsed_command.arguments[0])
 
@@ -93,7 +112,19 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			Status = self._Note.set_comment(parsed_command.arguments[0])
 
 		elif parsed_command.name == "era":
-			Status = self._Note.set_era(parsed_command.arguments[0])
+			if parsed_command.check_key("year"): Status = self._Note.set_era(parsed_command.get_key_value("year"), is_year = True)
+			else: Status = self._Note.set_era(parsed_command.arguments[0])
+
+		elif parsed_command.name == "eras":
+			Eras = self._Table.eras
+
+			for Era in Eras:
+				EraIndex = Era["index"]
+				Name = Era["name"]
+				StartYear = Era["start_year"] if Era["start_year"] else "earlier"
+				EndYear = Era["end_year"] if Era["end_year"] else "now"
+
+				print(f"    {EraIndex}: {Name} [{StartYear} – {EndYear}]")
 
 		elif parsed_command.name == "estimate":
 			Status = self._Note.estimate(parsed_command.arguments[0])
@@ -116,6 +147,21 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			if parsed_command.check_flag("del"):
 				Status = self._Note.remove_metainfo(parsed_command.arguments[0])
 
+		elif parsed_command.name == "pubdate":
+			Value = parsed_command.arguments[0]
+			if Value == "*": Status = self._Note.remove_metainfo("pubdate")
+			else: Status = self._Note.set_metainfo("pubdate", Value)
+
+		elif parsed_command.name == "publisher":
+			Value = parsed_command.arguments[0]
+			if Value == "*": Status = self._Note.remove_metainfo("publisher")
+			else: Status = self._Note.set_metainfo("publisher", Value)
+
+		elif parsed_command.name == "series":
+			Value = parsed_command.arguments[0]
+			if Value == "*": Status = self._Note.remove_metainfo("series")
+			else: Status = self._Note.set_metainfo("series", Value)
+
 		elif parsed_command.name == "status":
 			Status = self._Note.set_status(parsed_command.arguments[0])
 
@@ -133,6 +179,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			#---> Получение данных.
 			#==========================================================================================#
 			UsedName = None
+			Era = None
 			AnotherNames = list()
 
 			if self._Note.localized_name:
@@ -146,30 +193,37 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 			#---> Вывод описания записи.
 			#==========================================================================================#
-			if UsedName: StyledPrinter(UsedName, decorations = [Styles.Decorations.Bold], end = False)
+			if self._Table.manifest.viewer.autoclear: Clear()
+			if UsedName: print(TextStyler(UsedName).decorate.bold, end = "")
 			if self._Note.emoji_collection_status: print(" " + self._Note.emoji_collection_status, end = "")
 			print(f" {self._Note.emoji_status}", end = "")
 			print("")
-			for AnotherName in AnotherNames: StyledPrinter(f"    {AnotherName}", decorations = [Styles.Decorations.Italic])
-			StyledPrinter("PROPERTIES:", decorations = [Styles.Decorations.Bold])
+
+			if self._Note.era != None:
+
+				for CurrentEra in self._Table.eras:
+					if CurrentEra["index"] == self._Note.era: Era = CurrentEra["name"]
+
+			for AnotherName in AnotherNames: print(TextStyler(f"    {AnotherName}").decorate.bold)
+			print(TextStyler("PROPERTIES:").decorate.bold)
 			if self._Note.type: print("    ✒️  Type: " + self._Note.type.title())
-			if self._Note.era: print("    🏺 Era: " + self._Table.eras[self._Note.era]["name"])
-			if self._Note.estimation: print(f"    ⭐ Estimation:{self._Note.estimation}")
+			if Era: print(f"    🏺 Era: {Era}")
+			if self._Note.estimation: print(f"    ⭐ Estimation: {self._Note.estimation}")
 			if self._Note.bookmark: print(f"    🔖 Bookmark: {self._Note.bookmark} page")
 			if self._Note.comment: print(f"    💭 Comment: {self._Note.comment}")
 			if self._Note.link: print(f"    🔗 Link: {self._Note.link}")
 
 			Attachments = self._Note.attachments
 
-			if Attachments:
-				StyledPrinter("ATTACHMENTS:", decorations = [Styles.Decorations.Bold])
-				for Slot in Attachments.slots: print(f"    {Slot}: " + TextStyler(Attachments.get_slot_filename(Slot), decorations = [Styles.Decorations.Italic]))
+			if Attachments.count:
+				print(TextStyler("ATTACHMENTS:").decorate.bold)
+				for Slot in Attachments.slots: print(f"    {Slot}: " + TextStyler(Attachments.get_slot_filename(Slot)).decorate.italic)
 
 			#---> Вывод классификаторов записи.
 			#==========================================================================================#
 
 			if self._Note.metainfo:
-				StyledPrinter(f"METAINFO:", decorations = [Styles.Decorations.Bold])
+				print(TextStyler(f"METAINFO:").decorate.bold)
 				MetaInfo = self._Note.metainfo
 				
 				for Key in MetaInfo.keys():
@@ -208,12 +262,13 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 		if parsed_command.name == "eras":
 			Eras = self._Module.eras
 
-			for EraID in range(len(Eras)):
-				Name = Eras[EraID]["name"]
-				StartYear = Eras[EraID]["start_year"] if Eras[EraID]["start_year"] else "earlier"
-				EndYear = Eras[EraID]["end_year"] if Eras[EraID]["end_year"] else "now"
-
-				print(f"    {EraID}: {Name} [{StartYear} – {EndYear}]")
+			for Era in Eras:
+				EraIndex = Era["index"]
+				Name = Era["name"]
+				StartYear = Era["start_year"] if Era["start_year"] else "earlier"
+				EndYear = Era["end_year"] if Era["end_year"] else "now"
+				print(TextStyler(str(EraIndex).ljust(8)).decorate.bold, end = "")
+				print(f": {Name} [{StartYear} – {EndYear}]")
 
 		return Status
 
@@ -233,11 +288,13 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 					"Status": [],
 					"Name": [],
 					"Author": [],
+					"Publication": [],
 					"Type": [],
-					"Estimation": []
+					"Series": [],
+					"Estimation": [],
+					"Era": []
 				}
-				SortBy = parsed_command.keys["sort"].title() if "sort" in parsed_command.keys.keys() else "ID"
-				if SortBy == "Id": SortBy = SortBy.upper()
+				SortBy = parsed_command.keys["sort"] if "sort" in parsed_command.keys.keys() else "ID"
 
 				if SortBy not in Content.keys():
 					Status = ExecutionError(-1, "no_column_to_sort")
@@ -249,7 +306,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 					Notes = self._Module.notes
 
 					if search:
-						print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
+						print("Search:", TextStyler(search).colorize.yellow)
 						NotesCopy = list(Notes)
 						SearchBuffer = list()
 
@@ -266,38 +323,43 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 					for Note in Notes:
 						Name = Note.localized_name if Note.localized_name else Note.name
 						Type = Note.type or ""
+						Era = TextStyler(Note.era_name).decorate.italic if Note.era_name else ""
+						Publication = Note.metainfo["publication_date"] if "publication_date" in Note.metainfo and Note.metainfo["publication_date"] else ""
+						Series = TextStyler(Note.metainfo["series"]).decorate.italic if "series" in Note.metainfo else ""
 						Estimation = ""
 
 						if Note.estimation:
 							Estimation = "★ " * Note.estimation
-							if Note.estimation in [5]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Green)
-							if Note.estimation in [3, 4]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Yellow)
-							if Note.estimation in [1, 2]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Red)
+							if Note.estimation in [5]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Green).text
+							if Note.estimation in [3, 4]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Yellow).text
+							if Note.estimation in [1, 2]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Red).text
 
 						NoteStatus = Note.status
 						if not Name: Name = ""
 						if not NoteStatus: NoteStatus = "–"
 						Author = Note.metainfo["author"] if "author" in Note.metainfo.keys() else ""
-						if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Purple)
-						if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue)
-						if NoteStatus == "reading": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow)
-						if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green)
-						if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Red)
-						if NoteStatus == "skipped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Cyan)
+						if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Purple).text
+						if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue).text
+						if NoteStatus == "reading": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow).text
+						if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green).text
+						if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Red).text
+						if NoteStatus == "skipped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Cyan).text
 						if Note.emoji_collection_status: NoteStatus = Note.emoji_collection_status + " " + NoteStatus
 						else: NoteStatus = "   " + NoteStatus
 						Content["ID"].append(Note.id)
 						Content["Status"].append(NoteStatus)
 						Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
 						Content["Author"].append(Author)
+						Content["Publication"].append(Publication)
 						Content["Type"].append(Type)
+						Content["Series"].append(Series)
 						Content["Estimation"].append(Estimation)
+						Content["Era"].append(Era)
 
 					if len(Notes): Columns(Content, sort_by = SortBy, reverse = Reverse)
 					else: Status.message = "Notes not found."
 
-				else:
-					Status.message = "Table is empty."
+				else: Status.message = "Table is empty."
 
 			except: Status = ERROR_UNKNOWN
 
@@ -363,10 +425,24 @@ class BattleTech_Books_Note(Note):
 		return self._Data["comment"]
 
 	@property
-	def era(self) -> list[int]:
-		"""Эра."""
+	def era(self) -> float | int | None:
+		"""Индекс эры."""
 
 		return self._Data["era"]
+	
+	@property
+	def era_name(self) -> str | None:
+		"""Название эры."""
+
+		Name = None
+		
+		for Era in self._Table.eras:
+
+			if self.era == Era["index"]:
+				Name = Era["name"]
+				break
+
+		return Name
 
 	@property
 	def emoji_collection_status(self) -> str:
@@ -415,12 +491,6 @@ class BattleTech_Books_Note(Note):
 		"""Локализованное название."""
 
 		return self._Data["localized_name"]
-	
-	@property
-	def metainfo(self) -> dict:
-		"""Метаданные."""
-
-		return self._Data["metainfo"]
 	
 	@property
 	def status(self) -> str | None:
@@ -553,26 +623,39 @@ class BattleTech_Books_Note(Note):
 
 		return Status
 
-	def set_era(self, era: int, is_year: bool = False) -> ExecutionStatus:
+	def set_era(self, era: float | int | str, is_year: bool = False) -> ExecutionStatus:
 		"""
 		Задаёт эру.
-			era – ID эры или год событий;\n
+			era – индекс эры или год событий;\n
 			is_year – указывает, является ли идентификатор эры годом событий.
 		"""
 
 		Status = ExecutionStatus(0)
 
 		try:
-			era = int(era)
+			if is_year: 
+				Year = int(era)
 
-			if era in range(len(self._Table.eras)):
-				self._Data["era"] = era
-				self.save()
-				Status.message = "Era updated."
+				for Era in self._Table.eras:
+					if not Era["start_year"]: Era["start_year"] = 0
+					if not Era["end_year"]: Era["end_year"] = 9999
+					if Era["index"] >= 0 and Year > Era["start_year"] and Year < Era["end_year"]: self._Data["era"] = Era["index"]
+					self.save()
+					Status.message = "Era updated."
 
-			else: Status = ExecutionError(-1, "incorrect_era")
+			else:
+				if type(era) == str:
+					if "." in era: era = float(era)
+					else: era = int(era)
 
-		except:	Status = ERROR_UNKNOWN
+				if era in self._Table.eras_indexes:
+					self._Data["era"] = era
+					self.save()
+					Status.message = "Era updated."
+
+				else: Status = ExecutionError(-1, "incorrect_era")
+
+		except ZeroDivisionError:	Status = ERROR_UNKNOWN
 
 		return Status
 
@@ -705,12 +788,20 @@ class BattleTech_Books(Module):
 		},
 		"metainfo_rules": {
 			"author": None,
+			"publication_date": None,
 			"publisher": None,
-			"series": None,
-			"type": ["fanfiction", "novel", "story"]
+			"series": None
 		},
 		"viewer": {
-			"colorize": True
+			"autoclear": False,
+			"columns": {
+				"Author": True,
+				"Era": True,
+				"Estimation": True,
+				"Publication": True,
+				"Series": True,
+				"Type": True
+			}
 		},
 		"custom": {}
 	}
@@ -724,6 +815,12 @@ class BattleTech_Books(Module):
 		"""Эпохи BattleTech."""
 
 		return self._Table.eras
+	
+	@property
+	def eras_indexes(self) -> list[int, float]:
+		"""Индексы эпох BattleTech."""
+
+		return self._Table.eras_indexes
 	
 	#==========================================================================================#
 	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
