@@ -82,6 +82,12 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		Com.add_argument(description = "Status: announced (a), reading (r), completed (c), dropped (d), skipped (s).", important = True)
 		CommandsList.append(Com)
 
+		Com = Command("story", "Manage stories names.")
+		Com.add_argument(description = "Story name.", important = True)
+		Com.add_flag("del", "Remove exists story.")
+		Com.add_key("localname", description = "Localized story name.")
+		CommandsList.append(Com)
+
 		Com = Command("type", "Set type of book.")
 		Com.add_argument(description = "Type of book: novel, story.", important = True)
 		CommandsList.append(Com)
@@ -149,8 +155,8 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 		elif parsed_command.name == "pubdate":
 			Value = parsed_command.arguments[0]
-			if Value == "*": Status = self._Note.remove_metainfo("pubdate")
-			else: Status = self._Note.set_metainfo("pubdate", Value)
+			if Value == "*": Status = self._Note.remove_metainfo("publication_date")
+			else: Status = self._Note.set_metainfo("publication_date", Value)
 
 		elif parsed_command.name == "publisher":
 			Value = parsed_command.arguments[0]
@@ -164,6 +170,10 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 		elif parsed_command.name == "status":
 			Status = self._Note.set_status(parsed_command.arguments[0])
+
+		elif parsed_command.name == "story":
+			if parsed_command.check_flag("d"): Status = self._Note.remove_story(parsed_command.arguments[0])
+			else: Status = self._Note.add_story(parsed_command.arguments[0], parsed_command.get_key_value("localname"))
 
 		elif parsed_command.name == "type":
 			Status = self._Note.set_type(parsed_command.arguments[0])
@@ -205,6 +215,14 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 					if CurrentEra["index"] == self._Note.era: Era = CurrentEra["name"]
 
 			for AnotherName in AnotherNames: print(TextStyler(f"    {AnotherName}").decorate.bold)
+
+			for StoryIndex in range(len(self._Note.stories.keys())):
+				Index = StoryIndex + 1 
+				Story =  list(self._Note.stories.keys())[StoryIndex]
+				Localname =  list(self._Note.stories.values())[StoryIndex]
+				if Localname: Localname = " / " + Localname
+				print(TextStyler(f"    > {Index}. {Story}{Localname}").decorate.bold + " [story]")
+
 			print(TextStyler("PROPERTIES:").decorate.bold)
 			if self._Note.type: print("    ✒️  Type: " + self._Note.type.title())
 			if Era: print(f"    🏺 Era: {Era}")
@@ -356,7 +374,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 						Content["Estimation"].append(Estimation)
 						Content["Era"].append(Era)
 
-					if len(Notes): Columns(Content, sort_by = SortBy, reverse = Reverse)
+					if len(Notes): self._PrintNotesList(Content, sort_by = SortBy, reverse = Reverse)
 					else: Status.message = "Notes not found."
 
 				else: Status.message = "Table is empty."
@@ -380,6 +398,7 @@ class BattleTech_Books_Note(Note):
 		"name": None,
 		"localized_name": None,
 		"another_names": [],
+		"stories": {},
 		"type": "novel",
 		"era": None,
 		"estimation": None,
@@ -499,6 +518,14 @@ class BattleTech_Books_Note(Note):
 		return self._Data["status"]
 	
 	@property
+	def stories(self) -> dict[str, str]:
+		"""Словарь историй и их локализованных названий."""
+
+		if "stories" not in self._Data.keys(): self._Data["stories"] = dict()
+
+		return self._Data["stories"]
+	
+	@property
 	def type(self) -> str | None:
 		"""Тип книги."""
 
@@ -559,6 +586,46 @@ class BattleTech_Books_Note(Note):
 
 		except IndexError:
 			Status = ExecutionError(1, "incorrect_another_name_index")
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+	
+	def add_story(self, name: str, localname: str | None = None) -> ExecutionStatus:
+		"""
+		Добавляет историю.
+			name – название истории;\n
+			localname – локализованное название истории.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			if "stories" not in self._Data.keys(): self._Data["stories"] = list()
+
+			if name not in self._Data["stories"]:
+				self._Data["stories"][name] = localname
+				self.save()
+				Status.message = "Story added."
+
+			else: Status.message = "Stroty already exists."
+
+		except: Status = ERROR_UNKNOWN
+
+		return Status
+
+	def remove_story(self, name: str) -> ExecutionStatus:
+		"""
+		Удаляет историю.
+			name – название истории.
+		"""
+
+		Status = ExecutionStatus(0)
+
+		try:
+			del self._Data["stories"][name]
+			self.save()
+			Status.message = "Story removed."
 
 		except: Status = ERROR_UNKNOWN
 

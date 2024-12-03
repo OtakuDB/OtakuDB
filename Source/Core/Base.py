@@ -965,8 +965,8 @@ class BaseTableCLI:
 			sort_by – название колонки для сортировки;\n
 			reverse – инвертирует порядок записей.
 		"""
-
-		if self._Module.manifest.viewer.autoclear: Clear()
+		
+		if self._BaseTable.manifest.viewer.autoclear: Clear()
 
 		for ColumnName in list(content.keys()):
 				if self._BaseTable.manifest.viewer.columns[ColumnName] == False: del content[ColumnName]
