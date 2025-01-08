@@ -39,7 +39,7 @@ class Interpreter:
 			Com = Command("exit", "Exit from OtakuDB.")
 			CommandsList.append(Com)
 
-			Com = Command("list", "Print list op tables.")
+			Com = Command("list", "Print list of tables.")
 			CommandsList.append(Com)
 
 			Com = Command("mount", "Select storage directory.")
@@ -232,10 +232,10 @@ class Interpreter:
 			Status = ExecutionError(-7, "unknown_key")
 			Status["print"] = Key
 
-		except InvalidPositionalArgumentTypes:
-			Status = ExecutionError(-8, "invalid_positional_argument_types")
+		except MutuallyExclusiveParameters:
+			Status = ExecutionError(-8, "mutually_exclusive_parameters")
 
-		except: Status = ExecutionError(-1, "unknown_terminalyzer_error")
+		except: Status = ExecutionError(-1, "mutually_exclusive_parameters")
 
 		return Status
 

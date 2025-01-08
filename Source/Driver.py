@@ -3,7 +3,7 @@ from Source.Core.Errors import *
 
 import Source.Tables as TablesTypes
 
-from dublib.Methods.JSON import ReadJSON, WriteJSON
+from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 from dublib.Engine.Bus import ExecutionStatus
 
 import os

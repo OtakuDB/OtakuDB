@@ -9,6 +9,7 @@ from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.CLI.Templates import Confirmation
 from dublib.Engine.Bus import ExecutionStatus
 from dublib.Methods.System import Clear
+from typing import Any
 
 import shutil
 import os
@@ -251,8 +252,7 @@ class ColumnsOptions:
 		self.__Manifest = manifest
 		self.__Data: dict[str, bool] = data
 
-		for Command in list(self.__Data.keys()):
-			if Command in self.important_columns: del self.__Data[Command]
+		for Column in self.important_columns: self.__Data[Column] = True
 
 	def __getitem__(self, column: str) -> bool | None:
 		"""
@@ -574,7 +574,7 @@ class NoteCLI:
 		return CommandsList + self._GenereateCustomCommands()
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def _GenereateCustomCommands(self) -> list[Command]:
@@ -695,6 +695,7 @@ class NoteCLI:
 			Status = self._Note.unattach(Filename, Slot)
 
 		elif parsed_command.name == "view":
+			if self._Table.manifest.viewer.autoclear: Clear()
 			self._View()
 
 		else:
@@ -878,9 +879,83 @@ class BaseTableCLI:
 		
 		return Status
 
+	def _List(self, parsed_command: ParsedCommandData, search: str | None = None) -> ExecutionStatus:
+			"""
+			Выводит список записей.
+				parsed_command – описательная структура команды;\n
+				search – поисковый запрос.
+			"""
+
+			Status = ExecutionStatus(0)
+
+			try:
+				Content = dict()
+				SortBy = parsed_command.check_key("sort") or "ID"
+				IsReverse = parsed_command.check_flag("r")
+				for Column in self._BaseTable.manifest.viewer.columns.to_dict().keys(): Content[Column] = list()
+				Notes: list["Note"] = self._Module.notes if self._Module else self._Table.notes
+
+				if SortBy not in Content.keys():
+						Status = ExecutionError(-1, "no_column_to_sort")
+						return Status
+
+				if not Notes:
+					Status.message = "Table is empty."
+					return Status 
+				
+				if self._BaseTable.manifest.viewer.autoclear: Clear()
+				
+				if search:
+					print("Search:", TextStyler(search).colorize.yellow)
+					Notes = [Note for Note in Notes if any(search.lower() in Variant.lower() for Variant in Note.searchable)]
+				
+				for Note in Notes: Content = self._AddRowToTableContent(Content, Note)
+
+				if Notes:
+
+					for ColumnName in list(Content.keys()):
+						if self._BaseTable.manifest.viewer.columns[ColumnName] == False: del Content[ColumnName]
+
+					Columns(Content, SortBy, IsReverse)
+
+				else: Status.message = "Notes not found."
+
+			except: Status = ERROR_UNKNOWN
+
+			return Status
+
+	def _AddRowToTableContent(self, content: dict[str, list], note: "Note") -> dict[str, list]:
+		"""
+		Добавляет строчку в таблицу и выполняет проверки содержимого.
+			content – содержимое таблицы;\n
+			row – данные строчки.
+		"""
+
+		Row = self._BuildNoteRow(note)
+
+		for Column in content.keys():
+			Data = ""
+			if Column in Row.keys() and Row[Column] != None: Data = Row[Column]
+			if Column == "Name": Data = Data if len(Data) < 60 else Data[:60] + "…"
+			content[Column].append(Data)
+
+		return content
+
 	#==========================================================================================#
-	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
+
+	def _BuildNoteRow(self, note: "Note") -> dict[str, str]:
+		"""
+		Строит строку описания записи для таблицы и возвращает словарь в формате: название колонки – данные.
+			note – обрабатываемая запись.
+		"""
+
+		Row = dict()
+		Row["ID"] = note.id
+		Row["Name"] = note.name
+
+		return Row
 
 	def _GenereateCustomCommands(self) -> list[Command]:
 		"""Генерирует дексрипторы дополнительных команд."""
@@ -900,78 +975,6 @@ class BaseTableCLI:
 		Status = ExecutionStatus(0)
 
 		return Status
-
-	def _List(self, parsed_command: ParsedCommandData, search: str | None = None) -> ExecutionStatus:
-			"""
-			Выводит список записей.
-				parsed_command – описательная структура команды;\n
-				search – поисковый запрос.
-			"""
-
-			Status = ExecutionStatus(0)
-
-			try:
-				Content = {
-					"ID": [],
-					"Name": []
-				}
-				SortBy = "ID"
-				IsReverse = parsed_command.check_flag("r")
-				Notes = self._Module.notes if self._Module else self._Table.notes
-
-				if parsed_command.check_key("sort"):
-					SortBuffer = parsed_command.get_key_value("sort").lower()
-					if SortBuffer == "id": SortBy = "ID"
-					if SortBuffer == "name": SortBy = "Name"
-
-					if not SortBy:
-						Status = ExecutionError(-1, "no_column_to_sort")
-						return Status
-
-				if Notes:
-
-					if search:
-						print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
-						NotesCopy = list(Notes)
-						SearchBuffer = list()
-
-						for Note in NotesCopy:
-							Names = list()
-							if Note.name: Names.append(Note.name)
-
-							for Name in Names:
-								if search.lower() in Name.lower(): SearchBuffer.append(Note)
-
-						Notes = SearchBuffer
-					
-					for Note in Notes:
-						Name = Note.name if Note.name else ""
-						Content["ID"].append(Note.id)
-						Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
-
-					if len(Notes): self._PrintNotesList(Content, sort_by = SortBy, reverse = IsReverse)
-					else: Status.message = "Notes not found."
-
-				else: Status.message = "Table is empty."
-
-			except: Status = ERROR_UNKNOWN
-
-			return Status
-
-	def _PrintNotesList(self, content: dict[str, list], sort_by: str = "ID", reverse: bool = False):
-		"""
-		Выводит в консоль список записей.
-			content – контент таблицы;\n
-			sort_by – название колонки для сортировки;\n
-			reverse – инвертирует порядок записей.
-		"""
-		
-		if self._BaseTable.manifest.viewer.autoclear: Clear()
-
-		for ColumnName in list(content.keys()):
-				if self._BaseTable.manifest.viewer.columns[ColumnName] == False: del content[ColumnName]
-
-		Columns(content, sort_by, reverse)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -1153,6 +1156,25 @@ class Note:
 		return self._Data["name"]
 
 	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def searchable(self) -> list[str]:
+		"""Список строк, которые представляют контент для поисковых запросов."""
+
+		Strings = list()
+
+		Strings.append(self._Data["name"])
+		if "localized_name" in self._Data.keys(): Strings.append(self._Data["localized_name"])
+		if "another_name" in self._Data.keys() and type(self._Data["another_name"]) == str: Strings.append(self._Data["another_name"])
+		if "another_names" in self._Data.keys() and type(self._Data["another_names"]) == list: Strings += self._Data["another_names"]
+
+		Strings = list(filter(lambda Element: bool(Element), Strings))
+
+		return Strings
+
+	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
@@ -1171,7 +1193,7 @@ class Note:
 		return Path
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
 	def _PostInitMethod(self):
@@ -1386,7 +1408,6 @@ class Table:
 	MANIFEST: dict = {
 		"object": "table",
 		"type": TYPE,
-		"modules": [],
 		"common": {
 			"recycle_id": True,
 			"attachments": False
@@ -1494,7 +1515,7 @@ class Table:
 		self._Notes[note_id] = self._Note(self, note_id)
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
 	def _PostCreateMethod(self):
@@ -1529,7 +1550,7 @@ class Table:
 		self._StorageDirectory = NormalizePath(storage)
 		self._Name = name
 		self._Path = f"{self._StorageDirectory}/{name}"
-		self._Notes: list[Note] = dict()
+		self._Notes: dict[int, Note] = dict()
 		self._Manifest = None
 		self._IsModule = False
 		self._Note = None
@@ -1568,6 +1589,7 @@ class Table:
 		if IsTargetNoteExists:
 			
 			if mode == "i":
+				self.change_note_id(note, 0)
 				NotesID = list(self._Notes.keys())
 				NotesID = sorted(NotesID)
 				Buffer = list(NotesID)
@@ -1591,15 +1613,10 @@ class Table:
 				NotesID = NewBuffer
 				if note in NotesID: NotesID.remove(note)
 				NotesID.reverse()
-				self.change_note_id(note, 0)
 
-				if new_id > note:
-					for ID in NotesID:
-						Status = self.change_note_id(ID, ID + 1)
-						if Status.code != 0: return Status
-
-				else:
-					Status = self.change_note_id(new_id, new_id + 1)
+				for ID in NotesID:
+					Status = self.change_note_id(ID, ID + 1)
+					if Status.code != 0: return Status
 
 				if Status.code != 0: return Status
 				Status = self.change_note_id(0, new_id)
@@ -1710,6 +1727,7 @@ class Table:
 			
 			if Columns.check_column(column):
 				Columns.edit_column_status(column, status)
+				Status.message = "Column status changed."
 
 			else:
 				ColumnBold = TextStyler(column).decorate.bold
@@ -1818,7 +1836,7 @@ class Module(Table):
 		self._Notes[note_id] = self._Note(self, note_id)
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
 	def _PostCreateMethod(self):

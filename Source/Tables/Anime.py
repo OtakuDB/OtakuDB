@@ -1,5 +1,4 @@
 from Source.Core.Base import Note, NoteCLI, Table, TableCLI 
-from Source.CLI.Templates import Columns
 from Source.Core.Exceptions import *
 from Source.Core.Errors import *
 
@@ -16,7 +15,7 @@ class Anime_NoteCLI(NoteCLI):
 	"""CLI записи."""
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def _GenereateCustomCommands(self) -> list[Command]:
@@ -24,15 +23,28 @@ class Anime_NoteCLI(NoteCLI):
 
 		CommandsList = list()
 
+		Com = Command("altname", "Manage alternative names.")
+		ComPos = Com.create_position("ALTNAME", "Alternative name.", important = True)
+		ComPos.add_argument()
+		Com.add_flag("d", "Remove another name.")
+		CommandsList.append(Com)
+
+		Com = Command("base", "[METAINFO] Set anime base.")
+		ComPos = Com.create_position("BASE", "Anime base.", important = True)
+		ComPos.add_argument(ParametersTypes.Text, "Type of anime base: game, manga, novel, original, ranobe.")
+		CommandsList.append(Com)
+
 		Com = Command("delpart", "Remove part.")
-		Com.add_argument(ParametersTypes.Number, description = "Part index.", important = True)
+		ComPos = Com.create_position("INDEX", "Part index.", important = True)
+		ComPos.add_argument(ParametersTypes.Number)
 		CommandsList.append(Com)
 
-		Com = Command("downpart", "Omit part in list.")
-		Com.add_argument(ParametersTypes.Number, description = "Part index.", important = True)
+		Com = Command("downpart", "Down part in list.")
+		ComPos = Com.create_position("INDEX", "Part index.", important = True)
+		ComPos.add_argument(ParametersTypes.Number)
 		CommandsList.append(Com)
 
-		Com = Command("editpart", "Edit part.")
+		Com = Command("editpart", "Edit part. Put * to keys for data removig.")
 		Com.add_argument(ParametersTypes.Number, description = "Part index.", important = True)
 		Com.add_flag("a", description = "Mark part as announced.")
 		Com.add_flag("s", description = "Mark part as skipped.")
@@ -46,12 +58,15 @@ class Anime_NoteCLI(NoteCLI):
 		CommandsList.append(Com)
 
 		Com = Command("estimate", "Set estimation.")
-		Com.add_argument(ParametersTypes.Number, description = "Estimation.", important = True)
+		ComPos = Com.create_position("ESTIMATION", "Estimation value.", important = True)
+		ComPos.add_argument(ParametersTypes.Number)
 		CommandsList.append(Com)
 
 		Com = Command("mark", "Set bookmark to series.")
-		Com.add_argument(ParametersTypes.Number, description = "Part index.", important = True)
-		Com.add_argument(ParametersTypes.Number, description = "Bookmark.", important = True)
+		ComPos = Com.create_position("INDEX", "Part index.", important = True)
+		ComPos.add_argument(ParametersTypes.Number)
+		ComPos = Com.create_position("MARK", "Last watched episode number.", important = True)
+		ComPos.add_argument(ParametersTypes.Number)
 		CommandsList.append(Com)
 
 		Com = Command("newpart", "Create new part.")
@@ -67,20 +82,20 @@ class Anime_NoteCLI(NoteCLI):
 		Com.add_key("series", ParametersTypes.Number, description = "Set series count.")
 		CommandsList.append(Com)
 
-		Com = Command("set", "Set note values.")
-		Com.add_key("altname", description = "Alternative name.")
-		Com.add_key("status", description = "View status.")
-		Com.add_key("tag", description = "Tag.")
+		Com = Command("status", "Set viewing status.")
+		ComPos = Com.create_position("STATUS", "Status name or code: announced (a), watching (w), completed (c), dropped (d), planned (p) or * to remove.", important = True)
+		ComPos.add_argument(ParametersTypes.Text)
 		CommandsList.append(Com)
 
-		Com = Command("unset", "Remove alternative names or tags.")
-		ComPos = Com.create_position("TARGET", "Target to remove.", important = True)
-		ComPos.add_key("altname", ParametersTypes.All, "Index of alternative name or alternative name.")
-		ComPos.add_key("tag", description = "Tag.")
+		Com = Command("tag", "Manage tags.")
+		ComPos = Com.create_position("TAG", "Tag name.", important = True)
+		ComPos.add_argument()
+		Com.add_flag("d", "Remove tag.")
 		CommandsList.append(Com)
-
-		Com = Command("uppart", "Raise part.")
-		Com.add_argument(ParametersTypes.Number, "Part index.", important = True)
+		
+		Com = Command("uppart", "Raise part in list.")
+		ComPos = Com.create_position("INDEX", "Part index.", important = True)
+		ComPos.add_argument(ParametersTypes.Number)
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -92,20 +107,31 @@ class Anime_NoteCLI(NoteCLI):
 		"""
 
 		Status = ExecutionStatus(0)
+		self._Note: "Anime_Note"
 
-		if parsed_command.name == "estimate":
+		if parsed_command.name == "altname":
+			AnotherName = parsed_command.arguments[0]
+			if parsed_command.check_flag("d"): Status = self._Note.remove_another_name(AnotherName)
+			else: Status = self._Note.add_another_name(AnotherName)
+
+		elif parsed_command.name == "base":
+			Value = parsed_command.arguments[0]
+			if Value == "*": Status = self._Note.remove_metainfo("base")
+			else: Status = self._Note.set_metainfo("base", Value)
+
+		elif parsed_command.name == "estimate":
 			Status = self._Note.estimate(parsed_command.arguments[0])
 
-		if parsed_command.name == "delpart":
+		elif parsed_command.name == "delpart":
 			Response = Confirmation("Are you sure to remove part?")
 			
 			if Response:
-				Status = self._Note.delete_part(int(parsed_command.arguments[0]))
+				Status = self._Note.remove_part(parsed_command.arguments[0])
 
-		if parsed_command.name == "downpart":
-			Status = self._Note.down_part(int(parsed_command.arguments[0]))
+		elif parsed_command.name == "downpart":
+			Status = self._Note.down_part(parsed_command.arguments[0])
 
-		if parsed_command.name == "editpart":
+		elif parsed_command.name == "editpart":
 			Data = dict()
 			if "a" in parsed_command.flags: Data["announced"] = True
 			if "w" in parsed_command.flags:
@@ -125,12 +151,12 @@ class Anime_NoteCLI(NoteCLI):
 			if parsed_command.check_key("name"): Data["name"] = parsed_command.get_key_value("name")
 			if parsed_command.check_key("number"): Data["number"] = parsed_command.get_key_value("number")
 			if parsed_command.check_key("series"): Data["series"] = parsed_command.get_key_value("series")
-			Status = self._Note.edit_part(int(parsed_command.arguments[0]), Data)
+			Status = self._Note.edit_part(parsed_command.arguments[0], Data)
 
-		if parsed_command.name == "mark":
-			Status = self._Note.set_mark(int(parsed_command.arguments[0]), int(parsed_command.arguments[1]))
+		elif parsed_command.name == "mark":
+			Status = self._Note.set_mark(parsed_command.arguments[0], parsed_command.arguments[1])
 
-		if parsed_command.name == "newpart":
+		elif parsed_command.name == "newpart":
 			Data = dict()
 			if "a" in parsed_command.flags: Data["announced"] = True
 			if "w" in parsed_command.flags:
@@ -152,30 +178,16 @@ class Anime_NoteCLI(NoteCLI):
 			if "series" in parsed_command.keys.keys(): Data["series"] = parsed_command.keys["series"]
 			Status = self._Note.add_part(parsed_command.arguments[0], Data)
 
-		if parsed_command.name == "set":
+		elif parsed_command.name == "status":
+			Status = self._Note.set_status(parsed_command.arguments[0])
 
-			if "altname" in parsed_command.keys.keys():
-				Status = self._Note.add_another_name(parsed_command.keys["altname"])
+		elif parsed_command.name == "tag":
+			Tag = parsed_command.arguments[0]
+			if parsed_command.check_flag("d"): Status = self._Note.remove_tag(Tag)
+			else: Status = self._Note.add_tag(Tag)
 
-			if "status" in parsed_command.keys.keys():
-				Status = self._Note.set_status(parsed_command.keys["status"])
-
-			if "tag" in parsed_command.keys.keys():
-				Status = self._Note.add_tag(parsed_command.keys["tag"])
-
-		if parsed_command.name == "unset":
-
-			if "altname" in parsed_command.keys.keys():
-				Status = self._Note.remove_another_name(parsed_command.keys["altname"])
-
-			if "tag" in parsed_command.keys.keys():
-				Status = self._Note.remove_tag(parsed_command.keys["tag"])
-
-		if parsed_command.name == "uppart":
-			Status = self._Note.up_part(int(parsed_command.arguments[0]))
-
-		if parsed_command.name == "view":
-			self.__View()
+		elif parsed_command.name == "uppart":
+			Status = self._Note.up_part(parsed_command.arguments[0])
 
 		return Status
 
@@ -187,6 +199,8 @@ class Anime_NoteCLI(NoteCLI):
 		try:
 			#---> Получение данных.
 			#==========================================================================================#
+			self._Note: "Anime_Note"
+			self._Table: "Anime"
 			Parts = self._Note.parts
 			Options = self._Table.manifest.viewer
 
@@ -275,72 +289,29 @@ class Anime_TableCLI(TableCLI):
 	"""CLI таблицы."""
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _List(self, parsed_command: ParsedCommandData, search: str | None = None) -> ExecutionStatus:
-			"""
-			Выводит список записей.
-				parsed_command – описательная структура команды;\n
-				search – поисковый запрос.
-			"""
+	def _BuildNoteRow(self, note: "Anime_Note") -> dict[str, str]:
+		"""
+		Строит строку описания записи для таблицы и возвращает словарь в формате: название колонки – данные.
+			note – обрабатываемая запись.
+		"""
 
-			Status = ExecutionStatus(0)
+		Row = dict()
+		NoteStatus = note.status
+		if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Purple)
+		if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Cyan)
+		if NoteStatus == "watching": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow)
+		if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green)
+		if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Red)
+		Row["ID"] = note.id
+		Row["Status"] = NoteStatus
+		Row["Name"] = note.name
+		Row["Estimation"] = note.estimation
+		Row["Base"] = TextStyler(note.metainfo["base"]).decorate.italic if "base" in note.metainfo.keys() else None
 
-			try:
-				Content = {
-					"ID": [],
-					"Status": [],
-					"Name": [],
-					"Estimation": []
-				}
-				SortBy = parsed_command.keys["sort"] if "sort" in parsed_command.keys.keys() else "ID"
-
-				if SortBy not in Content.keys():
-					Status = ExecutionError(-1, "no_column_to_sort")
-					return Status
-				
-				Reverse = parsed_command.check_flag("r")
-				
-				if self._Table.notes:
-					Notes = self._Table.notes
-
-					if search:
-						print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
-						NotesCopy = list(Notes)
-						SearchBuffer = list()
-
-						for Note in NotesCopy:
-							Names = list()
-							if Note.name: Names.append(Note.name)
-							if Note.another_names: Names += Note.another_names
-
-							for Name in Names:
-								if search.lower() in Name.lower(): SearchBuffer.append(Note)
-
-						Notes = SearchBuffer
-					
-					for Note in Notes:
-						Name = Note.name if Note.name else ""
-						NoteStatus = Note.status
-						if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Purple)
-						if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Cyan)
-						if NoteStatus == "watching": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow)
-						if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green)
-						if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Red)
-						Content["ID"].append(Note.id)
-						Content["Status"].append(NoteStatus if NoteStatus else "")
-						Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
-						Content["Estimation"].append(Note.estimation if Note.estimation else "")
-
-					if len(Notes): self._PrintNotesList(Content, sort_by = SortBy, reverse = Reverse)
-					else: Status.message = "Notes not found."
-
-				else: Status.message = "Table is empty."
-
-			except: Status = ERROR_UNKNOWN
-
-			return Status
+		return Row
 	
 #==========================================================================================#
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
@@ -522,7 +493,7 @@ class Anime_Note(Note):
 					break
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
 	def _PostInitMethod(self):
@@ -593,22 +564,16 @@ class Anime_Note(Note):
 
 		return Status
 
-	def remove_another_name(self, another_name: int | str) -> ExecutionStatus:
+	def remove_another_name(self, another_name: str) -> ExecutionStatus:
 		"""
 		Удаляет альтернативное название.
-			another_name – альтернативное название или его индекс.
+			another_name – альтернативное название.
 		"""
 
 		Status = ExecutionStatus(0)
 
 		try:
-
-			if another_name.isdigit() and another_name not in self._Data["another_names"]:
-				self._Data["another_names"].pop(int(another_name))
-
-			else:
-				self._Data["another_names"].remove(another_name)
-
+			self._Data["another_names"].remove(another_name)
 			self.save()
 			Status.message = "Another name removed."
 
@@ -833,6 +798,14 @@ class Anime(Table):
 			"base": ["game", "manga", "novel", "original", "ranobe"]
 		},
 		"viewer": {
+			"autoclear": True,
+			"columns": {
+				"ID": True,
+				"Status": True,
+				"Name": True,
+				"Base": True,
+				"Estimation": True
+			},
 			"links": True,
 			"comments": True,
 			"colorize": True,
@@ -854,7 +827,7 @@ class Anime(Table):
 		return self._Manifest.custom["max_estimation"]
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕГРУЖАЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
 	def _PostInitMethod(self):
