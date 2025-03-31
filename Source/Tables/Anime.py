@@ -1,9 +1,9 @@
 from Source.Core.Base import Note, NoteCLI, Table, TableCLI 
+from Source.Core.Bus import ExecutionStatus
+from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
-from Source.Core.Errors import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.Engine.Bus import ExecutionError, ExecutionWarning, ExecutionStatus
 from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.CLI.Templates import Confirmation
 
@@ -44,7 +44,7 @@ class Anime_NoteCLI(NoteCLI):
 		ComPos.add_argument(ParametersTypes.Number)
 		CommandsList.append(Com)
 
-		Com = Command("editpart", "Edit part. Put * to keys for data removig.")
+		Com = Command("editpart", "Edit part. Put * to keys for data removing.")
 		Com.add_argument(ParametersTypes.Number, description = "Part index.", important = True)
 		Com.add_flag("a", description = "Mark part as announced.")
 		Com.add_flag("s", description = "Mark part as skipped.")
@@ -106,7 +106,7 @@ class Anime_NoteCLI(NoteCLI):
 			parsed_command – описательная структура команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		self._Note: "Anime_Note"
 
 		if parsed_command.name == "altname":
@@ -194,7 +194,7 @@ class Anime_NoteCLI(NoteCLI):
 	def _View(self) -> ExecutionStatus:
 		"""Выводит форматированные данные записи."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			#---> Получение данных.
@@ -207,6 +207,16 @@ class Anime_NoteCLI(NoteCLI):
 			#---> Объявление литералов.
 			#==========================================================================================#
 			MSG_TotalProgress = f" ({self._Note.progress}% viewed)" if self._Note.progress else ""
+
+			#---> Вывод связей.
+			#==========================================================================================#
+			
+			if self._Note.binded_notes:
+				print(TextStyler(f"BINDED NOTES:").decorate.bold)
+				try:
+					for Note in self._Note.binded_notes: print(f"    {Note.id}. {Note.name}")
+
+				except Exception as e: input(e)
 
 			#---> Вывод описания записи.
 			#==========================================================================================#
@@ -281,7 +291,7 @@ class Anime_NoteCLI(NoteCLI):
 					if Options["links"] and "link" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
 					if Options["comments"] and "comment" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       💭 " + Parts[PartIndex]["comment"])
 		
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 	
@@ -300,7 +310,7 @@ class Anime_TableCLI(TableCLI):
 
 		Row = dict()
 		NoteStatus = note.status
-		if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Purple)
+		if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Magenta)
 		if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Cyan)
 		if NoteStatus == "watching": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow)
 		if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green)
@@ -511,16 +521,16 @@ class Anime_Note(Note):
 			another_name – альтернативное название.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
 			if another_name not in self._Data["another_names"]:
 				self._Data["another_names"].append(another_name)
 				self.save()
-				Status.message = "Another name added."
+				Status.push_message("Another name added.")
 
-		except:	Status = ERROR_UNKNOWN
+		except:	Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -531,7 +541,7 @@ class Anime_Note(Note):
 			data – данные для заполнения свойств части.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			Buffer = self.__GetBasePart(part_type)
@@ -539,9 +549,9 @@ class Anime_Note(Note):
 			self._Data["parts"].append(Buffer)
 			self.__UpdateStatus()
 			self.save()
-			Status.message = "Part created."
+			Status.push_message("Part created.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -551,16 +561,16 @@ class Anime_Note(Note):
 			tag – название тега.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
 			if tag not in self._Data["tags"]:
 				self._Data["tags"].append(tag)
 				self.save()
-				Status.message = "Tag added."
+				Status.push_message("Tag added.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -570,15 +580,15 @@ class Anime_Note(Note):
 			another_name – альтернативное название.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			self._Data["another_names"].remove(another_name)
 			self.save()
-			Status.message = "Another name removed."
+			Status.push_message("Another name removed.")
 
 		except IndexError: Status = ExecutionError(-1, "incorrect_another_name_index")
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -588,15 +598,15 @@ class Anime_Note(Note):
 			index – индекс части.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			del self._Data["parts"][part_index]
 			self.__UpdateStatus()
 			self.save()
-			Status.message = "Part deleted."
+			Status.push_message("Part deleted.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -606,13 +616,13 @@ class Anime_Note(Note):
 			tag – тег или его индекс.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			if tag.isdigit(): self._Data["tags"].pop(int(tag))
 			else: self._Data["tags"].remove(tag)
 			self.save()
-			Status.message = "Tag removed."
+			Status.push_message("Tag removed.")
 
 		except IndexError: Status = ExecutionStatus(-1, "incorrect_tag_index")
 
@@ -624,19 +634,19 @@ class Anime_Note(Note):
 			part_index – индекс части.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
 			if part_index != len(self._Data["parts"]) - 1:
 				self._Data["parts"].insert(part_index + 1, self._Data["parts"].pop(part_index))
 				self.save()
-				Status.message = "Part downed."
+				Status.push_message("Part downed.")
 
 			elif part_index == len(self._Data["parts"]) - 1:
 				Status = ExecutionWarning(1, "unable_down_last_part")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -647,15 +657,15 @@ class Anime_Note(Note):
 			data – данные для обновления свойств части.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			self._Data["parts"][part_index] = self.__ModifyPart(self._Data["parts"][part_index], data)
 			self.__UpdateStatus()
 			self.save()
-			Status.message = "Part edited."
+			Status.push_message("Part edited.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -665,18 +675,18 @@ class Anime_Note(Note):
 			estimation – оценка.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
 			if estimation <= self._Table.manifest.custom["max_estimation"]:
 				self._Data["estimation"] = estimation
 				self.save()
-				Status.message = "Estimation updated."
+				Status.push_message("Estimation updated.")
 
 			else: Status = ExecutionError(-1, "max_estimation_exceeded")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -687,7 +697,7 @@ class Anime_Note(Note):
 			mark – номер серии для постановки закладки (0 для удаления закладки, номер последней серии для пометки всей части как просмотренной).
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
@@ -698,36 +708,36 @@ class Anime_Note(Note):
 					self._Data["parts"][part_index]["mark"] = mark
 					self.__UpdateStatus()
 					self.save()
-					Status.message = "Part marked as unseen."
+					Status.push_message("Part marked as unseen.")
 
 				elif "skipped" in self._Data["parts"][part_index].keys():
 					del self._Data["parts"][part_index]["skipped"]
 					self._Data["parts"][part_index]["mark"] = mark
 					self.__UpdateStatus()
 					self.save()
-					Status.message = "Part marked as unskipped."
+					Status.push_message("Part marked as unskipped.")
 
 				else:
 
 					if mark < self._Data["parts"][part_index]["series"] and mark != 0:
 						self._Data["parts"][part_index]["mark"] = mark
-						Status.message = "Mark updated."
+						Status.push_message("Mark updated.")
 
 					elif mark == self._Data["parts"][part_index]["series"]:
 						self._Data["parts"][part_index]["watched"] = True
 						if "mark" in self._Data["parts"][part_index].keys(): del self._Data["parts"][part_index]["mark"]
-						Status.message = "Part marked as fully viewed."
+						Status.push_message("Part marked as fully viewed.")
 
-					elif mark == 0:
+					elif mark == 0 and "mark" in self._Data["parts"][part_index].keys():
 						del self._Data["parts"][part_index]["mark"]
-						Status.message = "Mark removed."
+						Status.push_message("Mark removed.")
 
 					self.save()
 					self.__UpdateStatus()
 
-			else: Status = ExecutionError(-1, "only_series_supports_marks")
+			else: Status.push_error("Note.ONLY_SERIES_SUPPORT_MARKS")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -737,7 +747,7 @@ class Anime_Note(Note):
 			status – статус просмотра.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		Statuses = {
 			"a": "announced",
 			"w": "watching",
@@ -751,9 +761,9 @@ class Anime_Note(Note):
 			if status in Statuses.keys(): status = Statuses[status]
 			self._Data["status"] = status
 			self.save()
-			Status.message = "Status updated."
+			Status.push_message("Status updated.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -763,19 +773,19 @@ class Anime_Note(Note):
 			part_index – индекс части.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
 			if part_index != 0:
 				self._Data["parts"].insert(part_index - 1, self._Data["parts"].pop(part_index))
 				self.save()
-				Status.message = "Part upped."
+				Status.push_message("Part upped.")
 
 			elif part_index == 0:
 				Status = ExecutionWarning(1, "unable_up_first_part")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -792,7 +802,8 @@ class Anime(Table):
 		"type": TYPE,
 		"modules": [],
 		"common": {
-			"recycle_id": True
+			"recycle_id": True,
+			"attachments": False
 		},
 		"metainfo_rules": {
 			"base": ["game", "manga", "novel", "original", "ranobe"]

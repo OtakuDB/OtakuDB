@@ -1,11 +1,11 @@
 from Source.Core.Base import Module, ModuleCLI, Note, NoteCLI
+from Source.Core.Bus import ExecutionStatus
 from Source.CLI.Templates import Columns
 from Source.Core.Exceptions import *
-from Source.Core.Errors import *
+# from Source.Core.Errors import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.TextStyler import Styles, TextStyler
-from dublib.Engine.Bus import ExecutionError, ExecutionStatus
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #
@@ -73,7 +73,7 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 			parsed_command – описательная структура команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		if parsed_command.name == "code":
 			Status = self._Note.set_code(parsed_command.arguments[0])
@@ -94,7 +94,7 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 			Status = self._Note.set_bookmark(parsed_command.arguments[0])
 
 		elif parsed_command.name == "meta":
-			Status = ExecutionStatus(0)
+			Status = ExecutionStatus()
 			
 			if "set" in parsed_command.flags:
 				Status = self._Note.set_metainfo(parsed_command.arguments[0],  parsed_command.arguments[1])
@@ -123,7 +123,7 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 	def _View(self) -> ExecutionStatus:
 		"""Выводит форматированные данные записи."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			#---> Получение данных.
@@ -188,7 +188,7 @@ class BattleTech_Sources_ModuleCLI(ModuleCLI):
 			parsed_command – описательная структура команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		if parsed_command.name == "eras":
 			Eras = self._Module.eras
@@ -203,7 +203,7 @@ class BattleTech_Sources_ModuleCLI(ModuleCLI):
 				search – поисковый запрос.
 			"""
 
-			Status = ExecutionStatus(0)
+			Status = ExecutionStatus()
 
 			try:
 				Notes = list()
@@ -217,7 +217,7 @@ class BattleTech_Sources_ModuleCLI(ModuleCLI):
 				if SortBy == "Id": SortBy = SortBy.upper()
 
 				if SortBy not in Content.keys():
-					Status = ExecutionError(-1, "no_column_to_sort")
+					Status.push_message("no_column_to_sort")
 					return Status
 				
 				Reverse = parsed_command.check_flag("r")
@@ -245,7 +245,7 @@ class BattleTech_Sources_ModuleCLI(ModuleCLI):
 						if not Name: Name = ""
 						Type = Note.metainfo["type"] if "type" in Note.metainfo.keys() else ""
 						NoteStatus = Note.status
-						if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Purple)
+						if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Magenta)
 						if NoteStatus == "collected": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue)
 						if NoteStatus == "web": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue)
 						if NoteStatus == "ordered": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.White)
@@ -375,7 +375,7 @@ class BattleTech_Sources_Note(Note):
 			bookmark – номер страницы.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			if bookmark == "*": bookmark = None
@@ -394,7 +394,7 @@ class BattleTech_Sources_Note(Note):
 			code – код.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
@@ -419,7 +419,7 @@ class BattleTech_Sources_Note(Note):
 			comment – комментарий.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			if comment == "*": comment = None
@@ -438,7 +438,7 @@ class BattleTech_Sources_Note(Note):
 			link – ссылка.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			if link == "*": link = None
@@ -457,7 +457,7 @@ class BattleTech_Sources_Note(Note):
 			name – локализованное названиие.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
@@ -481,7 +481,7 @@ class BattleTech_Sources_Note(Note):
 			status – статус просмотра.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		Statuses = {
 			"a": "announced",
 			"r": "reading",

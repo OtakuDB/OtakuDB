@@ -1,8 +1,6 @@
-# Python cache.
+# Python cache and virtual enviroment.
 __pycache__
-# Virtual enviroment.
 .venv
-
 # User's files.
 session.json
 Data

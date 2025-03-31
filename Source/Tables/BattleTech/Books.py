@@ -1,9 +1,9 @@
 from Source.Core.Base import Module, ModuleCLI, Note, NoteCLI
+from Source.Core.Bus import ExecutionStatus
+from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
-from Source.Core.Errors import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.Engine.Bus import ExecutionError, ExecutionStatus
 from dublib.Methods.Data import RemoveRecurringSubstrings
 from dublib.CLI.TextStyler import Styles, TextStyler
 
@@ -81,12 +81,6 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		Com.add_argument(description = "Status: announced (a), reading (r), completed (c), dropped (d), skipped (s).", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("story", "Manage stories names.")
-		Com.add_argument(description = "Story name.", important = True)
-		Com.add_flag("del", "Remove exists story.")
-		Com.add_key("localname", description = "Localized story name.")
-		CommandsList.append(Com)
-
 		Com = Command("type", "Set type of book.")
 		Com.add_argument(description = "Type of book: novel, story.", important = True)
 		CommandsList.append(Com)
@@ -99,7 +93,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			parsed_command – описательная структура команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		if parsed_command.name == "altname":
 			if parsed_command.check_flag("d"): Status = self._Note.remove_another_name(parsed_command.arguments[0])
@@ -124,7 +118,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 		elif parsed_command.name == "era":
 			if parsed_command.check_key("year"): Status = self._Note.set_era(parsed_command.get_key_value("year"), is_year = True)
-			elif parsed_command.arguments[0] == "*": self._Note.remove_era()
+			elif parsed_command.arguments[0] == "*": Status = self._Note.remove_era()
 			else: Status = self._Note.set_era(parsed_command.arguments[0])
 
 		elif parsed_command.name == "eras":
@@ -151,7 +145,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			Status = self._Note.set_bookmark(parsed_command.arguments[0])
 
 		elif parsed_command.name == "meta":
-			Status = ExecutionStatus(0)
+			Status = ExecutionStatus()
 			
 			if parsed_command.check_flag("set"):
 				Status = self._Note.set_metainfo(parsed_command.arguments[0],  parsed_command.arguments[1])
@@ -177,10 +171,6 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		elif parsed_command.name == "status":
 			Status = self._Note.set_status(parsed_command.arguments[0])
 
-		elif parsed_command.name == "story":
-			if parsed_command.check_flag("d"): Status = self._Note.remove_story(parsed_command.arguments[0])
-			else: Status = self._Note.add_story(parsed_command.arguments[0], parsed_command.get_key_value("localname"))
-
 		elif parsed_command.name == "type":
 			Status = self._Note.set_type(parsed_command.arguments[0])
 
@@ -189,7 +179,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 	def _View(self) -> ExecutionStatus:
 		"""Выводит форматированные данные записи."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			#---> Получение данных.
@@ -220,14 +210,17 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 				for CurrentEra in self._Table.eras:
 					if CurrentEra["index"] == self._Note.era: Era = CurrentEra["name"]
 
-			for AnotherName in AnotherNames: print(TextStyler(f"    {AnotherName}").decorate.bold)
+			for AnotherName in AnotherNames: print(f"    {AnotherName}")
 
-			for StoryIndex in range(len(self._Note.stories.keys())):
-				Index = StoryIndex + 1 
-				Story =  list(self._Note.stories.keys())[StoryIndex]
-				Localname =  list(self._Note.stories.values())[StoryIndex]
+			#---> Вывод историй.
+			#==========================================================================================#
+			Stories = self._Note.stories
+			if Stories: print(TextStyler("STORIES:").decorate.bold)
+
+			for Story in Stories:
+				Localname = Story.localized_name
 				if Localname: Localname = " / " + Localname
-				print(TextStyler(f"    > {Index}. {Story}{Localname}").decorate.bold + " [story]")
+				print(f"    > {Story.id}. {Story.name}{Localname}")
 
 			print(TextStyler("PROPERTIES:").decorate.bold)
 			if self._Note.type: print("    ✒️  Type: " + self._Note.type.title())
@@ -256,7 +249,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 					CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
 					print(f"    {CustomMetainfoMarker}{Key}: {Data}")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -297,7 +290,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 			AuthorsCount = Author.count(";")
 			Author = Author.split(";")[0] + " " + TextStyler(f"(and {AuthorsCount} other)").decorate.italic
 
-		if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Purple).text
+		if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Magenta).text
 		if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue).text
 		if NoteStatus == "reading": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow).text
 		if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green).text
@@ -334,7 +327,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 			parsed_command – описательная структура команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		if parsed_command.name == "eras":
 			Eras = self._Module.eras
@@ -364,7 +357,6 @@ class BattleTech_Books_Note(Note):
 		"name": None,
 		"localized_name": None,
 		"another_names": [],
-		"stories": {},
 		"type": "novel",
 		"era": None,
 		"estimation": None,
@@ -484,32 +476,16 @@ class BattleTech_Books_Note(Note):
 		return self._Data["status"]
 	
 	@property
-	def stories(self) -> dict[str, str]:
-		"""Словарь историй и их локализованных названий."""
+	def stories(self) -> tuple["BattleTech_Books_Note"]:
+		"""Записи, являющиеся историями, входящими в книгу."""
 
-		if "stories" not in self._Data.keys(): self._Data["stories"] = dict()
-
-		return self._Data["stories"]
+		return self._Table.binder.local.get_binded_notes(self._ID)
 	
 	@property
 	def type(self) -> str | None:
 		"""Тип книги."""
 
 		return self._Data["type"]
-
-	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def searchable(self) -> list[str]:
-		"""Список строк, которые представляют контент для поисковых запросов."""
-
-		Strings = super().searchable
-		Stories = list(self.stories.keys()) + list(self.stories.values())
-		if Stories: Strings += Stories 
-
-		return Strings
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -521,8 +497,21 @@ class BattleTech_Books_Note(Note):
 		self._CLI = BattleTech_Books_NoteCLI
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< # Natural Selection
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
+
+	def attach(self, path: str, slot: str | None = None, force: bool = False) -> ExecutionStatus:
+		"""
+		Прикрепляет файл к записи.
+			path – путь к файлу;\n
+			slot – именной слот для файла;\n
+			force – включает режим перезаписи.
+		"""
+
+		Status = super().attach(path, slot, force)
+		if not Status.has_errors and slot == "ebook": Status.merge(self.set_collection_status("e"))
+
+		return Status
 
 	def add_another_name(self, another_name: str) -> ExecutionStatus:
 		"""
@@ -530,18 +519,18 @@ class BattleTech_Books_Note(Note):
 			another_name – альтернативное название.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
 			if another_name not in self._Data["another_names"]:
 				self._Data["another_names"].append(another_name)
 				self.save()
-				Status.message = "Another name added."
+				Status.push_message("Another name added.")
 
-			else: Status.message = "Another name already exists."
+			else: Status.push_message("Another name already exists.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -551,7 +540,7 @@ class BattleTech_Books_Note(Note):
 			another_name – альтернативное название или его индекс.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
@@ -562,64 +551,24 @@ class BattleTech_Books_Note(Note):
 				self._Data["another_names"].remove(another_name)
 
 			self.save()
-			Status.message = "Another name removed."
+			Status.push_message("Another name removed.")
 
 		except IndexError:
 			Status = ExecutionError(1, "incorrect_another_name_index")
 
-		except: Status = ERROR_UNKNOWN
-
-		return Status
-	
-	def add_story(self, name: str, localname: str | None = None) -> ExecutionStatus:
-		"""
-		Добавляет историю.
-			name – название истории;\n
-			localname – локализованное название истории.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			if "stories" not in self._Data.keys(): self._Data["stories"] = list()
-
-			if name not in self._Data["stories"]:
-				self._Data["stories"][name] = localname
-				self.save()
-				Status.message = "Story added."
-
-			else: Status.message = "Stroty already exists."
-
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
 	def remove_era(self) -> ExecutionStatus:
 		"""Удаляет эру."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		self._Data["era"] = None
 		self.save()
-		Status.message = "Era removed."
+		Status.push_message("Era removed.")
 		
-		return Status
-
-	def remove_story(self, name: str) -> ExecutionStatus:
-		"""
-		Удаляет историю.
-			name – название истории.
-		"""
-
-		Status = ExecutionStatus(0)
-
-		try:
-			del self._Data["stories"][name]
-			self.save()
-			Status.message = "Story removed."
-
-		except: Status = ERROR_UNKNOWN
-
 		return Status
 
 	def estimate(self, estimation: int) -> ExecutionStatus:
@@ -628,18 +577,18 @@ class BattleTech_Books_Note(Note):
 			estimation – оценка.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
 			if estimation <= 5:
 				self._Data["estimation"] = estimation
 				self.save()
-				Status.message = "Estimation updated."
+				Status.push_message("Estimation updated.")
 
 			else: Status = ExecutionError(1, "max_estimation_exceeded")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -649,16 +598,16 @@ class BattleTech_Books_Note(Note):
 			bookmark – номер страницы.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			if bookmark == "*": bookmark = None
 			self._Data["bookmark"] = bookmark
 			self.save()
-			Status.message = "Bookmark updated."
+			Status.push_message("Bookmark updated.")
 
 		except:
-			Status = ERROR_UNKNOWN
+			Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -668,16 +617,16 @@ class BattleTech_Books_Note(Note):
 			comment – комментарий.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			if comment == "*": comment = None
 			self._Data["comment"] = comment
 			self.save()
-			Status.message = "Comment updated."
+			Status.push_message("Comment updated.")
 
 		except:
-			Status = ERROR_UNKNOWN
+			Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -688,18 +637,23 @@ class BattleTech_Books_Note(Note):
 			is_year – указывает, является ли идентификатор эры годом событий.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
+
 			if is_year: 
 				Year = int(era)
+				self._Table: BattleTech_Books
 
 				for Era in self._Table.eras:
 					if not Era["start_year"]: Era["start_year"] = 0
 					if not Era["end_year"]: Era["end_year"] = 9999
-					if Era["index"] >= 0 and Year > Era["start_year"] and Year < Era["end_year"]: self._Data["era"] = Era["index"]
-					self.save()
-					Status.message = "Era updated."
+
+					if Era["index"] >= 0 and Year >= Era["start_year"] and Year <= Era["end_year"]:
+						self._Data["era"] = Era["index"]
+						self.save()
+						Status.push_message("Era updated.")
+						break
 
 			else:
 				if type(era) == str:
@@ -709,11 +663,11 @@ class BattleTech_Books_Note(Note):
 				if era in self._Table.eras_indexes:
 					self._Data["era"] = era
 					self.save()
-					Status.message = "Era updated."
+					Status.push_message("Era updated.")
 
-				else: Status = ExecutionError(-1, "incorrect_era")
+				else: Status.push_error("Incorrect era.")
 
-		except:	Status = ERROR_UNKNOWN
+		except:	Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -723,16 +677,16 @@ class BattleTech_Books_Note(Note):
 			link – ссылка.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			if link == "*": link = None
 			self._Data["link"] = link
 			self.save()
-			Status.message = "Link updated."
+			Status.push_message("Link updated.")
 
 		except:
-			Status = ERROR_UNKNOWN
+			Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -742,21 +696,21 @@ class BattleTech_Books_Note(Note):
 			name – локализованное названиие.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 
 			if localized_name == "*":
 				localized_name = None
-				Status.message = "Localized name removed."
+				Status.push_message("Localized name removed.")
 
 			else:
-				Status.message = "Localized name updated."
+				Status.push_message("Localized name updated.")
 
 			self._Data["localized_name"] = localized_name
 			self.save()
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -766,7 +720,7 @@ class BattleTech_Books_Note(Note):
 			status – статус.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		Statuses = {
 			"c": "collected",
 			"e": "ebook",
@@ -779,9 +733,9 @@ class BattleTech_Books_Note(Note):
 			if status in Statuses.keys(): status = Statuses[status]
 			self._Data["collection_status"] = status
 			self.save()
-			Status.message = "Collection status updated."
+			Status.push_message("Collection status updated.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -791,7 +745,7 @@ class BattleTech_Books_Note(Note):
 			status – статус.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		Statuses = {
 			"a": "announced",
 			"r": "reading",
@@ -806,9 +760,9 @@ class BattleTech_Books_Note(Note):
 			if status in Statuses.keys(): status = Statuses[status]
 			self._Data["status"] = status
 			self.save()
-			Status.message = "Status updated."
+			Status.push_message("Status updated.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -818,15 +772,15 @@ class BattleTech_Books_Note(Note):
 			type – имп.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			if type == "*": type = None
 			self._Data["type"] = type
 			self.save()
-			Status.message = "Type updated."
+			Status.push_message("Type updated.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 

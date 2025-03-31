@@ -1,15 +1,14 @@
+from Source.Core.Bus import ExecutionStatus
 from Source.CLI.Templates import Columns
+from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
-from Source.Core.Warnings import *
-from Source.Core.Errors import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.Methods.Filesystem import NormalizePath, ReadJSON, WriteJSON
 from dublib.CLI.TextStyler import Styles, TextStyler 
 from dublib.CLI.Templates import Confirmation
-from dublib.Engine.Bus import ExecutionStatus
+
 from dublib.Methods.System import Clear
-from typing import Any
 
 import shutil
 import os
@@ -209,6 +208,161 @@ class Attachments:
 		os.remove(f"{self.__Path}/{filename}")
 		self.__Other.remove(filename)
 		self.__CheckDirectoryForEmpty()
+
+#==========================================================================================#
+# >>>>> МЕНЕДЖЕР СВЯЗЕЙ <<<<< #
+#==========================================================================================#
+
+class TableBinds:
+	"""Табличные связи записей."""
+
+	def __init__(self, table: "Table | Module"):
+		"""
+		Табличные связи записей.
+			table – родительская таблица.
+		"""
+
+		#---> Генерация динамичкских атрибутов.
+		#==========================================================================================#
+		self.__Table = table
+
+		self.__Path = f"{self.__Table.path}/binds.json"
+		self.__Data = dict()
+
+		if os.path.exists(self.__Path): self.__Data = ReadJSON(self.__Path)
+
+	def bind_note(self, parent_note_id: int, child_note_id: int) -> ExecutionStatus:
+		"""
+		Привязывает к родительской записи дочернюю.
+			parent_note_id – ID записи, к которой выполняется привязка;\n
+			child_note_id – ID записи, которую привязывают.
+		"""
+
+		Status = ExecutionStatus()
+
+		if child_note_id not in self.__Table.notes_id:
+			Status.push_error(Errors.Table.NO_NOTE)
+			return Status
+
+		Binds = list(self.get_binded_notes_id(parent_note_id))
+		Binds.append(child_note_id)
+		Binds = tuple(set(Binds))
+		self.__Data[str(parent_note_id)] = Binds
+		self.save()
+
+		return Status
+
+	def fix_bindings(self, note_id: int, new_note_id: int, save: bool = False):
+		"""
+		Заменяет все вхождения ID записи на новый ID.
+			note_id – текущий ID записи;\n
+			new_note_id – новый ID записи;\n
+			save – выполнить автоматическое сохранение (может привести к ошибке записи JSON, если не все изменения внесены в связи).
+		"""
+
+		Data = self.__Data.copy()
+
+		for NoteID in Data.keys():
+			if str(note_id) == NoteID:
+				self.__Data[str(new_note_id)] = self.__Data[NoteID]
+				del self.__Data[NoteID]
+
+		Data = self.__Data.copy()
+
+		for NoteID in Data.keys():
+			if note_id in self.__Data[NoteID]: self.__Data[NoteID] = [new_note_id if ID == note_id else ID for ID in self.__Data[NoteID]]
+
+		if save: self.save()
+
+	def get_binded_notes(self, note_id: int) -> tuple["Note"]:
+		"""
+		Возвращает объекты привязанных записей.
+			note_id – ID записи, для которой запрашиваются связанные объекты.
+		"""
+
+		Binds = self.get_binded_notes_id(note_id)
+		BindsObjects = list()
+		
+		for NoteID in Binds: BindsObjects.append(self.__Table.get_note(NoteID).value)
+
+		return tuple(BindsObjects)
+
+	def get_binded_notes_id(self, note_id: int) -> tuple[int]:
+		"""
+		Возвращает последовательность ID привязанных записей.
+			note_id – ID записи, для которой запрашиваются связи.
+		"""
+
+		Binds = tuple()
+
+		for ParentNoteID in self.__Data.keys():
+
+			if int(ParentNoteID) == note_id:
+				Binds = tuple(self.__Data[ParentNoteID])
+				break
+
+		if Binds: Binds = tuple(sorted(Binds))
+
+		return Binds
+	
+	def remove_binding(self, parent_note_id: int, child_note_id: int):
+		"""
+		Удаляет привязку дочерней записи.
+			parent_note_id – ID записи, у которой удаляется привязка;\n
+			child_note_id – ID записи, привязку которой удаляют.
+		"""
+
+		Binds = list(self.get_binded_notes_id(parent_note_id))
+		try: Binds.remove(child_note_id)
+		except ValueError: pass
+		if Binds: self.__Data[str(parent_note_id)] = Binds
+		else: del self.__Data[str(parent_note_id)]
+		self.save()
+
+	def save(self):
+		"""Сохраняет табличные связи в JSON."""
+
+		if not self.__Data and os.path.exists(self.__Path):
+			os.remove(self.__Path)
+
+		else:
+			WriteJSON(self.__Path, self.__Data)
+
+class Binder:
+	"""Менеджер связей объектов."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def general(self) -> None:
+		"""Глобальные связи объектов."""
+
+		return self.__General
+	
+	@property
+	def local(self) -> TableBinds:
+		"""Табличные связи записей."""
+
+		return self.__Local
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, table: "Table | Module"):
+		"""
+		Менеджер связей объектов.
+			table – родительская таблица.
+		"""
+
+		#---> Генерация динамичкских атрибутов.
+		#==========================================================================================#
+		self.__Table = table
+
+		self.__General = None
+		self.__Local = TableBinds(self.__Table)
 
 #==========================================================================================#
 # >>>>> МАНИФЕСТ <<<<< #
@@ -501,7 +655,7 @@ class Manifest:
 	def save(self) -> ExecutionStatus:
 		"""Сохраняет манифест."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			ModulesBuffer = list()
@@ -509,7 +663,7 @@ class Manifest:
 			self.__Data["modules"] = ModulesBuffer
 			WriteJSON(f"{self.__Path}/manifest.json", self.__Data)
 			
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -537,10 +691,13 @@ class NoteCLI:
 		Com.add_key("slot", ParametersTypes.Text, "Name of slot for attachment.")
 		CommandsList.append(Com)
 
-		Com = Command("clear", "Clear console.")
+		Com = Command("bind", "Bind another note to this.")
+		ComPos = Com.create_position("NOTE_ID", "ID of the binded note.", important = True)
+		ComPos.add_argument(ParametersTypes.Number, "Note ID.")
+		Com.add_flag("r", "Remove binding if exists.")
 		CommandsList.append(Com)
 
-		Com = Command("close", "Close note.")
+		Com = Command("clear", "Clear console.")
 		CommandsList.append(Com)
 
 		Com = Command("delete", "Delete note.")
@@ -592,19 +749,29 @@ class NoteCLI:
 			parsed_command – описательная структура команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		return Status
 
 	def _View(self) -> ExecutionStatus:
 		"""Выводит форматированное представление записи."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			#---> Вывод описания.
 			#==========================================================================================#
 			if self._Note.name: print(TextStyler(self._Note.name).decorate.bold)
+
+			#---> Вывод связей.
+			#==========================================================================================#
+			
+			if self._Note.binded_notes:
+				print(TextStyler(f"BINDED NOTES:").decorate.bold)
+				
+				for Note in self._Note.binded_notes:
+					Name = f". {Note.name}" if Note.name else ""
+					print(f"    > {Note.id}{Name}")
 
 			#---> Вывод вложений.
 			#==========================================================================================#
@@ -630,7 +797,7 @@ class NoteCLI:
 					CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
 					print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -658,18 +825,19 @@ class NoteCLI:
 			command_data – описательная структура команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		if parsed_command.name == "attach":
 			Slot = parsed_command.get_key_value("slot")
 			Force = parsed_command.check_flag("f")
 			Status = self._Note.attach(parsed_command.arguments[0], Slot, Force)
 
+		elif parsed_command.name == "bind":
+			if parsed_command.check_flag("r"): self._Note.remove_note_binding(parsed_command.arguments[0])
+			else: self._Note.bind_note(parsed_command.arguments[0])
+
 		elif parsed_command.name == "clear":
 			Clear()
-
-		elif parsed_command.name == "close":
-			Status["interpreter"] = "module" if self._Table.is_module else "table"
 
 		elif parsed_command.name == "exit":
 			exit(0)
@@ -680,7 +848,7 @@ class NoteCLI:
 			
 			if Response:
 				Status = self._Table.delete_note(self._Note.id)
-				if Status.code == 0: Status["interpreter"] = "module" if self._Table.is_module else "table"
+				if Status: Status["interpreter"] = "module" if self._Table.is_module else "table"
 
 		elif parsed_command.name == "meta":
 			if parsed_command.check_flag("set"): Status = self._Note.set_metainfo(parsed_command.arguments[0], parsed_command.arguments[1])
@@ -728,9 +896,6 @@ class BaseTableCLI:
 		CommandsList.append(Com)
 
 		Com = Command("clear", "Clear console.")
-		CommandsList.append(Com)
-
-		Com = Command("close", "Close table.")
 		CommandsList.append(Com)
 
 		Com = Command("columns", "Edit columns showing options.")
@@ -793,7 +958,7 @@ class BaseTableCLI:
 		
 		if parsed_command.name not in self.base_commands_names: return None
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		if parsed_command.name == "chid":
 			Mode = None
@@ -804,9 +969,6 @@ class BaseTableCLI:
 
 		elif parsed_command.name == "clear":
 			Clear()
-
-		elif parsed_command.name == "close":
-			Status["interpreter"] = "driver" if not self._Module else "table"
 
 		elif parsed_command.name == "columns":
 			
@@ -841,7 +1003,7 @@ class BaseTableCLI:
 
 		elif parsed_command.name == "new":
 			Status = self._BaseTable.create_note()
-			if parsed_command.check_flag("o") and Status.code == 0: Status["open_note"] = Status["note_id"]
+			if parsed_command.check_flag("o") and Status: Status["open_note"] = Status["note_id"]
 
 		elif parsed_command.name == "open":
 
@@ -863,12 +1025,12 @@ class BaseTableCLI:
 			if Response:
 				Status = self._BaseTable.delete()
 
-				if Status.code == 0 and self._Module:
-					Status.message = "Module deleted."
+				if not Status.has_errors and self._Module:
+					Status.push_message("Module deleted.")
 					Status["interpreter"] = "table"
 
 				else:
-					Status.message = "Table deleted."
+					Status.push_message("Table deleted.")
 					Status["interpreter"] = "driver"
 
 		elif parsed_command.name == "rename":
@@ -886,7 +1048,7 @@ class BaseTableCLI:
 				search – поисковый запрос.
 			"""
 
-			Status = ExecutionStatus(0)
+			Status = ExecutionStatus()
 
 			try:
 				Content = dict()
@@ -896,11 +1058,11 @@ class BaseTableCLI:
 				Notes: list["Note"] = self._Module.notes if self._Module else self._Table.notes
 
 				if SortBy not in Content.keys():
-						Status = ExecutionError(-1, "no_column_to_sort")
+						Status.push_error("no_column_to_sort")
 						return Status
 
 				if not Notes:
-					Status.message = "Table is empty."
+					Status.push_message("Table is empty.")
 					return Status 
 				
 				if self._BaseTable.manifest.viewer.autoclear: Clear()
@@ -918,9 +1080,9 @@ class BaseTableCLI:
 
 					Columns(Content, SortBy, IsReverse)
 
-				else: Status.message = "Notes not found."
+				else: Status.push_message("Notes not found.")
 
-			except: Status = ERROR_UNKNOWN
+			except ZeroDivisionError: Status.push_error(Errors.UNKNOWN)
 
 			return Status
 
@@ -972,7 +1134,7 @@ class BaseTableCLI:
 			parsed_command – описательная структура команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		return Status
 
@@ -1028,7 +1190,7 @@ class TableCLI(BaseTableCLI):
 			parsed_command – описательная структура команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		if parsed_command.name == "init":
 			Modules = self._Table.manifest.modules
@@ -1062,7 +1224,7 @@ class TableCLI(BaseTableCLI):
 				
 				Columns(TableData, sort_by = "Module")
 
-			else: Status.message = "No modules in table."
+			else: Status.push_message("No modules in table.")
 
 		else:
 			Status = self._ExecuteBaseCommands(parsed_command)
@@ -1093,7 +1255,7 @@ class ModuleCLI(TableCLI):
 			parsed_command – описательная структура команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		Status = self._ExecuteBaseCommands(parsed_command)
 		if Status == None: Status = self._ExecuteCustomCommands(parsed_command)
 
@@ -1130,6 +1292,12 @@ class Note:
 		AttachmentsData = Attachments(Path, AttachmentsDictionary)
 
 		return AttachmentsData
+	
+	@property
+	def binded_notes(self) -> tuple["Note"]:
+		"""Связанные записи."""
+
+		return self._Table.binder.local.get_binded_notes(self._ID)
 
 	@property
 	def cli(self) -> NoteCLI:
@@ -1232,7 +1400,7 @@ class Note:
 			force – включает режим перезаписи.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			if not self._Table.manifest.common.is_attachments_enabled: return NOTE_ERROR_ATTACHMENTS_BLOCKED
@@ -1250,11 +1418,11 @@ class Note:
 
 			if slot:
 				AttachmentsObject.attach_to_slot(path, slot, force)
-				Status.message = f"File \"{path}\" attached to #{self._ID} note on slot \"{slot}\"."
+				Status.push_message(f"File \"{path}\" attached to #{self._ID} note on slot \"{slot}\".")
 
 			else:
 				AttachmentsObject.attach(path, force)
-				Status.message = f"File \"{path}\" attached to #{self._ID} note."
+				Status.push_message(f"File \"{path}\" attached to #{self._ID} note.")
 
 			self._Data["attachments"] = AttachmentsObject.dictionary
 			self.save()
@@ -1263,7 +1431,14 @@ class Note:
 			if slot: Status = NOTE_ERROR_SLOT_ATTACHMENTS_DENIED
 			else: Status = NOTE_ERROR_OTHER_ATTACHMENTS_DENIED
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
+
+		return Status
+
+	def bind_note(self, note_id: int) -> ExecutionStatus:
+		"""Привязывает другую запись к текущей."""
+
+		Status = self._Table.binder.local.bind_note(self.id, note_id)
 
 		return Status
 
@@ -1273,14 +1448,22 @@ class Note:
 			key – ключ поля.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			del self._Data["metainfo"][key]
 			self.save()
-			Status.message = "Metainfo field removed."
+			Status.push_message("Metainfo field removed.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
+
+		return Status
+
+	def remove_note_binding(self, note_id: int) -> ExecutionStatus:
+		"""Удаляет привязку записи к текущей."""
+
+		Status = ExecutionStatus()
+		self._Table.binder.local.remove_binding(self.id, note_id)
 
 		return Status
 
@@ -1290,25 +1473,25 @@ class Note:
 			name – название записи.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			self._Data["name"] = name
 			self.save()
-			Status.message = "Note renamed."
+			Status.push_message("Note renamed.")
 
 		except:
-			Status = ERROR_UNKNOWN
+			Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
 	def save(self) -> ExecutionStatus:
 		"""Сохраняет запись."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try: WriteJSON(self._Path, self._Data)
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -1318,7 +1501,7 @@ class Note:
 			id – идентификатор.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			
@@ -1331,10 +1514,10 @@ class Note:
 				NewPath = self.__GeneratePath(f".attachments/{id}")
 				shutil.move(OldPath, NewPath)
 
+			self._Table.binder.local.fix_bindings(self._ID, id, save = True)
 			self._ID = id
-			Status.message = "ID changed."
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -1345,7 +1528,7 @@ class Note:
 			data – значение.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			Rules = self._Table.manifest.metainfo_rules
@@ -1354,10 +1537,10 @@ class Note:
 			self._Data["metainfo"][key] = data
 			self._Data["metainfo"] = dict(sorted(self._Data["metainfo"].items()))
 			self.save()
-			Status.message = "Metainfo field updated."
+			Status.push_message("Metainfo field updated.")
 
 		except MetainfoBlocked: Status = NOTE_ERROR_METAINFO_BLOCKED
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -1368,10 +1551,10 @@ class Note:
 			slot – слот.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		if not filename and not slot:
-			Status = ExecutionError(-1, "no_filename_or_slot_to_unattach")
+			Status.push_error("no_filename_or_slot_to_unattach")
 			return Status
 
 		try:
@@ -1381,11 +1564,11 @@ class Note:
 
 			if filename:
 				AttachmentsObject.unattach(filename)
-				Status.message = f"File \"{filename}\" unattached."
+				Status.push_message(f"File \"{filename}\" unattached.")
 
 			else: 
 				AttachmentsObject.clear_slot(slot)
-				Status.message = f"Attachment slot \"{slot}\" cleared."
+				Status.push_message(f"Attachment slot \"{slot}\" cleared.")
 
 			self._Data["attachments"] = AttachmentsObject.dictionary
 			self.save()
@@ -1393,7 +1576,7 @@ class Note:
 			AttachmentsDirectory = self.__GeneratePath(point = ".attachments")
 			if not os.listdir(AttachmentsDirectory): os.rmdir(AttachmentsDirectory)
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -1424,6 +1607,12 @@ class Table:
 	#==========================================================================================#
 	# >>>>> ОБЯЗАТЕЛЬНЫЕ СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def binder(self) -> Binder:
+		"""Менеджер связей объектов."""
+
+		return self._Binder
 
 	@property
 	def cli(self) -> TableCLI:
@@ -1460,6 +1649,12 @@ class Table:
 		"""Список ID записей."""
 
 		return self._Notes.keys()
+
+	@property
+	def path(self) -> str:
+		"""Путь к директории таблицы."""
+
+		return self._Path
 
 	@property
 	def storage(self) -> str:
@@ -1549,9 +1744,11 @@ class Table:
 		#==========================================================================================#
 		self._StorageDirectory = NormalizePath(storage)
 		self._Name = name
+
 		self._Path = f"{self._StorageDirectory}/{name}"
 		self._Notes: dict[int, Note] = dict()
 		self._Manifest = None
+		self._Binder = Binder(self)
 		self._IsModule = False
 		self._Note = None
 		self._CLI = None
@@ -1568,22 +1765,20 @@ class Table:
 			mode – режим: i – вставка, o – перезапись, s – обмен.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		IsTargetNoteExists = new_id in self._Notes.keys()
 		
 		if note not in self._Notes.keys():
-			Status = TABLE_ERROR_MISSING_NOTE
+			Status.push_error(Errors.Table.NO_NOTE)
 			Status["print"] = note
 			return Status
 
 		if IsTargetNoteExists and not mode:
-			Status = TABLE_ERROR_NOTE_ALREADY_EXISTS
-			Status["print"] = new_id
+			Status.push_error("Table.ERROR_NOTE_ALREADY_EXISTS")
 			return Status
 		
 		if mode not in [None, "i", "o", "s"]:
-			Status = ExecutionError(-1, "unknown_mode")
-			Status["print"] = mode
+			Status.push_error("Table.UNKNOWN_CHID_MODE")
 			return Status
 		
 		if IsTargetNoteExists:
@@ -1614,19 +1809,16 @@ class Table:
 				if note in NotesID: NotesID.remove(note)
 				NotesID.reverse()
 
-				for ID in NotesID:
-					Status = self.change_note_id(ID, ID + 1)
-					if Status.code != 0: return Status
-
-				if Status.code != 0: return Status
+				for ID in NotesID: Status = self.change_note_id(ID, ID + 1)
+				if Status.has_errors: return Status
 				Status = self.change_note_id(0, new_id)
-				if Status.code != 0: return Status
-				Status.message = f"Note #{note} inserted to position #{new_id}."
+				if Status.has_errors: return Status
+				Status.push_message(f"Note #{note} inserted to position #{new_id}.")
 
 			elif mode == "o":
 				self.delete_note(new_id)
 				self._Notes[note].set_id(new_id)
-				Status.message = f"Note #{new_id} overwritten."
+				Status.push_message(f"Note #{new_id} overwritten.")
 
 			elif mode == "s":
 				self._Notes[0] = self._Notes[new_id]
@@ -1640,34 +1832,42 @@ class Table:
 
 				del self._Notes[0]
 
-				Status.message = f"Note #{note} and #{new_id} swiped."
+				Status.push_message(f"Note #{note} and #{new_id} swiped.")
 
 		else:
 			self._Notes[new_id] = self._Notes[note]
 			self._Notes[new_id].set_id(new_id)
 			del self._Notes[note]
-			Status.message = f"Note #{note} changed ID to #{new_id}."
+			Status.push_message(f"Note #{note} changed ID to #{new_id}.")
 
 		return Status
 
 	def create(self) -> ExecutionStatus:
 		"""Создаёт таблицу."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
-			if not os.path.exists(self._Path): os.makedirs(self._Path)
+
+			if not os.path.exists(self._Path):
+				os.makedirs(self._Path)
+
+			else:
+				Status.push_error(Errors.Driver.TABLE_ALREADY_EXISTS)
+				return Status
+
 			WriteJSON(f"{self._Path}/manifest.json", self.MANIFEST)
 			self._PostCreateMethod()
+			Status.value = self
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.print_messages(Errors.UNKNOWN)
 
 		return Status
 
 	def create_note(self) -> ExecutionStatus:
 		"""Создаёт запись."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			ID = self._GenerateNewID(self._Notes.keys())
@@ -1675,22 +1875,20 @@ class Table:
 			if self.manifest.common.is_attachments_enabled: BaseNoteStruct["attachments"] = {"slots": {}, "other": []}
 			WriteJSON(f"{self._Path}/{ID}.json", BaseNoteStruct)
 			self._ReadNote(ID)
-			Status["note_id"] = ID
-			Status.message = f"Note #{ID} created."
+			Status.emit_navigate_signal(ID)
+			Status.push_message(f"Note #{ID} created.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
 	def delete(self) -> ExecutionStatus:
 		"""Удаляет таблицу."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
-		try:
-			shutil.rmtree(self._Path)
-
-		except FileNotFoundError: Status = DRIVER_ERROR_NO_TABLE
+		try: shutil.rmtree(self._Path)
+		except FileNotFoundError: Status.push_error(Errors.Driver.PATH_NOT_FOUND)
 
 		return Status
 
@@ -1700,16 +1898,17 @@ class Table:
 			note_id – идентификатор записи.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			note_id = int(note_id)
 			del self._Notes[note_id]
 			os.remove(f"{self._Path}/{note_id}.json")
-			Status.message = f"Note #{note_id} deleted."
+			Status.emit_close_signal()
+			Status.push_message(f"Note #{note_id} deleted.")
 
-		except KeyError: Status = TABLE_ERROR_MISSING_NOTE
-		except: Status = ERROR_UNKNOWN
+		except KeyError: Status = Errors.Table.NO_NOTE
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -1720,20 +1919,20 @@ class Table:
 			status – статус отображения.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		Columns = self._Manifest.viewer.columns
 
 		if Columns.is_available:
 			
 			if Columns.check_column(column):
 				Columns.edit_column_status(column, status)
-				Status.message = "Column status changed."
+				Status.push_message("Column status changed.")
 
 			else:
 				ColumnBold = TextStyler(column).decorate.bold
 				Status = ExecutionWarning(1, f"Option for {ColumnBold} not available or column missing")
 
-		else: Status.message = "Colums options not available for this table."
+		else: Status.push_message("Colums options not available for this table.")
 
 		return Status
 
@@ -1743,21 +1942,22 @@ class Table:
 			note_id – идентификатор записи.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			note_id = int(note_id)
 			if note_id in self._Notes.keys(): Status.value = self._Notes[note_id]
-			else: Status = TABLE_ERROR_MISSING_NOTE
+			else: Status.push_error(Errors.Table.NO_NOTE)
 
-		except: Status = ERROR_UNKNOWN
+		except ValueError: Status.push_error(Errors.Table.INCORRECT_NOTE_ID)
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
 	def open(self) -> ExecutionStatus:
 		"""Загружает данные таблицы."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			self._Manifest = Manifest(self._Path, ReadJSON(f"{self._Path}/manifest.json"))
@@ -1767,8 +1967,9 @@ class Table:
 			if not os.path.exists(AttachmentsDirectory) and self._Manifest.common.is_attachments_enabled: os.makedirs(AttachmentsDirectory)
 			if os.path.exists(AttachmentsDirectory) and not os.listdir(AttachmentsDirectory): os.rmdir(AttachmentsDirectory)
 			self._PostOpenMethod()
+			Status.value = self
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -1778,7 +1979,7 @@ class Table:
 			name – новое название.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			OldPath = self._Path
@@ -1788,9 +1989,9 @@ class Table:
 			os.rename(OldPath, NewPath)
 			self._Path = NewPath
 			self._Name = name
-			Status.message = "Table renamed."
+			Status.push_message("Table renamed.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 	
@@ -1872,9 +2073,11 @@ class Module(Table):
 		self._StorageDirectory = NormalizePath(storage)
 		self._Table = table
 		self._Name = name
+
 		self._Path = f"{self._StorageDirectory}/{table.name}/{name}"
 		self._Notes = dict()
 		self._Manifest = None
+		self._Binder = Binder(self)
 		self._IsModule = True
 		self._Note = None
 		self._CLI = None

@@ -1,17 +1,24 @@
+from Source.Core.Session import Session, StorageLevels
+from Source.Core.Bus import ExecutionStatus
 from Source.CLI.Templates import Columns
-from Source.Core.Warnings.ModuleWarnings import *
-from Source.Core.Errors import *
-from Source.Driver import Driver
+from Source.Core.Messages import Errors
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData, Terminalyzer
-from dublib.CLI.Templates import PrintExecutionStatus
-from dublib.Engine.Bus import ExecutionError, ExecutionWarning, ExecutionStatus
-from dublib.CLI.TextStyler import Styles, TextStyler
+from dublib.CLI.TextStyler import Decorations, TextStyler
 from dublib.Methods.System import Clear
 from dublib.Exceptions.CLI import *
+from dublib.CLI import readline
 
-import readline
 import shlex
+import enum
+
+class InterpreterLevels(enum.Enum):
+	"""Перечисление уровней интерпретатора."""
+
+	Driver = 0
+	Table = 1
+	Module = 2
+	Note = 3
 
 class Interpreter:
 	"""Обработчик интерфейса командной строки."""
@@ -26,7 +33,7 @@ class Interpreter:
 
 		CommandsList = list()
 
-		if self.__InterpreterLevel == "driver":
+		if self.__Session.storage_level is StorageLevels.DRIVER:
 
 			Com = Command("clear", "Clear console.")
 			CommandsList.append(Com)
@@ -46,31 +53,23 @@ class Interpreter:
 			Com.add_argument(description = "Path to storage directory.")
 			CommandsList.append(Com)
 
-			Com = Command("open", "Open table.")
-			Com.add_argument(description = "Table name.", important = True)
-			CommandsList.append(Com)
+		elif self.__Session.storage_level is StorageLevels.TABLE:
+			CommandsList = self.__Session.table.cli(self.__Session.driver, self.__Session.table).commands
 
-		elif self.__InterpreterLevel == "table":
-			CommandsList = self.__Table.cli(self.__Driver, self.__Table).commands
+		elif self.__Session.storage_level is StorageLevels.MODULE:
+			CommandsList = self.__Session.module.cli(self.__Session.driver, self.__Session.table, self.__Session.module).commands
 
-		elif self.__InterpreterLevel == "module":
-			CommandsList = self.__Module.cli(self.__Driver, self.__Table, self.__Module).commands
+		elif self.__Session.storage_level is StorageLevels.NOTE:
+			CommandsList = self.__Session.note.cli(self.__Session.driver, self.__Session.table, self.__Session.note).commands
 
-		elif self.__InterpreterLevel == "note":
-			CommandsList = self.__Note.cli(self.__Driver, self.__Table, self.__Note).commands
+		Com = Command("close", "Close current note, module or table.")
+		CommandsList.append(Com)
+
+		Com = Command("open", "Open path.")
+		Com.add_argument(description = "Path to open.", important = True)
+		CommandsList.append(Com)
 
 		return CommandsList
-
-	@property
-	def selector(self) -> str:
-		"""Идентификатор ввода."""
-
-		TableName = "-" + self.__Table.name if self.__Table else ""
-		if self.__Module: TableName += ":" + self.__Module.name
-		NoteID = "-" + str(self.__Note.id) if self.__Note else ""
-		Selector = f"[OtakuDB{TableName}{NoteID}]-> "
-
-		return Selector
 
 	#==========================================================================================#
 	# >>>>> ОБРАБОТЧИКИ КОМАНД <<<<< #
@@ -82,19 +81,19 @@ class Interpreter:
 			parsed_command – данные команды.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		
 		if parsed_command.name == "clear":
 			Clear()
 
-		if parsed_command.name == "create":
+		elif parsed_command.name == "create":
 			Status["create_table"] = parsed_command.arguments[0]
 			Status["table_type"] = parsed_command.get_key_value("type")
 
-		if parsed_command.name == "exit":
+		elif parsed_command.name == "exit":
 			exit(0)
 		
-		if parsed_command.name == "list":
+		elif parsed_command.name == "list":
 			Tables = sorted(self.__Driver.tables)
 
 			if len(Tables):
@@ -113,12 +112,9 @@ class Interpreter:
 			else:
 				print("No tables.")
 
-		if parsed_command.name == "mount":
+		elif parsed_command.name == "mount":
 			StorageDir = parsed_command.arguments[0] if len(parsed_command.arguments) else "Data"
-			Status = self.__Driver.mount(StorageDir)
-			
-		if parsed_command.name == "open":
-			Status["open_table"] = parsed_command.arguments[0]		
+			Status = self.__Driver.mount(StorageDir)	
 
 		return Status
 
@@ -128,114 +124,59 @@ class Interpreter:
 			parsed_command – данные команды.
 		"""
 
-		Status = ExecutionStatus(0)
-		if self.__InterpreterLevel == "driver": Status = self.__ExecuteDriverCommands(parsed_command)
-		if self.__InterpreterLevel == "table": Status: ExecutionStatus = self.__Table.cli(self.__Driver, self.__Table).execute(parsed_command)
-		if self.__InterpreterLevel == "module": Status: ExecutionStatus = self.__Module.cli(self.__Driver, self.__Table, self.__Module).execute(parsed_command)
-		if self.__InterpreterLevel == "note": Status: ExecutionStatus = self.__Note.cli(self.__Driver, self.__Module if self.__Module else self.__Table, self.__Note).execute(parsed_command)
+		Status = ExecutionStatus()
+
+		if parsed_command.name == "open": self.__Session.navigate(parsed_command.arguments[0])
+		elif parsed_command.name == "close": self.__Session.close()
 		
-		if Status.code == 0:
+		else:
 
-			if Status.check_data("create_table"):
-				Status = self.__Driver.create(Status["create_table"], type = Status["table_type"])
+			match self.__Session.storage_level:
+				case StorageLevels.DRIVER: Status.merge(self.__ExecuteDriverCommands(parsed_command))
+				case StorageLevels.TABLE: Status.merge(self.__Session.table.cli(self.__Session.driver, self.__Session.table).execute(parsed_command))
+				case StorageLevels.MODULE: Status.merge(self.__Session.module.cli(self.__Session.driver, self.__Session.table, self.__Session.module).execute(parsed_command))
+				case StorageLevels.NOTE: Status.merge(self.__Session.note.cli(self.__Session.driver, self.__Session.module if self.__Session.module else self.__Session.table, self.__Session.note).execute(parsed_command))
 
-			if Status.check_data("initialize_module"):
-				Status = self.__Driver.create(Status["initialize_module"], table = self.__Table)
+		if Status.navigate: self.__Session.navigate(Status.navigate)
+		if Status.close: self.__Session.close()
+		if Status.check_data("create_table"): Status.merge(self.__Session.driver.create(Status["create_table"], type = Status["table_type"]))
+		if Status.check_data("initialize_module"): Status.merge(self.__Session.driver.create(Status["initialize_module"], table = self.__Session.table))
 
-			if Status.check_data("open_table"):
-				Status = self.__Driver.open(Status["open_table"])
-
-				if Status.code == 0:
-					self.__Table = Status.value
-					self.__InterpreterLevel = "table"
-
-			if Status.check_data("open_module"):
-				Status = self.__Driver.open(Status["open_module"], self.__Table)
-
-				if Status.code == 0:
-					self.__Module = Status.value
-					self.__InterpreterLevel = "module"
-			
-			if Status.check_data("open_note"):
-				Status = self.__OpenNote(Status["open_note"])
-
-			if Status.check_data("interpreter"):
-				self.__InterpreterLevel = Status["interpreter"]
-
-				if self.__InterpreterLevel == "driver":
-					self.__Table = None
-					self.__Module = None
-					self.__Note = None
-
-				if self.__InterpreterLevel == "table":
-					self.__Module = None
-					self.__Note = None
-
-				if self.__InterpreterLevel == "module":
-					self.__Note = None
-
-		PrintExecutionStatus(Status)
+		Status.print_messages()
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __OpenNote(self, note_id: int) -> ExecutionStatus:
-		"""
-		Открывает запись.
-			note_id – идентификатор записи.
-		"""
+	def __GenerateSelector(self) -> str:
+		"""Идентификатор ввода."""
 
-		Status = ExecutionStatus(0)
-		if self.__Module: Status = self.__Module.get_note(note_id)
-		else: Status = self.__Table.get_note(note_id)
+		TableName = "-" + self.__Session.table.name if self.__Session.table else ""
+		if self.__Session.module: TableName += ":" + self.__Session.module.name
+		NoteID = "-" + str(self.__Session.note.id) if self.__Session.note else ""
+		Selector = f"[OtakuDB{TableName}{NoteID}]-> "
 
-		if Status.code == 0:
-			self.__Note = Status.value
-			self.__InterpreterLevel = "note"
-
-		return Status
+		return Selector
 
 	def __ParseCommandData(self, input_line: list[str]) -> ExecutionStatus:
 		"""Парсит команду на составляющие."""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			Analyzer = Terminalyzer(input_line)
 			Analyzer.enable_help(True)
 			Analyzer.help_translation.important_note = ""
 			Status.value = Analyzer.check_commands(self.commands)
+			if not Status: Status.push_error(input_line[0]) 
 
-			if not Status.value:
-				Status = ExecutionError(-2, "unknown_command")
-				Status["print"] = input_line[0]
-
-		except NotEnoughParameters:
-			Status = ExecutionError(-3, "not_enough_parameters")
-
-		except InvalidParameterType as ExceptionData:
-			Type = str(ExceptionData).split("\"")[-2]
-			Status = ExecutionError(-4, "invalid_parameter_type")
-			Status["print"] = Type
-
-		except TooManyParameters:
-			Status = ExecutionError(-5, "too_many_parameters")
-
-		except UnknownFlag as ExceptionData:
-			Flag = str(ExceptionData).split("\"")[-2].lstrip("-")
-			Status = ExecutionError(-6, "unknown_flag")
-			Status["print"] = Flag
-
-		except UnknownKey as ExceptionData:
-			Key = str(ExceptionData).split("\"")[-2].lstrip("-")
-			Status = ExecutionError(-7, "unknown_key")
-			Status["print"] = Key
-
-		except MutuallyExclusiveParameters:
-			Status = ExecutionError(-8, "mutually_exclusive_parameters")
-
-		except: Status = ExecutionError(-1, "mutually_exclusive_parameters")
+		except NotEnoughParameters: Status.push_error("not_enough_parameters")
+		except InvalidParameterType: Status.push_error("invalid_parameter_type")
+		except TooManyParameters: Status.push_error("too_many_parameters")
+		except UnknownFlag: Status.push_error("unknown_flag")
+		except UnknownKey: Status.push_error("unknown_key")
+		except MutuallyExclusiveParameters: Status.push_error("mutually_exclusive_parameters")
+		except ZeroDivisionError: Status.push_error("unkonw_cli_error")
 
 		return Status
 
@@ -248,12 +189,10 @@ class Interpreter:
 
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
-		self.__Driver = Driver(mount = True)
-		if self.__Driver.is_mounted: print(f"Mounted: \"{self.__Driver.storage_directory}\"." )
-		self.__InterpreterLevel = "driver"
-		self.__Table = None
-		self.__Module = None
-		self.__Note = None
+		self.__Session = Session()
+		self.__Driver = self.__Session.driver
+
+		if self.__Session.driver.is_mounted: print(f"Mounted: \"{self.__Driver.storage_directory}\".")
 
 	def run(self):
 		"""Запускает CLI."""
@@ -262,9 +201,10 @@ class Interpreter:
 		InputLine = None
 		
 		while True:
+			Status = ExecutionStatus()
 
 			try:
-				InputLine = input(self.selector)
+				InputLine = input(self.__GenerateSelector())
 				InputLine = InputLine.strip()
 				InputLine = shlex.split(InputLine) if len(InputLine) > 0 else None
 
@@ -275,13 +215,13 @@ class Interpreter:
 			except ValueError as ExceptionData:
 
 				if str(ExceptionData) == "No closing quotation":
-					Status = ExecutionError(-1, "no_closing_quotation")
+					Status.push_error("no_closing_quotation")
 					InputLine = None
-					PrintExecutionStatus(Status)
+					Status.print_messages()
 
 				else: raise ValueError(str(ExceptionData))
 
 			if InputLine:
 				Status = self.__ParseCommandData(InputLine)
-				if Status.code == 0: self.__Execute(Status.value)	
-				else: PrintExecutionStatus(Status)				
+				if Status: self.__Execute(Status.value)	
+				else: Status.print_messages()		

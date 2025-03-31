@@ -1,10 +1,10 @@
 from Source.Core.Base import Manifest, Table
-from Source.Core.Errors import *
+from Source.Core.Messages import Errors
 
 import Source.Tables as TablesTypes
 
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
-from dublib.Engine.Bus import ExecutionStatus
+from Source.Core.Bus import ExecutionStatus
 
 import os
 
@@ -188,7 +188,7 @@ class Driver:
 			table – таблица, к которой привязывается модуль.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			NewTable = None
@@ -200,22 +200,17 @@ class Driver:
 					if Module.name == name:
 						Module.activate()
 						NewTable: Table = self.__Tables[Module.type](self.__StorageDirectory, table, name)
-						NewTable.create()
+						Status.merge(NewTable.create())
 				
 			else:
 				NewTable: Table = self.__Tables[type](self.__StorageDirectory, name)
-				NewTable.create()
+				Status.merge(NewTable.create())
 
-			Status: ExecutionStatus = NewTable.create()
+			if Status and table: Status.push_message("Module initialized.")
+			elif Status: Status.push_message("Table created.")
 
-			if Status.code == 0 and table: Status.message = "Module initialized."
-			elif Status.code == 0: Status.message = "Table created."
-
-		except KeyError:
-			Status = DRIVER_ERROR_NO_TYPE
-			Status["print"] = type
-
-		except ZeroDivisionError: Status = ERROR_UNKNOWN
+		except KeyError: Status.push_error(Errors.Driver.NO_TABLE_TYPE)
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 	
@@ -226,14 +221,14 @@ class Driver:
 			module – название модуля.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		try:
 			module = ("/" + module) if module else ""
 			Path = f"{self.__StorageDirectory}/{name}{module}/manifest.json"
 			Status.value = Manifest(Path, ReadJSON(Path))
 
-		except FileExistsError: Status = DRIVER_ERROR_BAD_MANIFEST
+		except FileExistsError: Status.push_message(Errors.Driver.BAD_MANIFEST)
 
 		return Status	
 
@@ -243,7 +238,7 @@ class Driver:
 			storage_dir – директория хранилища.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		storage_dir = self.__Session["storage-directory"] if not storage_dir else storage_dir
 		
 		try:
@@ -252,12 +247,11 @@ class Driver:
 				self.__StorageDirectory = storage_dir
 				self.__Session["storage-directory"] = storage_dir
 				self.__SaveSession()
-				Status.message = f"Mounted: \"{storage_dir}\"."
+				Status.print_messages(f"Mounted: \"{storage_dir}\".")
 
-			else:
-				Status = DRIVER_ERROR_BAD_PATH
+			else: Status.push_error(Errors.Driver.PATH_NOT_FOUND)
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -268,23 +262,22 @@ class Driver:
 			table – таблица, к которой привязан модуль.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 		
 		try:
-			Status = None
-			if table: Status = self.load_manifest(table.name, name)
-			else: Status = self.load_manifest(name)
+			ManifestLoadingStatus = ExecutionStatus()
+			if table: ManifestLoadingStatus = self.load_manifest(table.name, name)
+			else: ManifestLoadingStatus = self.load_manifest(name)
 			
-			if Status.code == 0:
-				TableManifest: Manifest = Status.value
+			if ManifestLoadingStatus:
+				TableManifest: Manifest = ManifestLoadingStatus.value
 				TableToOpen = None
 				if table: TableToOpen = self.__Tables[TableManifest.type](self.__StorageDirectory, table, name)
 				else: TableToOpen: TableToOpen = self.__Tables[TableManifest.type](self.__StorageDirectory, name)
-				Status = TableToOpen.open()
-				if Status.code == 0: Status.value = TableToOpen
+				Status: ExecutionStatus = TableToOpen.open()
 
-		except FileNotFoundError: Status = DRIVER_ERROR_NO_TABLE
-		except KeyError: Status = DRIVER_ERROR_NO_TYPE
-		except ImportError: Status = ERROR_UNKNOWN
+		except FileNotFoundError: Status.push_error(Errors.Driver.PATH_NOT_FOUND)
+		except ZeroDivisionError: Status.push_error(Errors.Driver.NO_TABLE_TYPE)
+		except ImportError: Status.push_error(Errors.UNKNOWN)
 
 		return Status
