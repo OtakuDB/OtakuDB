@@ -1,24 +1,15 @@
 from Source.Core.Session import Session, StorageLevels
 from Source.Core.Bus import ExecutionStatus
 from Source.CLI.Templates import Columns
-from Source.Core.Messages import Errors
+from Source.Core.Base import Manifest
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData, Terminalyzer
-from dublib.CLI.TextStyler import Decorations, TextStyler
+from dublib.CLI.TextStyler import TextStyler
 from dublib.Methods.System import Clear
 from dublib.Exceptions.CLI import *
 from dublib.CLI import readline
 
 import shlex
-import enum
-
-class InterpreterLevels(enum.Enum):
-	"""Перечисление уровней интерпретатора."""
-
-	Driver = 0
-	Table = 1
-	Module = 2
-	Note = 3
 
 class Interpreter:
 	"""Обработчик интерфейса командной строки."""
@@ -34,9 +25,6 @@ class Interpreter:
 		CommandsList = list()
 
 		if self.__Session.storage_level is StorageLevels.DRIVER:
-
-			Com = Command("clear", "Clear console.")
-			CommandsList.append(Com)
 
 			Com = Command("create", "Create new table.")
 			Com.add_argument(description = "Table name.", important = True)
@@ -56,11 +44,22 @@ class Interpreter:
 		elif self.__Session.storage_level is StorageLevels.TABLE:
 			CommandsList = self.__Session.table.cli(self.__Session.driver, self.__Session.table).commands
 
+			Com = Command("rename", "Rename table.")
+			Com.add_argument(description = "Table name.", important = True)
+			CommandsList.append(Com)
+
 		elif self.__Session.storage_level is StorageLevels.MODULE:
 			CommandsList = self.__Session.module.cli(self.__Session.driver, self.__Session.table, self.__Session.module).commands
 
+			Com = Command("rename", "Rename module.")
+			Com.add_argument(description = "Module name.", important = True)
+			CommandsList.append(Com)
+
 		elif self.__Session.storage_level is StorageLevels.NOTE:
 			CommandsList = self.__Session.note.cli(self.__Session.driver, self.__Session.table, self.__Session.note).commands
+
+		Com = Command("clear", "Clear console.")
+		CommandsList.append(Com)
 
 		Com = Command("close", "Close current note, module or table.")
 		CommandsList.append(Com)
@@ -82,13 +81,9 @@ class Interpreter:
 		"""
 
 		Status = ExecutionStatus()
-		
-		if parsed_command.name == "clear":
-			Clear()
 
-		elif parsed_command.name == "create":
-			Status["create_table"] = parsed_command.arguments[0]
-			Status["table_type"] = parsed_command.get_key_value("type")
+		if parsed_command.name == "create":
+			Status.emit_create_table(parsed_command.arguments[0], parsed_command.get_key_value("type"))
 
 		elif parsed_command.name == "exit":
 			exit(0)
@@ -99,13 +94,15 @@ class Interpreter:
 			if len(Tables):
 				Content = {
 					"Table": [],
-					"Type": []
+					"Type": [],
+					"Moduled": []
 				}
 				
 				for Table in self.__Driver.tables:
-					Manifest = self.__Driver.load_manifest(Table).value
+					TableManifest: Manifest = self.__Driver.load_manifest(Table).value
 					Content["Table"].append(Table)
-					Content["Type"].append(TextStyler(Manifest.type).decorate.italic)
+					Content["Type"].append(TextStyler(TableManifest.type).decorate.italic)
+					Content["Moduled"].append(TextStyler("true").colorize.green if TableManifest.modules else TextStyler("false").colorize.red)
 
 				Columns(Content, sort_by = "Table")
 
@@ -126,21 +123,23 @@ class Interpreter:
 
 		Status = ExecutionStatus()
 
-		if parsed_command.name == "open": self.__Session.navigate(parsed_command.arguments[0])
+		if parsed_command.name == "open": Status += self.__Session.open_objects(parsed_command.arguments[0])
+		elif parsed_command.name == "clear": Clear()
 		elif parsed_command.name == "close": self.__Session.close()
+		elif parsed_command.name == "rename": Status += self.__Session.rename_current_object(parsed_command.arguments[0])
 		
 		else:
 
 			match self.__Session.storage_level:
-				case StorageLevels.DRIVER: Status.merge(self.__ExecuteDriverCommands(parsed_command))
-				case StorageLevels.TABLE: Status.merge(self.__Session.table.cli(self.__Session.driver, self.__Session.table).execute(parsed_command))
-				case StorageLevels.MODULE: Status.merge(self.__Session.module.cli(self.__Session.driver, self.__Session.table, self.__Session.module).execute(parsed_command))
-				case StorageLevels.NOTE: Status.merge(self.__Session.note.cli(self.__Session.driver, self.__Session.module if self.__Session.module else self.__Session.table, self.__Session.note).execute(parsed_command))
+				case StorageLevels.DRIVER: Status += self.__ExecuteDriverCommands(parsed_command)
+				case StorageLevels.TABLE: Status += self.__Session.table.cli(self.__Session.driver, self.__Session.table).execute(parsed_command)
+				case StorageLevels.MODULE: Status += self.__Session.module.cli(self.__Session.driver, self.__Session.table, self.__Session.module).execute(parsed_command)
+				case StorageLevels.NOTE: Status += self.__Session.note.cli(self.__Session.driver, self.__Session.module if self.__Session.module else self.__Session.table, self.__Session.note).execute(parsed_command)
 
-		if Status.navigate: self.__Session.navigate(Status.navigate)
+		if Status.navigate: self.__Session.open_objects(Status.navigate)
 		if Status.close: self.__Session.close()
-		if Status.check_data("create_table"): Status.merge(self.__Session.driver.create(Status["create_table"], type = Status["table_type"]))
-		if Status.check_data("initialize_module"): Status.merge(self.__Session.driver.create(Status["initialize_module"], table = self.__Session.table))
+		if Status.create_table: Status += self.__Session.driver.create_table(Status.create_table.name, Status.create_table.type)
+		if Status.initialize_module: Status += self.__Session.driver.initialize_module(Status.initialize_module, self.__Session.table)
 
 		Status.print_messages()
 
@@ -176,7 +175,7 @@ class Interpreter:
 		except UnknownFlag: Status.push_error("unknown_flag")
 		except UnknownKey: Status.push_error("unknown_key")
 		except MutuallyExclusiveParameters: Status.push_error("mutually_exclusive_parameters")
-		except ZeroDivisionError: Status.push_error("unkonw_cli_error")
+		except: Status.push_error("unkonw_cli_error")
 
 		return Status
 
@@ -215,7 +214,7 @@ class Interpreter:
 			except ValueError as ExceptionData:
 
 				if str(ExceptionData) == "No closing quotation":
-					Status.push_error("no_closing_quotation")
+					Status.push_error("No closing quotation.")
 					InputLine = None
 					Status.print_messages()
 

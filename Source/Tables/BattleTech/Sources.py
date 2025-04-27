@@ -1,8 +1,7 @@
 from Source.Core.Base import Module, ModuleCLI, Note, NoteCLI
 from Source.Core.Bus import ExecutionStatus
-from Source.CLI.Templates import Columns
+from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
-# from Source.Core.Errors import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.TextStyler import Styles, TextStyler
@@ -23,46 +22,33 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 
 		CommandsList = list()
 
+		Com = Command("altname", "Manage another names.")
+		Com.add_argument(description = "Another name.", important = True)
+		Com.add_flag("d", "Remove exists name.")
+		CommandsList.append(Com)
+
 		Com = Command("code", "Set code.")
-		Com.add_argument(description = "Code of sourcebook.", important = True)
+		Com.add_argument(ParametersTypes.Number, "[METAINFO] Product code of sourcebook.", important = True)
+		CommandsList.append(Com)
+
+		Com = Command("collection", "Set collection status.")
+		Com.add_argument(description = "Status: collected (c), ebook (e), whishlist (w), ordered (o).", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("comment", "Set comment to note.")
 		Com.add_argument(description = "Comment text or * to remove.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("era", "Set era.")
-		Com.add_argument(description = "Era ID or name.", important = True)
-		CommandsList.append(Com)
-
-		Com = Command("estimate", "Set estimation.")
-		Com.add_argument(ParametersTypes.Number, description = "Estimation.", important = True)
-		CommandsList.append(Com)
-
 		Com = Command("link", "Attach link to note.")
 		Com.add_argument(description = "URL or * to remove.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("meta", "Manage note metainfo fields.")
-		Com.add_argument(ParametersTypes.All, description = "Field name.", important = True)
-		Com.add_argument(ParametersTypes.All, description = "Field value.")
-		ComPos = Com.create_position("OPERATION", "Type of operation with metainfo.", important = True)
-		ComPos.add_flag("set", description = "Create new or update exists field.")
-		ComPos.add_flag("unset", description = "Remove field.")
+		Com = Command("localname", "Set localized name.")
+		Com.add_argument(description = "Localized name.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("set", "Set note values.")
-		Com.add_key("altname", description = "Alternative name.")
-		Com.add_key("era", ParametersTypes.Number, description = "Era ID.")
-		Com.add_key("localname", description = "Localized name.")
-		Com.add_key("name", description = "Note name.")
-		Com.add_key("status", description = "View status.")
-		CommandsList.append(Com)
-
-		Com = Command("unset", "Remove alternative names or eras.")
-		ComPos = Com.create_position("TARGET", "Target to remove.", important = True)
-		ComPos.add_key("altname", ParametersTypes.All, "Index of alternative name or alternative name.")
-		Com.add_key("era", ParametersTypes.Number, description = "Era ID.")
+		Com = Command("type", "Set sourcebook type.")
+		Com.add_argument(description = "One of types: sourcebook (s), scenario pack (p).", important = True)
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -74,49 +60,31 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 		"""
 
 		Status = ExecutionStatus()
+		self._Note: BattleTech_Sources_Note
 
-		if parsed_command.name == "code":
-			Status = self._Note.set_code(parsed_command.arguments[0])
+		if parsed_command.name == "altname":
+			if parsed_command.check_flag("d"): Status = self._Note.remove_another_name(parsed_command.arguments[0])
+			else: Status = self._Note.add_another_name(parsed_command.arguments[0])
+
+		elif parsed_command.name == "code":
+			Value = parsed_command.arguments[0]
+			if Value == "*": Status = self._Note.remove_metainfo("product_code")
+			else: Status = self._Note.set_metainfo("product_code", Value)
+
+		elif parsed_command.name == "collection":
+			Status = self._Note.set_collection_status(parsed_command.arguments[0])
 
 		elif parsed_command.name == "comment":
 			Status = self._Note.set_comment(parsed_command.arguments[0])
 
-		elif parsed_command.name == "era":
-			Status = self._Note.set_era(parsed_command.arguments[0])
-
-		elif parsed_command.name == "estimate":
-			Status = self._Note.estimate(parsed_command.arguments[0])
-
 		elif parsed_command.name == "link":
 			Status = self._Note.set_link(parsed_command.arguments[0])
 
-		elif parsed_command.name == "mark":
-			Status = self._Note.set_bookmark(parsed_command.arguments[0])
+		elif parsed_command.name == "localname":
+			Status = self._Note.set_localized_name(parsed_command.arguments[0])
 
-		elif parsed_command.name == "meta":
-			Status = ExecutionStatus()
-			
-			if "set" in parsed_command.flags:
-				Status = self._Note.set_metainfo(parsed_command.arguments[0],  parsed_command.arguments[1])
-
-			if parsed_command.check_flag("unset"):
-				Status = self._Note.delete_metainfo(parsed_command.arguments[0])
-
-		elif parsed_command.name == "set":
-
-			if "localname" in parsed_command.keys.keys():
-				Status = self._Note.set_localized_name(parsed_command.keys["localname"])
-
-			if "name" in parsed_command.keys.keys():
-				Status = self._Note.rename(parsed_command.keys["name"])
-
-			if "status" in parsed_command.keys.keys():
-				Status = self._Note.set_status(parsed_command.keys["status"])
-
-		elif parsed_command.name == "unset":
-
-			if parsed_command.check_key("altname"):
-				Status = self._Note.delete_another_name(parsed_command.get_key_value("altname"))
+		elif parsed_command.name == "type":
+			Status = self._Note.set_type(parsed_command.arguments[0])
 
 		return Status
 
@@ -128,40 +96,43 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 		try:
 			#---> Получение данных.
 			#==========================================================================================#
-			UsedName = ""
+			self._Note: BattleTech_Sources_Note
+			self._Table: BattleTech_Sources
+			UsedName = None
+			Era = None
 			AnotherNames = list()
 
 			if self._Note.localized_name:
 				UsedName = self._Note.localized_name
 				AnotherNames.append(self._Note.name)
 
-			else:
-				UsedName = self._Note.name
+			else: UsedName = self._Note.name
 
-			if len(UsedName) and self._Note.code: UsedName = f"{UsedName} [{self._Note.code}]"
+			AnotherNames += self._Note.another_names
 
 			#---> Вывод описания записи.
 			#==========================================================================================#
+			if self._Note.emoji_collection_status: print(self._Note.emoji_collection_status + " ", end = "")
 			if UsedName: print(TextStyler(UsedName).decorate.bold, end = "")
-			print(f" {self._Note.emoji_status}")
-			if self._Note.bookmark: print(f"🔖 {self._Note.bookmark} page")
-			if self._Note.comment: print(f"💭 {self._Note.comment}")
-			if self._Note.link: print(f"🔗 {self._Note.link}")
-			if AnotherNames: print(TextStyler(f"ANOTHER NAMES: ").decorate.bold)
-			for AnotherName in AnotherNames: print(TextStyler(f"    {AnotherName}").decorate.italic)
+			if "product_code" in self._Note.metainfo.keys(): print(" [" + str(self._Note.metainfo["product_code"]) + "]", end = "")
+			print("")
+			for AnotherName in AnotherNames: print(f"    {AnotherName}")
 
-			#---> Вывод классификаторов записи.
+			#---> Вывод свойств.
 			#==========================================================================================#
+			if self._Note.comment or self._Note.link: print(TextStyler("PROPERTIES:").decorate.bold)
+			if self._Note.comment: print(f"    💭 Comment: {self._Note.comment}")
+			if self._Note.link: print(f"    🔗 Link: {self._Note.link}")
 
-			if self._Note.metainfo:
-				print(TextStyler(f"METAINFO:").decorate.bold)
-				MetaInfo = self._Note.metainfo
-				
-				for Key in MetaInfo.keys():
-					CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
-					print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
+			#---> Вывод вложений.
+			#==========================================================================================#
+			Attachments = self._Note.attachments
 
-		except: Status = ERROR_UNKNOWN
+			if Attachments.count:
+				print(TextStyler("ATTACHMENTS:").decorate.bold)
+				for Slot in Attachments.slots: print(f"    {Slot}: " + TextStyler(Attachments.get_slot_filename(Slot)).decorate.italic)
+
+		except ZeroDivisionError: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -171,104 +142,29 @@ class BattleTech_Sources_ModuleCLI(ModuleCLI):
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-
-	def _GenereateCustomCommands(self) -> list[Command]:
-		"""Генерирует дексрипторы дополнительных команд."""
-
-		CommandsList = list()
-
-		Com = Command("eras", "Show list of BattleTech eras.")
-		CommandsList.append(Com)
-
-		return CommandsList
-
-	def _ExecuteCustomCommands(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
-		"""
-		Обрабатывает дополнительные команды.
-			parsed_command – описательная структура команды.
-		"""
-
-		Status = ExecutionStatus()
-
-		if parsed_command.name == "eras":
-			Eras = self._Module.eras
-			for EraID in Eras.keys(): print(f"    {EraID}: {Eras[EraID]}")
-
-		return Status
 	
-	def _List(self, parsed_command: ParsedCommandData, search: str | None = None) -> ExecutionStatus:
-			"""
-			Выводит список записей.
-				parsed_command – описательная структура команды;\n
-				search – поисковый запрос.
-			"""
+	def _BuildNoteRow(self, note: "BattleTech_Sources_Note") -> dict[str, str]:
+		"""
+		Строит строку описания записи для таблицы и возвращает словарь в формате: название колонки – данные.
+			note – обрабатываемая запись.
+		"""
 
-			Status = ExecutionStatus()
+		Row = dict()
+		Row["ID"] = note.id
 
-			try:
-				Notes = list()
-				Content = {
-					"ID": [],
-					"Status": [],
-					"Name": [],
-					"Type": []
-				}
-				SortBy = parsed_command.keys["sort"].title() if "sort" in parsed_command.keys.keys() else "ID"
-				if SortBy == "Id": SortBy = SortBy.upper()
+		Status = note.collection_status
+		if Status == "collected": Status = TextStyler(Status, text_color = Styles.Colors.Green).text
+		elif Status == "ebook": Status = TextStyler(Status, text_color = Styles.Colors.Cyan).text
+		elif Status == "ordered": Status = TextStyler(Status, text_color = Styles.Colors.Yellow).text
 
-				if SortBy not in Content.keys():
-					Status.push_message("no_column_to_sort")
-					return Status
-				
-				Reverse = parsed_command.check_flag("r")
-				
-				if self._Module.notes:
-					Notes = self._Module.notes
+		Row["Status"] = f"{note.emoji_collection_status} {Status}" if Status else ""
+		Row["Code"] = note.code or ""
+		Row["Name"] = note.localized_name or note.name
+		Row["Ebook"] = "✅" if note.attachments.check_slot_occupation("ebook") else "❌"
+		Row["Type"] = TextStyler(note.type.replace("_", " ").title()).decorate.italic if note.type else ""
 
-					if search:
-						print("Search:", TextStyler(search, text_color = Styles.Colors.Yellow))
-						NotesCopy = list(Notes)
-						SearchBuffer = list()
-
-						for Note in NotesCopy:
-							Names = list()
-							if Note.name: Names.append(Note.name)
-							if Note.localized_name: Names.append(Note.localized_name)
-
-							for Name in Names:
-								if search.lower() in Name.lower(): SearchBuffer.append(Note)
-
-						Notes = SearchBuffer
-					
-					for Note in Notes:
-						Name = Note.localized_name if Note.localized_name else Note.name
-						if not Name: Name = ""
-						Type = Note.metainfo["type"] if "type" in Note.metainfo.keys() else ""
-						NoteStatus = Note.status
-						if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Magenta)
-						if NoteStatus == "collected": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue)
-						if NoteStatus == "web": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue)
-						if NoteStatus == "ordered": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.White)
-						if NoteStatus == "wishlist": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.White)
-						if NoteStatus == "reading": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow)
-						if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green)
-						if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Red)
-						if NoteStatus == "skipped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Cyan)
-						Content["ID"].append(Note.id)
-						Content["Status"].append(NoteStatus if NoteStatus else "–")
-						Content["Name"].append(Name if len(Name) < 60 else Name[:60] + "…")
-						Content["Type"].append(Type)
-
-					if len(Notes): Columns(Content, sort_by = SortBy, reverse = Reverse)
-					else: Status.message = "Notes not found."
-
-				else:
-					Status.message = "Table is empty."
-
-			except: Status = ERROR_UNKNOWN
-
-			return Status
-
+		return Row
+	
 #==========================================================================================#
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
 #==========================================================================================#
@@ -283,12 +179,17 @@ class BattleTech_Sources_Note(Note):
 	BASE_NOTE = {
 		"name": None,
 		"localized_name": None,
-		"code": None,
+		"another_names": [],
+		"type": "Sourcebook",
 		"comment": None,
 		"link": None,
-		"bookmark": None,
-		"status": None,
-		"metainfo": {}
+		"collection_status": None,
+		"metainfo": {},
+		"attachments": {
+			"slots": {
+				"ebook": None
+			}
+		}
 	}
 
 	#==========================================================================================#
@@ -296,16 +197,25 @@ class BattleTech_Sources_Note(Note):
 	#==========================================================================================#
 
 	@property
-	def bookmark(self) -> int | None:
-		"""Закладка."""
+	def another_names(self) -> list[str]:
+		"""Список альтернативных названий."""
 
-		return self._Data["bookmark"]
+		return self._Data["another_names"]
 
 	@property
 	def code(self) -> int | None:
-		"""Код."""
+		"""Код продукта."""
 
-		return self._Data["code"]
+		Code = None
+		if "product_code" in self.metainfo.keys(): Code = self.metainfo["product_code"]
+
+		return Code
+
+	@property
+	def collection_status(self) -> str | None:
+		"""Статус коллекционирования."""
+
+		return self._Data["collection_status"]
 
 	@property
 	def comment(self) -> str | None:
@@ -314,23 +224,18 @@ class BattleTech_Sources_Note(Note):
 		return self._Data["comment"]
 
 	@property
-	def emoji_status(self) -> str:
-		"""Статус просмотра в видзе эмодзи."""
+	def emoji_collection_status(self) -> str:
+		"""Статус коллекционирования в видзе эмодзи."""
 
 		Statuses = {
-			"announced": "ℹ️",
-			"reading": "📖",
-			"completed": "✅",
-			"dropped": "⛔",
 			"collected": "📦",
-			"web": "🌍",
+			"ebook": "🌍",
 			"wishlist": "🎁",
 			"ordered": "🚚",
-			"skipped": "🚫",
 			None: ""
 		}
 
-		return Statuses[self._Data["status"]]
+		return Statuses[self._Data["collection_status"]]
 
 	@property
 	def link(self) -> str | None:
@@ -343,18 +248,12 @@ class BattleTech_Sources_Note(Note):
 		"""Локализованное название."""
 
 		return self._Data["localized_name"]
-	
-	@property
-	def metainfo(self) -> dict:
-		"""Метаданные."""
 
-		return self._Data["metainfo"]
-	
 	@property
-	def status(self) -> str | None:
-		"""Статус просмотра."""
+	def type(self) -> str | None:
+		"""Тип соурсбука."""
 
-		return self._Data["status"]
+		return self._Data["type"]
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -369,47 +268,68 @@ class BattleTech_Sources_Note(Note):
 	# >>>>> ДОПОЛНИТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def set_bookmark(self, bookmark: int) -> ExecutionStatus:
+	def add_another_name(self, another_name: str) -> ExecutionStatus:
 		"""
-		Задаёт заладку.
-			bookmark – номер страницы.
+		Добавляет альтернативное название.
+			another_name – альтернативное название.
 		"""
 
 		Status = ExecutionStatus()
 
 		try:
-			if bookmark == "*": bookmark = None
-			self._Data["bookmark"] = bookmark
-			self.save()
-			Status.message = "Bookmark updated."
 
-		except:
-			Status = ERROR_UNKNOWN
+			if another_name not in self._Data["another_names"]:
+				self._Data["another_names"].append(another_name)
+				self.save()
+				Status.push_message("Another name added.")
+
+			else: Status.push_message("Another name already exists.")
+
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
-	def set_code(self, code: str) -> ExecutionStatus:
+	def remove_another_name(self, another_name: str) -> ExecutionStatus:
 		"""
-		Задаёт код соурсбука.
-			code – код.
+		Удаляет альтернативное название.
+			another_name – альтернативное название.
 		"""
 
 		Status = ExecutionStatus()
 
 		try:
+			if another_name in self._Data["another_names"]:
+				self._Data["another_names"].remove(another_name)
+				self.save()
+				Status.push_message("Another name removed.")
 
-			if code == "*":
-				code = None
-				Status.message = "Code removed."
+		except: Status.push_error(Errors.UNKNOWN)
 
-			else:
-				code = int(code)
-				Status.message = "Code updated."
+		return Status
+	
+	def set_collection_status(self, status: str) -> ExecutionStatus:
+		"""
+		Задаёт статус коллекционирования.
+			status – статус.
+		"""
 
-			self._Data["code"] = code
+		Status = ExecutionStatus()
+		Statuses = {
+			"c": "collected",
+			"e": "ebook",
+			"w": "wishlist",
+			"o": "ordered",
+			"*": None
+		}
+
+		try:
+			if status in Statuses.keys(): status = Statuses[status]
+			self._Data["collection_status"] = status
 			self.save()
+			if status: Status.push_message("Collection status updated.")
+			else: Status.push_message("Collection status removed.")
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -422,13 +342,17 @@ class BattleTech_Sources_Note(Note):
 		Status = ExecutionStatus()
 
 		try:
-			if comment == "*": comment = None
+			if comment == "*":
+				comment = None
+				Status.push_message("Comment removed.")
+
+			else: 
+				Status.push_message("Comment updated.")
+
 			self._Data["comment"] = comment
 			self.save()
-			Status.message = "Comment updated."
 
-		except:
-			Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -441,13 +365,17 @@ class BattleTech_Sources_Note(Note):
 		Status = ExecutionStatus()
 
 		try:
-			if link == "*": link = None
+			if link == "*":
+				link = None
+				Status.push_message("Link removed.")
+
+			else:
+				Status.push_message("Link updated.")
+
 			self._Data["link"] = link
 			self.save()
-			Status.message = "Link updated."
 
-		except:
-			Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -463,46 +391,46 @@ class BattleTech_Sources_Note(Note):
 
 			if localized_name == "*":
 				localized_name = None
-				Status.message = "Localized name removed."
+				Status.push_message("Localized name removed.")
 
 			else:
-				Status.message = "Localized name updated."
+				Status.push_message("Localized name updated.")
 
 			self._Data["localized_name"] = localized_name
 			self.save()
 
-		except: Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
-	def set_status(self, status: str) -> ExecutionStatus:
+	def set_type(self, type: str) -> ExecutionStatus:
 		"""
-		Задаёт статус.
-			status – статус просмотра.
+		Задаёт тип соурсбука.
+			type – тип.
 		"""
 
 		Status = ExecutionStatus()
-		Statuses = {
-			"a": "announced",
-			"r": "reading",
-			"c": "completed",
-			"d": "dropped",
-			"i": "collected",
-			"n": "web",
-			"w": "wishlist",
-			"o": "ordered",
-			"s": "skipped",
+		Types = {
+			"d": "Dossiers",
+			"c": "Combat Manuals",
+			"f": "Force Manuals",
+			"h": "Handbooks",
+			"o": "Spotlight On",
+			"t": "Touring the Stars",
+
+			"p": "Scenario Pack",
+			"s": "Sourcebook",
 			"*": None
 		}
 
 		try:
-			if status in Statuses.keys(): status = Statuses[status]
-			self._Data["status"] = status
+			if type in Types.keys(): type = Types[type]
+			self._Data["type"] = type
 			self.save()
-			Status.message = "Status updated."
+			if type: Status.push_message("Type updated.")
+			else: Status.push_message("Type removed.")
 
-		except:
-			Status = ERROR_UNKNOWN
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -518,26 +446,25 @@ class BattleTech_Sources(Module):
 		"object": "module",
 		"type": TYPE,
 		"common": {
-			"recycle_id": True
+			"recycle_id": True,
+			"attachments": True
 		},
 		"metainfo_rules": {
-			"type": ["handbook", "sourcebook"]
+			"product_code": None
 		},
 		"viewer": {
-			"colorize": True
-		},
-		"custom": {}
+			"autoclear": False,
+			"colorize": True,
+			"columns": {
+				"ID": True,
+				"Status": True,
+				"Code": True,
+				"Name": True,
+				"Ebook": True,
+				"Type": True
+			}
+		}
 	}
-
-	#==========================================================================================#
-	# >>>>> ДОПОЛНИТЕЛЬНЫЕ СВОЙСТВА <<<<< #
-	#==========================================================================================#
-	
-	@property
-	def eras(self) -> dict:
-		"""Эпохи BattleTech."""
-
-		return self._Table.eras
 	
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #

@@ -1,4 +1,4 @@
-from Source.Core.Base import Manifest, Table
+from Source.Core.Base import Manifest, Module, Table
 from Source.Core.Messages import Errors
 
 import Source.Tables as TablesTypes
@@ -22,7 +22,9 @@ class Tables:
 		#==========================================================================================#
 		self.__TablesTypes = {
 			Table.TYPE: Table,
-			TablesTypes.Anime.TYPE: TablesTypes.Anime,
+
+			TablesTypes.Otaku.TYPE: TablesTypes.Otaku,
+			TablesTypes.Otaku_Anime.TYPE: TablesTypes.Otaku_Anime,
 
 			TablesTypes.BattleTech.TYPE: TablesTypes.BattleTech,
 			TablesTypes.BattleTech_Books.TYPE: TablesTypes.BattleTech_Books,
@@ -176,44 +178,70 @@ class Driver:
 			"storage-directory": "Data"
 		}
 		self.__Tables = Tables()
+		self.__Objects: dict[str, Table | Module] = dict()
 
 		self.__ReadSession()
 		if mount: self.mount()
 
-	def create(self, name: str, type: str | None = None, table: Table = None) -> ExecutionStatus:
+	def create_table(self, name: str, type: str | None = None) -> ExecutionStatus:
 		"""
-		Создаёт таблицу или модуль.
+		Создаёт таблицу.
 			name – название;\n
-			type – тип;\n
-			table – таблица, к которой привязывается модуль.
+			type – тип.
 		"""
 
 		Status = ExecutionStatus()
 
 		try:
-			NewTable = None
-
-			if table:
-
-				for Module in table.manifest.modules:
-
-					if Module.name == name:
-						Module.activate()
-						NewTable: Table = self.__Tables[Module.type](self.__StorageDirectory, table, name)
-						Status.merge(NewTable.create())
-				
-			else:
-				NewTable: Table = self.__Tables[type](self.__StorageDirectory, name)
-				Status.merge(NewTable.create())
-
-			if Status and table: Status.push_message("Module initialized.")
-			elif Status: Status.push_message("Table created.")
+			NewTable: Table = self.__Tables[type](self, self.__StorageDirectory, name)
+			Status += NewTable.create()
+			if Status: Status.push_message("Table created.")
 
 		except KeyError: Status.push_error(Errors.Driver.NO_TABLE_TYPE)
 		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 	
+	def get_loaded_object(self, table_name: str, module_name: str | None = None) -> ExecutionStatus:
+		"""
+		Возвращает загруженный ранее объект.
+			table – название таблицы;\n
+			module – название модуля.
+		"""
+
+		Status = ExecutionStatus()
+		Name = f"{table_name}:{module_name}" if module_name else table_name
+
+		try: Status.value = self.__Objects[Name]
+		except KeyError: Status.push_error(Errors.Driver.MISSING_OBJECT)
+		except: Status.push_error(Errors.UNKNOWN)
+
+		return Status
+
+	def initialize_module(self, name: str, table: Table) -> ExecutionStatus:
+		"""
+		Инициализирует модуль таблицы.
+			name – название;\n
+			table – таблица, которой принадлежит модуль.
+		"""
+
+		Status = ExecutionStatus()
+
+		try:
+
+			for CurrentModule in table.manifest.modules:
+
+				if CurrentModule.name == name:
+					NewModule: Module = self.__Tables[CurrentModule.type](self, self.__StorageDirectory, table, name)
+					Status += NewModule.create()
+
+			if Status: Status.push_message("Module initialized.")
+
+		except KeyError: Status.push_error(Errors.Driver.NO_TABLE_TYPE)
+		except: Status.push_error(Errors.UNKNOWN)
+
+		return Status
+
 	def load_manifest(self, name: str, module: str | None = None) -> ExecutionStatus:
 		"""
 		Считывает манифест таблицы.
@@ -232,6 +260,64 @@ class Driver:
 
 		return Status	
 
+	def load_module(self, table: Table, module_name: str) -> ExecutionStatus:
+		"""
+		Загружает модуль.
+			table – таблица, к которой привязан модуль;\n
+			module_name – название модуля.
+		"""
+
+		Status = ExecutionStatus()
+		
+		try:
+			ManifestLoadingStatus = ExecutionStatus()
+			ObjectPath = f"{table.name}:{module_name}"
+
+			Status += self.get_loaded_object(table.name, module_name)
+			if not Status.has_errors and Status: return Status
+
+			ManifestLoadingStatus = self.load_manifest(table.name, module_name)
+			
+			if ManifestLoadingStatus:
+				TableManifest: Manifest = ManifestLoadingStatus.value
+				TableToOpen = None
+				TableToOpen = self.__Tables[TableManifest.type](self, self.__StorageDirectory, table, module_name)
+				Status: ExecutionStatus = TableToOpen.open()
+				if not Status.has_errors: self.__Objects[ObjectPath] = Status.value
+
+		except FileNotFoundError: Status.push_error(Errors.PATH_NOT_FOUND)
+		except KeyError: Status.push_error(Errors.Driver.NO_TABLE_TYPE)
+		except ImportError: Status.push_error(Errors.UNKNOWN)
+
+		return Status
+
+	def load_table(self, table_name: str) -> ExecutionStatus:
+		"""
+		Загружает таблицу или модуль.
+			table_name – название таблицы.
+		"""
+
+		Status = ExecutionStatus()
+		
+		try:
+			ManifestLoadingStatus = ExecutionStatus()
+
+			LoadingStatus = self.get_loaded_object(table_name)
+			if not LoadingStatus.has_errors: return LoadingStatus
+			else: ManifestLoadingStatus = self.load_manifest(table_name)
+
+			if ManifestLoadingStatus:
+				TableManifest: Manifest = ManifestLoadingStatus.value
+				TableToOpen: Table = self.__Tables[TableManifest.type](self, self.__StorageDirectory, table_name)
+				Status += TableToOpen.open()
+				if not Status.has_errors: self.__Objects[table_name] = Status.value
+				
+		except FileNotFoundError: Status.push_error(Errors.PATH_NOT_FOUND)
+		except KeyError: Status.push_error(Errors.Driver.NO_TABLE_TYPE)
+		except: Status.push_error(Errors.UNKNOWN)
+		
+		return Status
+
 	def mount(self, storage_dir: str | None = None) -> ExecutionStatus:
 		"""
 		Указывает каталог хранения таблиц.
@@ -249,35 +335,73 @@ class Driver:
 				self.__SaveSession()
 				Status.print_messages(f"Mounted: \"{storage_dir}\".")
 
-			else: Status.push_error(Errors.Driver.PATH_NOT_FOUND)
+			else: Status.push_error(Errors.PATH_NOT_FOUND)
 
 		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
-
-	def open(self, name: str, table: Table = None) -> ExecutionStatus:
+	
+	def rename_loaded_table(self, old_table_name: str, table_name: str) -> ExecutionStatus:
 		"""
-		Открывает таблицу или модуль.
-			name – название таблицы или модуля;\n
-			table – таблица, к которой привязан модуль.
+		Изменяет название таблица.
+			old_table_name – прежнее название таблицы;\n
+			table_name – новое название таблицы.
 		"""
 
 		Status = ExecutionStatus()
-		
-		try:
-			ManifestLoadingStatus = ExecutionStatus()
-			if table: ManifestLoadingStatus = self.load_manifest(table.name, name)
-			else: ManifestLoadingStatus = self.load_manifest(name)
-			
-			if ManifestLoadingStatus:
-				TableManifest: Manifest = ManifestLoadingStatus.value
-				TableToOpen = None
-				if table: TableToOpen = self.__Tables[TableManifest.type](self.__StorageDirectory, table, name)
-				else: TableToOpen: TableToOpen = self.__Tables[TableManifest.type](self.__StorageDirectory, name)
-				Status: ExecutionStatus = TableToOpen.open()
 
-		except FileNotFoundError: Status.push_error(Errors.Driver.PATH_NOT_FOUND)
-		except ZeroDivisionError: Status.push_error(Errors.Driver.NO_TABLE_TYPE)
-		except ImportError: Status.push_error(Errors.UNKNOWN)
+		try:
+			if table_name in self.__Objects.keys():
+				Status.push_error(Errors.Driver.OBJECT_OVERWRITING_DENIED)
+				return Status
+			
+			self.__Objects[old_table_name].rename(table_name)
+			self.__Objects[table_name] = self.__Objects[old_table_name]
+			del self.__Objects[old_table_name]
+
+		except KeyError: Status.push_error(Errors.Driver.MISSING_OBJECT)
+		except: Status.push_error(Errors.UNKNOWN)
+
+		return Status
+
+	def rename_loaded_module(self, table_name: str, old_module_name: str, module_name: str) -> ExecutionStatus:
+		"""
+		Изменяет название объекта.
+			table_name – название таблицы;\n
+			old_module_name – прежнее название модуля;\n
+			module_name – новое название модуля.
+		"""
+
+		Status = ExecutionStatus()
+		OldName = f"{table_name}:{old_module_name}"
+		Name = f"{table_name}:{module_name}"
+
+		try:
+			if Name in self.__Objects.keys():
+				Status.push_error(Errors.Driver.OBJECT_OVERWRITING_DENIED)
+				return Status
+			
+			self.__Objects[OldName].rename(module_name)
+			self.__Objects[Name] = self.__Objects[OldName]
+			del self.__Objects[OldName]
+
+		except KeyError: Status.push_error(Errors.Driver.MISSING_OBJECT)
+		except: Status.push_error(Errors.UNKNOWN)
+
+		return Status
+
+	def unload_object(self, table: str, module: str | None = None) -> ExecutionStatus:
+		"""
+		Выгружает объект.
+			table – название таблицы;\n
+			module – название модуля.
+		"""
+
+		Status = ExecutionStatus()
+		Name = f"{table}:{module}" if module else table
+
+		try: del self.__Objects[Name]
+		except KeyError: Status.push_error(Errors.Driver.MISSING_OBJECT)
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status

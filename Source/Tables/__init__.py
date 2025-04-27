@@ -1,4 +1,5 @@
-from Source.Tables.Anime import Anime
+from Source.Tables.Otaku import Otaku
+from Source.Tables.Otaku.Anime import Otaku_Anime
 
 from Source.Tables.BattleTech import BattleTech
 from Source.Tables.BattleTech.Books import BattleTech_Books

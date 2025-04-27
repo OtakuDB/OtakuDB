@@ -1,32 +1,8 @@
-from Source.Core.Base import Note, NoteCLI, Table, TableCLI
-from Source.Core.Bus import ExecutionStatus
-from Source.Core.Exceptions import *
-# from Source.Core.Errors import *
+from Source.Core.Base import Table
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData
-
-#==========================================================================================#
-# >>>>> CLI <<<<< #
-#==========================================================================================#
-
-class BattleTech_NoteCLI(NoteCLI):
-	"""CLI записи"""
-
-	pass
-
-class BattleTech_TableCLI(TableCLI):
-	"""CLI таблицы."""
-
-	pass
-	
 #==========================================================================================#
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
 #==========================================================================================#
-
-class BattleTech_Note(Note):
-	"""Базовая запись BattleTech."""
-
-	pass
 
 class BattleTech(Table):
 	"""Базовая таблица BattleTech."""
@@ -51,19 +27,11 @@ class BattleTech(Table):
 				"is_active": False
 			},
 			{
-				"name": "sheets",
-				"type": "battletech:sheets",
-				"is_active": False
-			},
-			{
 				"name": "sources",
 				"type": "battletech:sources",
 				"is_active": False
 			}
-		],
-		"common": {
-			"recycle_id": True
-		}
+		]
 	}
 
 	#==========================================================================================#
@@ -157,13 +125,3 @@ class BattleTech(Table):
 		for Era in self.eras: Indexes.append(Era["index"])
 
 		return Indexes
-
-	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#	
-
-	def _PostInitMethod(self):
-		"""Метод, выполняющийся после инициализации класса."""
-
-		self._Note = BattleTech_Note
-		self._CLI = BattleTech_TableCLI

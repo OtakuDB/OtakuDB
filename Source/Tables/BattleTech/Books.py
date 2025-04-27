@@ -61,10 +61,6 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		Com.add_argument(description = "Localized name.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("mark", "Set bookmark.")
-		Com.add_argument(ParametersTypes.Number, description = "Page number or * to remove.", important = True)
-		CommandsList.append(Com)
-
 		Com = Command("pubdate", "[METAINFO] Set publication date.")
 		Com.add_argument(description = "Publication date.", important = True)
 		CommandsList.append(Com)
@@ -141,18 +137,6 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		elif parsed_command.name == "localname":
 			Status = self._Note.set_localized_name(parsed_command.arguments[0])
 
-		elif parsed_command.name == "mark":
-			Status = self._Note.set_bookmark(parsed_command.arguments[0])
-
-		elif parsed_command.name == "meta":
-			Status = ExecutionStatus()
-			
-			if parsed_command.check_flag("set"):
-				Status = self._Note.set_metainfo(parsed_command.arguments[0],  parsed_command.arguments[1])
-
-			if parsed_command.check_flag("del"):
-				Status = self._Note.remove_metainfo(parsed_command.arguments[0])
-
 		elif parsed_command.name == "pubdate":
 			Value = parsed_command.arguments[0]
 			if Value == "*": Status = self._Note.remove_metainfo("publication_date")
@@ -184,8 +168,8 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		try:
 			#---> Получение данных.
 			#==========================================================================================#
-			self._Note: "BattleTech_Books_Note"
-			self._Table: "BattleTech_Books"
+			self._Note: BattleTech_Books_Note
+			self._Table: BattleTech_Books
 			UsedName = None
 			Era = None
 			AnotherNames = list()
@@ -220,13 +204,12 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			for Story in Stories:
 				Localname = Story.localized_name
 				if Localname: Localname = " / " + Localname
-				print(f"    > {Story.id}. {Story.name}{Localname}")
+				print(f"    > {Story.id}. {Story.name}{Localname} {Story.emoji_status}")
 
 			print(TextStyler("PROPERTIES:").decorate.bold)
 			if self._Note.type: print("    ✒️  Type: " + self._Note.type.title())
 			if Era: print(f"    🏺 Era: {Era}")
 			if self._Note.estimation: print(f"    ⭐ Estimation: {self._Note.estimation}")
-			if self._Note.bookmark: print(f"    🔖 Bookmark: {self._Note.bookmark} page")
 			if self._Note.comment: print(f"    💭 Comment: {self._Note.comment}")
 			if self._Note.link: print(f"    🔗 Link: {self._Note.link}")
 
@@ -244,7 +227,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 				MetaInfo = self._Note.metainfo
 				
 				for Key in MetaInfo.keys():
-					Data = MetaInfo[Key]
+					Data: str = MetaInfo[Key]
 					if Key == "author": Data = Data.replace(";", ", ")
 					CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
 					print(f"    {CustomMetainfoMarker}{Key}: {Data}")
@@ -319,6 +302,9 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 		Com = Command("eras", "Show list of BattleTech eras.")
 		CommandsList.append(Com)
 
+		Com = Command("statistics", "Show statistics of BattleTech books.")
+		CommandsList.append(Com)
+
 		return CommandsList
 
 	def _ExecuteCustomCommands(self, parsed_command: ParsedCommandData) -> ExecutionStatus:
@@ -339,6 +325,44 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 				EndYear = Era["end_year"] if Era["end_year"] else "now"
 				print(TextStyler(str(EraIndex).ljust(8)).decorate.bold, end = "")
 				print(f": {Name} [{StartYear} – {EndYear}]")
+
+		elif parsed_command.name == "statistics":
+			Notes: list[BattleTech_Books_Note] = self._Module.notes
+			Total = len(Notes)
+			Novels = 0
+			Stories = 0
+			Compilations = 0
+			Undefined = 0
+
+			Completed = 0
+
+			CollectedBooks = 0
+			CollectedEbooks = 0
+
+			for CurrentNote in Notes:
+				if CurrentNote.type == "novel": Novels += 1
+				elif CurrentNote.type == "story": Stories += 1
+				elif CurrentNote.type == "compilation": Compilations += 1
+				else: Undefined += 1
+
+				if CurrentNote.status == "completed": Completed += 1
+
+				if CurrentNote.collection_status == "ebook": CollectedEbooks += 1
+				elif CurrentNote.collection_status == "collected": CollectedBooks += 1
+
+			if Undefined: Undefined = f", {Undefined} undefined"
+			else: Undefined = ""
+			print(TextStyler("Total books:").decorate.bold, end = "")
+			print(f" {Total} ({Novels} novels, {Stories} stories, {Compilations} compilations){Undefined}")
+
+			CompletedPercentage = round(Completed / Total * 100, 2)
+			print(TextStyler("Fully readed:").decorate.bold, end = "")
+			print(f" {Completed} books ({CompletedPercentage}%)")
+
+			CollectedTotal = CollectedBooks + CollectedEbooks
+			CollectedPercentage = round(CollectedTotal / Total * 100, 2)
+			print(TextStyler("Collected:").decorate.bold, end = "")
+			print(f" {CollectedBooks} books, {CollectedEbooks} ebooks ({CollectedPercentage}%)")
 
 		return Status
 	
@@ -362,7 +386,6 @@ class BattleTech_Books_Note(Note):
 		"estimation": None,
 		"comment": None,
 		"link": None,
-		"bookmark": None,
 		"status": None,
 		"collection_status": None,
 		"metainfo": {},
@@ -382,12 +405,6 @@ class BattleTech_Books_Note(Note):
 		"""Список альтернативных названий."""
 
 		return self._Data["another_names"]
-
-	@property
-	def bookmark(self) -> int | None:
-		"""Закладка."""
-
-		return self._Data["bookmark"]
 
 	@property
 	def collection_status(self) -> str | None:
@@ -509,7 +526,7 @@ class BattleTech_Books_Note(Note):
 		"""
 
 		Status = super().attach(path, slot, force)
-		if not Status.has_errors and slot == "ebook": Status.merge(self.set_collection_status("e"))
+		if not Status.has_errors and slot == "ebook" and not self.collection_status: Status.merge(self.set_collection_status("e"))
 
 		return Status
 
@@ -534,27 +551,19 @@ class BattleTech_Books_Note(Note):
 
 		return Status
 
-	def remove_another_name(self, another_name: int | str) -> ExecutionStatus:
+	def remove_another_name(self, another_name: str) -> ExecutionStatus:
 		"""
 		Удаляет альтернативное название.
-			another_name – альтернативное название или его индекс.
+			another_name – альтернативное название.
 		"""
 
 		Status = ExecutionStatus()
 
 		try:
-
-			if another_name.isdigit() and another_name not in self._Data["another_names"]:
-				self._Data["another_names"].pop(int(another_name))
-
-			else:
+			if another_name in self._Data["another_names"]:
 				self._Data["another_names"].remove(another_name)
-
-			self.save()
-			Status.push_message("Another name removed.")
-
-		except IndexError:
-			Status = ExecutionError(1, "incorrect_another_name_index")
+				self.save()
+				Status.push_message("Another name removed.")
 
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -565,9 +574,10 @@ class BattleTech_Books_Note(Note):
 
 		Status = ExecutionStatus()
 
-		self._Data["era"] = None
-		self.save()
-		Status.push_message("Era removed.")
+		if self._Data["era"]:
+			self._Data["era"] = None
+			self.save()
+			Status.push_message("Era removed.")
 		
 		return Status
 
@@ -581,33 +591,14 @@ class BattleTech_Books_Note(Note):
 
 		try:
 
-			if estimation <= 5:
+			if estimation <= 5 and estimation > 0:
 				self._Data["estimation"] = estimation
 				self.save()
 				Status.push_message("Estimation updated.")
 
-			else: Status = ExecutionError(1, "max_estimation_exceeded")
+			else: Status.push_error("Incorrect estimation value. From 1 to 5 expected.")
 
 		except: Status.push_error(Errors.UNKNOWN)
-
-		return Status
-
-	def set_bookmark(self, bookmark: int) -> ExecutionStatus:
-		"""
-		Задаёт заладку.
-			bookmark – номер страницы.
-		"""
-
-		Status = ExecutionStatus()
-
-		try:
-			if bookmark == "*": bookmark = None
-			self._Data["bookmark"] = bookmark
-			self.save()
-			Status.push_message("Bookmark updated.")
-
-		except:
-			Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -620,13 +611,17 @@ class BattleTech_Books_Note(Note):
 		Status = ExecutionStatus()
 
 		try:
-			if comment == "*": comment = None
+			if comment == "*":
+				comment = None
+				Status.push_message("Comment removed.")
+
+			else: 
+				Status.push_message("Comment updated.")
+
 			self._Data["comment"] = comment
 			self.save()
-			Status.push_message("Comment updated.")
 
-		except:
-			Status.push_error(Errors.UNKNOWN)
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -680,13 +675,17 @@ class BattleTech_Books_Note(Note):
 		Status = ExecutionStatus()
 
 		try:
-			if link == "*": link = None
+			if link == "*":
+				link = None
+				Status.push_message("Link removed.")
+
+			else:
+				Status.push_message("Link updated.")
+
 			self._Data["link"] = link
 			self.save()
-			Status.push_message("Link updated.")
 
-		except:
-			Status.push_error(Errors.UNKNOWN)
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -733,7 +732,8 @@ class BattleTech_Books_Note(Note):
 			if status in Statuses.keys(): status = Statuses[status]
 			self._Data["collection_status"] = status
 			self.save()
-			Status.push_message("Collection status updated.")
+			if status: Status.push_message("Collection status updated.")
+			else: Status.push_message("Collection status removed.")
 
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -760,7 +760,9 @@ class BattleTech_Books_Note(Note):
 			if status in Statuses.keys(): status = Statuses[status]
 			self._Data["status"] = status
 			self.save()
-			Status.push_message("Status updated.")
+			if status: Status.push_message("Status updated.")
+			else: Status.push_message("Status removed.")
+			
 
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -773,12 +775,22 @@ class BattleTech_Books_Note(Note):
 		"""
 
 		Status = ExecutionStatus()
+		AllowedTypes = ("novel", "story", "compilation")
 
 		try:
-			if type == "*": type = None
+			if type.lower() not in AllowedTypes:
+				Status.push_error("Type isn't allowed. Use novel, story or compilation.")
+				return Status
+			
+			if type == "*":
+				type = None
+				Status.push_message("Type removed.")
+
+			else:
+				Status.push_message("Type updated.")
+
 			self._Data["type"] = type
 			self.save()
-			Status.push_message("Type updated.")
 
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -796,7 +808,8 @@ class BattleTech_Books(Module):
 		"object": "module",
 		"type": TYPE,
 		"common": {
-			"recycle_id": True
+			"recycle_id": True,
+			"attachments": True
 		},
 		"metainfo_rules": {
 			"author": None,
@@ -817,8 +830,7 @@ class BattleTech_Books(Module):
 				"Era": True,
 				"Estimation": True
 			}
-		},
-		"custom": {}
+		}
 	}
 
 	#==========================================================================================#
@@ -844,5 +856,6 @@ class BattleTech_Books(Module):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации класса."""
 
+		self._Table: BattleTech_Books
 		self._Note = BattleTech_Books_Note
 		self._CLI = BattleTech_Books_ModuleCLI

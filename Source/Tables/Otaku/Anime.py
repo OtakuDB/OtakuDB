@@ -1,4 +1,4 @@
-from Source.Core.Base import Note, NoteCLI, Table, TableCLI 
+from Source.Core.Base import Note, NoteCLI, Module, ModuleCLI 
 from Source.Core.Bus import ExecutionStatus
 from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
@@ -11,7 +11,7 @@ from dublib.CLI.Templates import Confirmation
 # >>>>> CLI <<<<< #
 #==========================================================================================#
 
-class Anime_NoteCLI(NoteCLI):
+class Otaku_Anime_NoteCLI(NoteCLI):
 	"""CLI записи."""
 
 	#==========================================================================================#
@@ -107,7 +107,7 @@ class Anime_NoteCLI(NoteCLI):
 		"""
 
 		Status = ExecutionStatus()
-		self._Note: "Anime_Note"
+		self._Note: "Otaku_Anime_Note"
 
 		if parsed_command.name == "altname":
 			AnotherName = parsed_command.arguments[0]
@@ -199,8 +199,8 @@ class Anime_NoteCLI(NoteCLI):
 		try:
 			#---> Получение данных.
 			#==========================================================================================#
-			self._Note: "Anime_Note"
-			self._Table: "Anime"
+			self._Note: "Otaku_Anime_Note"
+			self._Table: "Otaku_Anime"
 			Parts = self._Note.parts
 			Options = self._Table.manifest.viewer
 
@@ -295,14 +295,14 @@ class Anime_NoteCLI(NoteCLI):
 
 		return Status
 	
-class Anime_TableCLI(TableCLI):
+class Otaku_Anime_ModuleCLI(ModuleCLI):
 	"""CLI таблицы."""
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _BuildNoteRow(self, note: "Anime_Note") -> dict[str, str]:
+	def _BuildNoteRow(self, note: "Otaku_Anime_Note") -> dict[str, str]:
 		"""
 		Строит строку описания записи для таблицы и возвращает словарь в формате: название колонки – данные.
 			note – обрабатываемая запись.
@@ -327,7 +327,7 @@ class Anime_TableCLI(TableCLI):
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
 #==========================================================================================#
 
-class Anime_Note(Note):
+class Otaku_Anime_Note(Note):
 	"""Запись о просмотре аниме."""
 
 	#==========================================================================================#
@@ -339,7 +339,6 @@ class Anime_Note(Note):
 		"another_names": [],
 		"estimation": None,
 		"status": None,
-		"group": None,
 		"tags": [],
 		"metainfo": {},
 		"parts": []
@@ -413,7 +412,7 @@ class Anime_Note(Note):
 
 				if "announced" not in Part.keys() and "skipped" not in Part.keys():
 
-					if "watched" in Part.keys() and "series" in Part.keys() and Part["series"] != None:
+					if "series" in Part.keys() and Part["series"]:
 						CurrentProgress += Part["series"] if "mark" not in Part.keys() else Part["mark"]
 
 					elif "watched" in Part.keys():
@@ -509,7 +508,7 @@ class Anime_Note(Note):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации класса."""
 
-		self._CLI = Anime_NoteCLI
+		self._CLI = Otaku_Anime_NoteCLI
 
 	#==========================================================================================#
 	# >>>>> ДОПОЛНИТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -524,7 +523,6 @@ class Anime_Note(Note):
 		Status = ExecutionStatus()
 
 		try:
-
 			if another_name not in self._Data["another_names"]:
 				self._Data["another_names"].append(another_name)
 				self.save()
@@ -564,11 +562,12 @@ class Anime_Note(Note):
 		Status = ExecutionStatus()
 
 		try:
-
 			if tag not in self._Data["tags"]:
 				self._Data["tags"].append(tag)
 				self.save()
 				Status.push_message("Tag added.")
+
+			else: Status.push_message("Tag already exists.")
 
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -587,7 +586,6 @@ class Anime_Note(Note):
 			self.save()
 			Status.push_message("Another name removed.")
 
-		except IndexError: Status = ExecutionError(-1, "incorrect_another_name_index")
 		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
@@ -610,21 +608,23 @@ class Anime_Note(Note):
 
 		return Status
 
-	def remove_tag(self, tag: int | str) -> ExecutionStatus:
+	def remove_tag(self, tag: str) -> ExecutionStatus:
 		"""
 		Удаляет тег.
-			tag – тег или его индекс.
+			tag – тег.
 		"""
 
 		Status = ExecutionStatus()
 
 		try:
-			if tag.isdigit(): self._Data["tags"].pop(int(tag))
-			else: self._Data["tags"].remove(tag)
-			self.save()
-			Status.push_message("Tag removed.")
+			if tag in self._Data["tags"]:
+				self._Data["tags"].remove(tag)
+				self.save()
+				Status.push_message("Tag removed.")
 
-		except IndexError: Status = ExecutionStatus(-1, "incorrect_tag_index")
+			else: Status.push_message("Tag not found.")
+
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
@@ -644,7 +644,7 @@ class Anime_Note(Note):
 				Status.push_message("Part downed.")
 
 			elif part_index == len(self._Data["parts"]) - 1:
-				Status = ExecutionWarning(1, "unable_down_last_part")
+				Status.push_warning("Unable down last part.")
 
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -684,7 +684,7 @@ class Anime_Note(Note):
 				self.save()
 				Status.push_message("Estimation updated.")
 
-			else: Status = ExecutionError(-1, "max_estimation_exceeded")
+			else: Status.push_error("Estimation exceeded.")
 
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -735,7 +735,7 @@ class Anime_Note(Note):
 					self.save()
 					self.__UpdateStatus()
 
-			else: Status.push_error("Note.ONLY_SERIES_SUPPORT_MARKS")
+			else: Status.push_error("Only series supports mark.")
 
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -761,8 +761,9 @@ class Anime_Note(Note):
 			if status in Statuses.keys(): status = Statuses[status]
 			self._Data["status"] = status
 			self.save()
-			Status.push_message("Status updated.")
-
+			if status: Status.push_message("Status updated.")
+			else: Status.push_message("Status removed.")
+			
 		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
@@ -783,28 +784,23 @@ class Anime_Note(Note):
 				Status.push_message("Part upped.")
 
 			elif part_index == 0:
-				Status = ExecutionWarning(1, "unable_up_first_part")
+				Status.push_error("Unable up first part.")
 
 		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 
-class Anime(Table):
+class Otaku_Anime(Module):
 	"""Таблица просмотров аниме."""
 
 	#==========================================================================================#
 	# >>>>> СТАТИЧЕСКИЕ АТРИБУТЫ <<<<< #
 	#==========================================================================================#
 
-	TYPE: str = "anime"
+	TYPE: str = "otaku:anime"
 	MANIFEST: dict = {
-		"object": "table",
+		"object": "module",
 		"type": TYPE,
-		"modules": [],
-		"common": {
-			"recycle_id": True,
-			"attachments": False
-		},
 		"metainfo_rules": {
 			"base": ["game", "manga", "novel", "original", "ranobe"]
 		},
@@ -844,5 +840,5 @@ class Anime(Table):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации класса."""
 
-		self._Note = Anime_Note
-		self._CLI = Anime_TableCLI
+		self._Note = Otaku_Anime_Note
+		self._CLI = Otaku_Anime_ModuleCLI

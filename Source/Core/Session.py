@@ -1,7 +1,7 @@
-from Source.Core.Base import Table, Module, Note 
-from Source.Core.Driver import Driver
-
+from Source.Core.Base import Table, Module, Note
 from Source.Core.Bus import ExecutionStatus
+from Source.Core.Messages import Errors
+from Source.Core.Driver import Driver
 
 from dataclasses import dataclass
 
@@ -143,17 +143,17 @@ class Session:
 			self.__Table = None
 			self.__Level = StorageLevels.DRIVER
 
-	def navigate(self, path: str) -> ExecutionStatus:
+	def open_objects(self, path: str) -> ExecutionStatus:
 		"""
-		Открывает объекты по указанному пути.
+		Открывает объекты по указанному пути и устанавливает их в качестве активных.
 			path – путь к объектам.
 		"""
 
 		Status = ExecutionStatus()
 		Targets = self.__ParsePath(path)
-			
+
 		if Targets.table: 
-			OpenStatus = self.__Driver.open(Targets.table)
+			OpenStatus = self.__Driver.load_table(Targets.table)
 			Status.merge(OpenStatus, overwrite = False)
 
 			if OpenStatus.value:
@@ -163,7 +163,7 @@ class Session:
 		else: self.__Table = None
 
 		if Targets.module: 
-			OpenStatus = self.__Driver.open(Targets.module, self.__Table)
+			OpenStatus = self.__Driver.load_module(self.__Table, Targets.module)
 			Status.merge(OpenStatus, overwrite = False)
 
 			if OpenStatus.value:
@@ -183,5 +183,33 @@ class Session:
 				self.__Level = StorageLevels.NOTE
 
 		else: self.__Note = None
+
+		return Status
+	
+	def rename_current_object(self, name: str) -> ExecutionStatus:
+		"""
+		Переименовывает объект текущего уровня (таблицу или модуль).
+			name – новое имя.
+		"""
+
+		Status = ExecutionStatus()
+
+		if name.isdigit():
+			Status.push_error("Driver.INCORRECT_OBJECT_NAME")
+			return Status
+
+		if self.storage_level is StorageLevels.TABLE:
+			Status += self.__Driver.rename_loaded_table(self.__Table.name, name)
+			Status.push_message("Table renamed.")
+
+		elif self.storage_level is StorageLevels.MODULE:
+			Status += self.__Driver.rename_loaded_module(self.__Table.name, self.__Module.name, name)
+			Status.push_message("Module renamed.")
+
+		elif self.storage_level is StorageLevels.NOTE:
+			self.__Note.rename(name)
+			Status.push_message("Note renamed.")
+
+		else: Status.push_error(Errors.UNKNOWN)
 
 		return Status
