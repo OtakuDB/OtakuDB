@@ -848,37 +848,30 @@ class NoteCLI:
 		Com = Command("attach", "Attach files to note.")
 		ComPos = Com.create_position("FILE", important = True)
 		ComPos.add_argument(ParametersTypes.ValidPath, description = "Path to file.")
-		Com.add_flag("f", "Enable attachments overwrite.")
-		Com.add_key("slot", ParametersTypes.Text, "Name of slot for attachment.")
+		Com.base.add_flag("f", "Enable attachments overwrite.")
+		Com.base.add_key("slot", ParametersTypes.Text, "Name of slot for attachment.")
 		CommandsList.append(Com)
 
 		Com = Command("bind", "Bind another note to this.")
 		ComPos = Com.create_position("NOTE", "Target note for binding.", important = True)
-		# ComPos.add_argument(ParametersTypes.Number, description = "Note ID.")
 		ComPos.add_argument(description = "Note identificator in module-id format.")
-		Com.add_flag("r", "Remove binding if exists.")
-		CommandsList.append(Com)
-
-		Com = Command("clear", "Clear console.")
+		Com.base.add_flag("r", "Remove binding if exists.")
 		CommandsList.append(Com)
 
 		Com = Command("delete", "Delete note.")
-		Com.add_flag("y", "Automatically confirms deletion.")
+		Com.base.add_flag("y", "Automatically confirms deletion.")
 		CommandsList.append(Com)
 
-		Com = Command("exit", "Exit from OtakuDB.")
-		CommandsList.append(Com)
-
-		Com = Command("meta", "Manage note metainfo fields.")
-		Com.add_argument(description = "Field name.", important = True)
-		Com.add_argument(description = "Field value.")
+		Com = Command("meta", "Manage note metainfo fields.", category = "Metainfo")
+		Com.base.add_argument(description = "Field name.", important = True)
+		Com.base.add_argument(description = "Field value.")
 		ComPos = Com.create_position("OPERATION", "Type of operation with metainfo.", important = True)
 		ComPos.add_flag("set", description = "Create new or update exists field.")
 		ComPos.add_flag("del", description = "Remove field.")
 		CommandsList.append(Com)
 
 		Com = Command("rename", "Rename note.")
-		Com.add_argument(description = "New name.", important = True)
+		Com.base.add_argument(description = "New name.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("unattach", "Unattach files from note.")
@@ -996,12 +989,6 @@ class NoteCLI:
 			if parsed_command.check_flag("r"): self._Note.remove_note_binding(parsed_command.arguments[0])
 			else: self._Note.bind_note(parsed_command.arguments[0])
 
-		elif parsed_command.name == "clear":
-			Clear()
-
-		elif parsed_command.name == "exit":
-			exit(0)
-
 		elif parsed_command.name == "delete":
 			Response = parsed_command.check_flag("y")
 			if not Response: Response = Confirmation(f"Are you sure to delete #{self._Note.id} note?")
@@ -1062,34 +1049,25 @@ class BaseTableCLI:
 		CommandsList.append(Com)
 
 		Com = Command("delete", "Delete table.")
-		Com.add_flag("y", "Automatically confirms deletion.")
-		CommandsList.append(Com)
-
-		Com = Command("exit", "Exit from OtakuDB.")
+		Com.base.add_flag("y", "Automatically confirms deletion.")
 		CommandsList.append(Com)
 
 		Com = Command("new", "Create new note.")
-		Com.add_flag("o", "Open new note.")
+		Com.base.add_flag("o", "Open new note.")
 		CommandsList.append(Com)
 
-		Com = Command("open", "Open note or module.")
-		ComPos = Com.create_position("TARGET", "Target for opening.", important = True)
-		ComPos.add_argument(description = "Note ID or module name.")
-		ComPos.add_flag("m", description = "Open note with max ID.")
-		CommandsList.append(Com)
-
-		Com = Command("rename", "Rename table.")
-		Com.add_argument(description = "Table name.", important = True)
+		Com = Command("rename", "Rename current table or module.")
+		Com.base.add_argument(description = "New table or module name.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("search", "Search notes by part of name.")
-		Com.add_argument(description = "Search query.", important = True)
-		Com.add_key("sort", description = "Set sort by column name.")
+		Com.base.add_argument(description = "Search query.", important = True)
+		Com.base.add_key("sort", description = "Set sort by column name.")
 		CommandsList.append(Com)
 
 		Com = Command("view", "Show list of notes.")
-		Com.add_flag("r", "Reverse list.")
-		Com.add_key("sort", description = "Set sort by column name.")
+		Com.base.add_flag("r", "Reverse list.")
+		Com.base.add_key("sort", description = "Set sort by column name.")
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -1164,25 +1142,9 @@ class BaseTableCLI:
 
 				Columns(TableData, sort_by = "Column")
 
-		elif parsed_command.name == "exit":
-			exit(0)
-
 		elif parsed_command.name == "new":
 			Status = self._BaseTable.create_note()
 			if parsed_command.check_flag("o") and Status: Status.emit_navigate(Status.value.id)
-
-		elif parsed_command.name == "open":
-
-			if parsed_command.check_flag("m"):
-				NoteID = max(self._BaseTable.notes_id)
-				Status["open_note"] = NoteID
-
-			elif parsed_command.arguments[0].isdigit():
-				Status["open_note"] = int(parsed_command.arguments[0])
-
-			else:
-				Status["open_module"] = parsed_command.arguments[0]
-				Status["interpreter"] = "module"
 
 		elif parsed_command.name == "delete":
 			Response = parsed_command.check_flag("y")
@@ -1321,7 +1283,7 @@ class TableCLI(BaseTableCLI):
 		CommandsList = list()
 
 		Com = Command("init", "Initialize module.")
-		Com.add_argument(description = "Module name.", important = True)
+		Com.base.add_argument(description = "Module name.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("list", "List of modules.")
@@ -1333,10 +1295,8 @@ class TableCLI(BaseTableCLI):
 	def commands(self) -> list[Command]:
 		"""Список дескрипторов команд."""
 
-		CommandsList = self._GenereateCustomCommands()
-
+		CommandsList = self.base_commands + self._GenereateCustomCommands()
 		if self._Table.manifest.modules: CommandsList += self.moduled_commands
-		else: CommandsList += self.base_commands
 
 		return CommandsList
 

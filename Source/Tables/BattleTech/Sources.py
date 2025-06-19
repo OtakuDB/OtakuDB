@@ -23,32 +23,32 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 		CommandsList = list()
 
 		Com = Command("altname", "Manage another names.")
-		Com.add_argument(description = "Another name.", important = True)
-		Com.add_flag("d", "Remove exists name.")
+		Com.base.add_argument(description = "Another name.", important = True)
+		Com.base.add_flag("d", "Remove exists name.")
 		CommandsList.append(Com)
 
 		Com = Command("code", "Set code.")
-		Com.add_argument(ParametersTypes.Number, "[METAINFO] Product code of sourcebook.", important = True)
+		Com.base.add_argument(ParametersTypes.Number, "[METAINFO] Product code of sourcebook.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("collection", "Set collection status.")
-		Com.add_argument(description = "Status: collected (c), ebook (e), whishlist (w), ordered (o).", important = True)
+		Com.base.add_argument(description = "Status: collected (c), ebook (e), whishlist (w), ordered (o).", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("comment", "Set comment to note.")
-		Com.add_argument(description = "Comment text or * to remove.", important = True)
+		Com.base.add_argument(description = "Comment text or * to remove.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("link", "Attach link to note.")
-		Com.add_argument(description = "URL or * to remove.", important = True)
+		Com.base.add_argument(description = "URL or * to remove.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("localname", "Set localized name.")
-		Com.add_argument(description = "Localized name.", important = True)
+		Com.base.add_argument(description = "Localized name.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("type", "Set sourcebook type.")
-		Com.add_argument(description = "One of types: sourcebook (s), scenario pack (p).", important = True)
+		Com.base.add_argument(description = "One of types: sourcebook (s), scenario pack (p).", important = True)
 		CommandsList.append(Com)
 
 		return CommandsList

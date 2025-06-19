@@ -24,20 +24,20 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		CommandsList = list()
 
 		Com = Command("altname", "Manage another names.")
-		Com.add_argument(description = "Another name.", important = True)
-		Com.add_flag("d", "Remove exists name.")
+		Com.base.add_argument(description = "Another name.", important = True)
+		Com.base.add_flag("d", "Remove exists name.")
 		CommandsList.append(Com)
 
-		Com = Command("author", "[METAINFO] Set author.")
-		Com.add_argument(description = "Author or authors list, splitted by \";\" character.", important = True)
+		Com = Command("author", "Set author.", category = "Metainfo")
+		Com.base.add_argument(description = "Author or authors list, splitted by \";\" character.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("collection", "Set collection status.")
-		Com.add_argument(description = "Status: collected (c), ebook (e), whishlist (w), ordered (o).", important = True)
+		Com.base.add_argument(description = "Status: collected (c), ebook (e), whishlist (w), ordered (o).", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("comment", "Set comment to note.")
-		Com.add_argument(description = "Comment text or * to remove.", important = True)
+		Com.base.add_argument(description = "Comment text or * to remove.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("era", "Set era by timeline year.")
@@ -50,35 +50,35 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		CommandsList.append(Com)
 
 		Com = Command("estimate", "Set estimation.")
-		Com.add_argument(ParametersTypes.Number, description = "Estimation.", important = True)
+		Com.base.add_argument(ParametersTypes.Number, description = "Estimation.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("link", "Attach link to note.")
-		Com.add_argument(description = "URL or * to remove.", important = True)
+		Com.base.add_argument(description = "URL or * to remove.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("localname", "Set localized name.")
-		Com.add_argument(description = "Localized name.", important = True)
+		Com.base.add_argument(description = "Localized name.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("pubdate", "[METAINFO] Set publication date.")
-		Com.add_argument(description = "Publication date.", important = True)
+		Com = Command("pubdate", "Set publication date.", category = "Metainfo")
+		Com.base.add_argument(description = "Publication date.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("publisher", "[METAINFO] Set publisher.")
-		Com.add_argument(description = "Publisher.", important = True)
+		Com = Command("publisher", "Set publisher.", category = "Metainfo")
+		Com.base.add_argument(description = "Publisher.", important = True)
 		CommandsList.append(Com)
 
-		Com = Command("series", "[METAINFO] Set series.")
-		Com.add_argument(description = "Series.", important = True)
+		Com = Command("series", "Set series.", category = "Metainfo")
+		Com.base.add_argument(description = "Series.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("status", "Set reading status.")
-		Com.add_argument(description = "Status: announced (a), reading (r), completed (c), dropped (d), skipped (s).", important = True)
+		Com.base.add_argument(description = "Status: announced (a), reading (r), completed (c), dropped (d), skipped (s).", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("type", "Set type of book.")
-		Com.add_argument(description = "Type of book: novel, story.", important = True)
+		Com.base.add_argument(description = "Type of book: novel, story.", important = True)
 		CommandsList.append(Com)
 
 		return CommandsList

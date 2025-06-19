@@ -3,7 +3,7 @@ from Source.Core.Bus import ExecutionStatus
 from Source.CLI.Templates import Columns
 from Source.Core.Base import Manifest
 
-from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData, Terminalyzer
+from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData, Terminalyzer
 from dublib.CLI.TextStyler import TextStyler
 from dublib.Methods.System import Clear
 from dublib.Exceptions.CLI import *
@@ -26,37 +26,33 @@ class Interpreter:
 
 		if self.__Session.storage_level is StorageLevels.DRIVER:
 
-			Com = Command("create", "Create new table.")
-			Com.add_argument(description = "Table name.", important = True)
-			Com.add_key("type", description = "Type of table.", important = True)
+			Com = Command("create", "Create new table.", category = "Driver")
+			Com.base.add_argument(description = "Table name.", important = True)
+			Com.base.add_key("type", description = "Type of table.", important = True)
 			CommandsList.append(Com)
 
-			Com = Command("exit", "Exit from OtakuDB.")
+			Com = Command("exit", "Exit from OtakuDB.", category = "Driver")
 			CommandsList.append(Com)
 
-			Com = Command("list", "Print list of tables.")
+			Com = Command("list", "Print list of tables.", category = "Driver")
 			CommandsList.append(Com)
 
-			Com = Command("mount", "Select storage directory.")
-			Com.add_argument(description = "Path to storage directory.")
+			Com = Command("mount", "Select storage directory.", category = "Driver")
+			Com.base.add_argument(description = "Path to storage directory.")
 			CommandsList.append(Com)
 
 		elif self.__Session.storage_level is StorageLevels.TABLE:
 			CommandsList = self.__Session.table.cli(self.__Session.driver, self.__Session.table).commands
-
-			Com = Command("rename", "Rename table.")
-			Com.add_argument(description = "Table name.", important = True)
-			CommandsList.append(Com)
+			for CurrentCommand in CommandsList: CurrentCommand.set_category("Table")
 
 		elif self.__Session.storage_level is StorageLevels.MODULE:
 			CommandsList = self.__Session.module.cli(self.__Session.driver, self.__Session.table, self.__Session.module).commands
-
-			Com = Command("rename", "Rename module.")
-			Com.add_argument(description = "Module name.", important = True)
-			CommandsList.append(Com)
+			for CurrentCommand in CommandsList: CurrentCommand.set_category("Module")
 
 		elif self.__Session.storage_level is StorageLevels.NOTE:
 			CommandsList = self.__Session.note.cli(self.__Session.driver, self.__Session.table, self.__Session.note).commands
+			for CurrentCommand in CommandsList:
+				if not CurrentCommand.category: CurrentCommand.set_category("Note")
 
 		Com = Command("clear", "Clear console.")
 		CommandsList.append(Com)
@@ -64,8 +60,11 @@ class Interpreter:
 		Com = Command("close", "Close current note, module or table.")
 		CommandsList.append(Com)
 
+		Com = Command("exit", "Exit from OtakuDB.")
+		CommandsList.append(Com)
+
 		Com = Command("open", "Open path.")
-		Com.add_argument(description = "Path to open.", important = True)
+		Com.base.add_argument(description = "Path to open.", important = True)
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -164,8 +163,8 @@ class Interpreter:
 
 		try:
 			Analyzer = Terminalyzer(input_line)
-			Analyzer.enable_help(True)
-			Analyzer.help_translation.important_note = ""
+			Analyzer.helper.enable()
+			Analyzer.helper.enable_sorting()
 			Status.value = Analyzer.check_commands(self.commands)
 			if not Status: Status.push_error(input_line[0]) 
 
@@ -175,7 +174,9 @@ class Interpreter:
 		except UnknownFlag: Status.push_error("unknown_flag")
 		except UnknownKey: Status.push_error("unknown_key")
 		except MutuallyExclusiveParameters: Status.push_error("mutually_exclusive_parameters")
-		except: Status.push_error("unkonw_cli_error")
+		except Exception as ExceptionData:
+			Type = type(ExceptionData).__qualname__
+			Status.push_error(f"{Type}: {ExceptionData}")
 
 		return Status
 
