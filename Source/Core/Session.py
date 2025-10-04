@@ -207,8 +207,7 @@ class Session:
 			Status.push_message("Module renamed.")
 
 		elif self.storage_level is StorageLevels.NOTE:
-			self.__Note.rename(name)
-			Status.push_message("Note renamed.")
+			Status += self.__Note.rename(name)
 
 		else: Status.push_error(Errors.UNKNOWN)
 

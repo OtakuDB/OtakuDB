@@ -5,7 +5,7 @@ from Source.Core.Exceptions import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.Methods.Filesystem import NormalizePath, ReadJSON, WriteJSON
-from dublib.CLI.TextStyler import Styles, TextStyler 
+from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates import Confirmation
 from dublib.Methods.System import Clear
 
@@ -914,13 +914,13 @@ class NoteCLI:
 		try:
 			#---> Вывод описания.
 			#==========================================================================================#
-			if self._Note.name: print(TextStyler(self._Note.name).decorate.bold)
+			if self._Note.name: print(FastStyler(self._Note.name).decorate.bold)
 
 			#---> Вывод связей.
 			#==========================================================================================#
 			
 			if self._Note.binded_notes:
-				print(TextStyler(f"BINDED NOTES:").decorate.bold)
+				print(FastStyler(f"BINDED NOTES:").decorate.bold)
 				
 				for Note in self._Note.binded_notes:
 					Name = f". {Note.name}" if Note.name else ""
@@ -931,19 +931,19 @@ class NoteCLI:
 			Attachments = self._Note.attachments
 
 			if Attachments.count:
-				print(TextStyler("ATTACHMENTS:").decorate.bold)
+				print(FastStyler("ATTACHMENTS:").decorate.bold)
 
 				if Attachments.slots != None:
-					for Slot in Attachments.slots: print(f"    {Slot}: " + TextStyler(Attachments.get_slot_filename(Slot), decorations = [Styles.Decorations.Italic]))
+					for Slot in Attachments.slots: print(f"    {Slot}: " + FastStyler(Attachments.get_slot_filename(Slot), decorations = Codes.Decorations.Italic))
 
 				if Attachments.other != None:
-					for Filename in Attachments.other: print("    " + TextStyler(Filename, decorations = [Styles.Decorations.Italic]))
+					for Filename in Attachments.other: print("    " + TextStyler(Filename, decorations = Codes.Decorations.Italic))
 
 			#---> Вывод метаданных.
 			#==========================================================================================#
 
 			if self._Note.metainfo:
-				print(TextStyler(f"METAINFO:").decorate.bold)
+				print(FastStyler(f"METAINFO:").decorate.bold)
 				MetaInfo = self._Note.metainfo
 				
 				for Key in MetaInfo.keys():
@@ -1073,13 +1073,10 @@ class BaseTableCLI:
 		return CommandsList
 
 	@property
-	def base_commands_names(self) -> list[str]:
+	def base_commands_names(self) -> tuple[str]:
 		"""Список названий базовых команд."""
 
-		Names = list()
-		for Command in self.base_commands: Names.append(Command.name)
-
-		return Names
+		return tuple(Command.name for Command in self.base_commands)
 
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
@@ -1136,7 +1133,7 @@ class BaseTableCLI:
 				
 				for Name in Data.keys():
 					ColumnStatus = Data[Name]
-					ColumnStatus = TextStyler("enabled").colorize.green if ColumnStatus else TextStyler("disabled").colorize.red
+					ColumnStatus = FastStyler("enabled").colorize.green if ColumnStatus else FastStyler("disabled").colorize.red
 					TableData["Column"].append(Name)
 					TableData["Status"].append(ColumnStatus)
 
@@ -1196,7 +1193,7 @@ class BaseTableCLI:
 				if self._BaseTable.manifest.viewer.autoclear: Clear()
 				
 				if search:
-					print("Search:", TextStyler(search).colorize.yellow)
+					print("Search:", FastStyler(search).colorize.yellow)
 					Notes = [Note for Note in Notes if any(search.lower() in Variant.lower() for Variant in Note.searchable)]
 				
 				for Note in Notes: Content = self._AddRowToTableContent(Content, Note)
@@ -1210,7 +1207,7 @@ class BaseTableCLI:
 
 				else: Status.push_message("Notes not found.")
 
-			except: Status.push_error(Errors.UNKNOWN)
+			except ZeroDivisionError: Status.push_error(Errors.UNKNOWN)
 
 			return Status
 
@@ -1337,9 +1334,10 @@ class TableCLI(BaseTableCLI):
 				}
 
 				for Module in Modules:
-					ModuleStatus = TextStyler("active", text_color = Styles.Colors.Green) if Module.is_active else TextStyler("inactive", text_color = Styles.Colors.Red)
+					ModuleStatus = TextStyler(text_color = Codes.Colors.Green).get_styled_text("active") 
+					if not Module.is_active: TextStyler(text_color = Codes.Colors.Red).get_styled_text("inactive") 
 					TableData["Module"].append(Module.name)
-					TableData["Type"].append(TextStyler(Module.type).decorate.italic)
+					TableData["Type"].append(FastStyler(Module.type).decorate.italic)
 					TableData["Status"].append(ModuleStatus)
 				
 				Columns(TableData, sort_by = "Module")
@@ -1635,14 +1633,18 @@ class Note:
 		"""
 
 		Status = ExecutionStatus()
+		name = name.strip()
 
 		try:
 			if name == "*":
 				name = None
 				Status.push_message("Note name removed.")
 
-			else: 
+			else:
 				Status.push_message("Note renamed.")
+
+				if name in tuple(Element.name for Element in self._Table.notes):
+					Status.push_warning("Note with same name already exists.")
 
 			self._Data["name"] = name
 			self.save()
@@ -1805,10 +1807,10 @@ class Table:
 		return self._Name
 
 	@property
-	def notes(self) -> list[Note]:
+	def notes(self) -> tuple[Note]:
 		"""Список записей."""
 
-		return self._Notes.values()
+		return tuple(self._Notes.values())
 	
 	@property
 	def notes_id(self) -> list[int]:
@@ -2096,7 +2098,7 @@ class Table:
 				Status.push_message("Column status changed.")
 
 			else:
-				ColumnBold = TextStyler(column).decorate.bold
+				ColumnBold = FastStyler(column).decorate.bold
 				Status.push_error(f"Option for {ColumnBold} not available or column missing.")
 
 		else: Status.push_message("Colums options not available for this table.")

@@ -4,7 +4,7 @@ from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.CLI.TextStyler import Styles, TextStyler
+from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #
@@ -113,14 +113,14 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 			#---> Вывод описания записи.
 			#==========================================================================================#
 			if self._Note.emoji_collection_status: print(self._Note.emoji_collection_status + " ", end = "")
-			if UsedName: print(TextStyler(UsedName).decorate.bold, end = "")
+			if UsedName: print(FastStyler(UsedName).decorate.bold, end = "")
 			if "product_code" in self._Note.metainfo.keys(): print(" [" + str(self._Note.metainfo["product_code"]) + "]", end = "")
 			print("")
 			for AnotherName in AnotherNames: print(f"    {AnotherName}")
 
 			#---> Вывод свойств.
 			#==========================================================================================#
-			if self._Note.comment or self._Note.link: print(TextStyler("PROPERTIES:").decorate.bold)
+			if self._Note.comment or self._Note.link: print(FastStyler("PROPERTIES:").decorate.bold)
 			if self._Note.comment: print(f"    💭 Comment: {self._Note.comment}")
 			if self._Note.link: print(f"    🔗 Link: {self._Note.link}")
 
@@ -129,8 +129,8 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 			Attachments = self._Note.attachments
 
 			if Attachments.count:
-				print(TextStyler("ATTACHMENTS:").decorate.bold)
-				for Slot in Attachments.slots: print(f"    {Slot}: " + TextStyler(Attachments.get_slot_filename(Slot)).decorate.italic)
+				print(FastStyler("ATTACHMENTS:").decorate.bold)
+				for Slot in Attachments.slots: print(f"    {Slot}: " + FastStyler(Attachments.get_slot_filename(Slot)).decorate.italic)
 
 		except ZeroDivisionError: Status.push_error(Errors.UNKNOWN)
 
@@ -153,15 +153,15 @@ class BattleTech_Sources_ModuleCLI(ModuleCLI):
 		Row["ID"] = note.id
 
 		Status = note.collection_status
-		if Status == "collected": Status = TextStyler(Status, text_color = Styles.Colors.Green).text
-		elif Status == "ebook": Status = TextStyler(Status, text_color = Styles.Colors.Cyan).text
-		elif Status == "ordered": Status = TextStyler(Status, text_color = Styles.Colors.Yellow).text
+		if Status == "collected": Status = TextStyler(Status, text_color = Codes.Colors.Green).get_styled_text()
+		elif Status == "ebook": Status = TextStyler(Status, text_color = Codes.Colors.Cyan).get_styled_text()
+		elif Status == "ordered": Status = TextStyler(Status, text_color = Codes.Colors.Yellow).get_styled_text()
 
 		Row["Status"] = f"{note.emoji_collection_status} {Status}" if Status else ""
 		Row["Code"] = note.code or ""
 		Row["Name"] = note.localized_name or note.name
 		Row["Ebook"] = "✅" if note.attachments.check_slot_occupation("ebook") else "❌"
-		Row["Type"] = TextStyler(note.type.replace("_", " ").title()).decorate.italic if note.type else ""
+		Row["Type"] = FastStyler(note.type.replace("_", " ").title()).decorate.italic if note.type else ""
 
 		return Row
 	

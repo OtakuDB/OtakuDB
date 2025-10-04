@@ -5,7 +5,7 @@ from Source.Core.Exceptions import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.Methods.Data import RemoveRecurringSubstrings
-from dublib.CLI.TextStyler import Styles, TextStyler
+from dublib.CLI.TextStyler import FastStyler
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #
@@ -176,7 +176,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 			if self._Note.localized_name:
 				UsedName = self._Note.localized_name
-				AnotherNames.append(self._Note.name)
+				if self._Note.name: AnotherNames.append(self._Note.name)
 
 			else: UsedName = self._Note.name
 
@@ -184,7 +184,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 			#---> Вывод описания записи.
 			#==========================================================================================#
-			if UsedName: print(TextStyler(UsedName).decorate.bold, end = "")
+			if UsedName: print(FastStyler(UsedName).decorate.bold, end = "")
 			if self._Note.emoji_collection_status: print(" " + self._Note.emoji_collection_status, end = "")
 			print(f" {self._Note.emoji_status}", end = "")
 			print("")
@@ -199,14 +199,14 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			#---> Вывод историй.
 			#==========================================================================================#
 			Stories = self._Note.stories
-			if Stories: print(TextStyler("STORIES:").decorate.bold)
+			if Stories: print(FastStyler("STORIES:").decorate.bold)
 
 			for Story in Stories:
 				Localname = Story.localized_name
 				if Localname: Localname = " / " + Localname
 				print(f"    > {Story.id}. {Story.name}{Localname} {Story.emoji_status}")
 
-			print(TextStyler("PROPERTIES:").decorate.bold)
+			print(FastStyler("PROPERTIES:").decorate.bold)
 			if self._Note.type: print("    ✒️  Type: " + self._Note.type.title())
 			if Era: print(f"    🏺 Era: {Era}")
 			if self._Note.estimation: print(f"    ⭐ Estimation: {self._Note.estimation}")
@@ -216,14 +216,14 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			Attachments = self._Note.attachments
 
 			if Attachments.count:
-				print(TextStyler("ATTACHMENTS:").decorate.bold)
-				for Slot in Attachments.slots: print(f"    {Slot}: " + TextStyler(Attachments.get_slot_filename(Slot)).decorate.italic)
+				print(FastStyler("ATTACHMENTS:").decorate.bold)
+				for Slot in Attachments.slots: print(f"    {Slot}: " + FastStyler(Attachments.get_slot_filename(Slot)).decorate.italic)
 
 			#---> Вывод классификаторов записи.
 			#==========================================================================================#
 
 			if self._Note.metainfo:
-				print(TextStyler(f"METAINFO:").decorate.bold)
+				print(FastStyler(f"METAINFO:").decorate.bold)
 				MetaInfo = self._Note.metainfo
 				
 				for Key in MetaInfo.keys():
@@ -253,16 +253,16 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 
 		Name = note.localized_name if note.localized_name else note.name
 		Type = note.type or ""
-		Era = TextStyler(note.era_name).decorate.italic if note.era_name else ""
+		Era = FastStyler(note.era_name).decorate.italic if note.era_name else ""
 		Publication = note.metainfo["publication_date"] if "publication_date" in note.metainfo and note.metainfo["publication_date"] else ""
-		Series = TextStyler(note.metainfo["series"]).decorate.italic if "series" in note.metainfo else ""
+		Series = FastStyler(note.metainfo["series"]).decorate.italic if "series" in note.metainfo else ""
 		Estimation = ""
 
 		if note.estimation:
 			Estimation = "★ " * note.estimation
-			if note.estimation in [5]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Green).text
-			if note.estimation in [3, 4]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Yellow).text
-			if note.estimation in [1, 2]: Estimation = TextStyler(Estimation, text_color = Styles.Colors.Red).text
+			if note.estimation == 5: Estimation = FastStyler(Estimation).colorize.green
+			elif note.estimation in (3, 4): Estimation = FastStyler(Estimation).colorize.yellow
+			elif note.estimation in (1, 2): Estimation = FastStyler(Estimation).colorize.red
 
 		NoteStatus = note.status
 		if not Name: Name = ""
@@ -271,14 +271,16 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 
 		if ";" in Author:
 			AuthorsCount = Author.count(";")
-			Author = Author.split(";")[0] + " " + TextStyler(f"(and {AuthorsCount} other)").decorate.italic
+			Author = Author.split(";")[0] + " " + FastStyler(f"(and {AuthorsCount} other)").decorate.italic
 
-		if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Magenta).text
-		if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Blue).text
-		if NoteStatus == "reading": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow).text
-		if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green).text
-		if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Red).text
-		if NoteStatus == "skipped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Cyan).text
+		match NoteStatus:
+			case "announced": NoteStatus = FastStyler(NoteStatus).colorize.magenta
+			case "planned": NoteStatus = FastStyler(NoteStatus).colorize.blue
+			case "reading": NoteStatus = FastStyler(NoteStatus).colorize.yellow
+			case "completed": NoteStatus = FastStyler(NoteStatus).colorize.green
+			case "dropped": NoteStatus = FastStyler(NoteStatus).colorize.red
+			case "skipped": NoteStatus = FastStyler(NoteStatus).colorize.cyan
+
 		if note.emoji_collection_status: NoteStatus = note.emoji_collection_status + " " + NoteStatus
 		else: NoteStatus = "   " + NoteStatus
 
@@ -323,7 +325,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 				Name = Era["name"]
 				StartYear = Era["start_year"] if Era["start_year"] else "earlier"
 				EndYear = Era["end_year"] if Era["end_year"] else "now"
-				print(TextStyler(str(EraIndex).ljust(8)).decorate.bold, end = "")
+				print(FastStyler(str(EraIndex).ljust(8)).decorate.bold, end = "")
 				print(f": {Name} [{StartYear} – {EndYear}]")
 
 		elif parsed_command.name == "statistics":
@@ -352,16 +354,16 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 
 			if Undefined: Undefined = f", {Undefined} undefined"
 			else: Undefined = ""
-			print(TextStyler("Total books:").decorate.bold, end = "")
+			print(FastStyler("Total books:").decorate.bold, end = "")
 			print(f" {Total} ({Novels} novels, {Stories} stories, {Compilations} compilations){Undefined}")
 
 			CompletedPercentage = round(Completed / Total * 100, 2)
-			print(TextStyler("Fully readed:").decorate.bold, end = "")
+			print(FastStyler("Fully readed:").decorate.bold, end = "")
 			print(f" {Completed} books ({CompletedPercentage}%)")
 
 			CollectedTotal = CollectedBooks + CollectedEbooks
 			CollectedPercentage = round(CollectedTotal / Total * 100, 2)
-			print(TextStyler("Collected:").decorate.bold, end = "")
+			print(FastStyler("Collected:").decorate.bold, end = "")
 			print(f" {CollectedBooks} books, {CollectedEbooks} ebooks ({CollectedPercentage}%)")
 
 		return Status
@@ -705,6 +707,10 @@ class BattleTech_Books_Note(Note):
 
 			else:
 				Status.push_message("Localized name updated.")
+				NotesList: tuple[BattleTech_Books_Note] = self._Table.notes
+
+				if localized_name in tuple(Element.localized_name for Element in NotesList):
+					Status.push_warning("Note with same localized name already exists.")
 
 			self._Data["localized_name"] = localized_name
 			self.save()
@@ -848,7 +854,7 @@ class BattleTech_Books(Module):
 		"""Индексы эпох BattleTech."""
 
 		return self._Table.eras_indexes
-	
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	

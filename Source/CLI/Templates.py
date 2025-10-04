@@ -1,5 +1,5 @@
 from prettytable import PLAIN_COLUMNS, PrettyTable
-from dublib.CLI.TextStyler import TextStyler
+from dublib.CLI.TextStyler import FastStyler
 from pick import pick
 
 #==========================================================================================#
@@ -13,13 +13,13 @@ def Columns(columns: dict[str, list], sort_by: str = "ID", reverse: bool = False
 	TableObject.right_padding_width = 3
 
 	for ColumnName in columns.keys():
-		Buffer = TextStyler(ColumnName).decorate.bold
+		Buffer = FastStyler(ColumnName).decorate.bold
 		TableObject.add_column(Buffer, columns[ColumnName])
 
 	TableObject.align = "l"
 	TableObject.reversesort = reverse
 	TableObject.sort_key = lambda x: 0 if x[0] == "" else x[0]
-	TableObject.sortby = TextStyler(sort_by).decorate.bold
+	TableObject.sortby = FastStyler(sort_by).decorate.bold
 	print(TableObject)
 
 def Pick(title: str, variants: list[int, str], indicator: str = ">", default_index: int = 0):

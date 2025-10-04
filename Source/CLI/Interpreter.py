@@ -4,7 +4,7 @@ from Source.CLI.Templates import Columns
 from Source.Core.Base import Manifest
 
 from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData, Terminalyzer
-from dublib.CLI.TextStyler import TextStyler
+from dublib.CLI.TextStyler import FastStyler
 from dublib.Methods.System import Clear
 from dublib.Exceptions.CLI import *
 from dublib.CLI import readline
@@ -100,8 +100,8 @@ class Interpreter:
 				for Table in self.__Driver.tables:
 					TableManifest: Manifest = self.__Driver.load_manifest(Table).value
 					Content["Table"].append(Table)
-					Content["Type"].append(TextStyler(TableManifest.type).decorate.italic)
-					Content["Moduled"].append(TextStyler("true").colorize.green if TableManifest.modules else TextStyler("false").colorize.red)
+					Content["Type"].append(FastStyler(TableManifest.type).decorate.italic)
+					Content["Moduled"].append(FastStyler("true").colorize.green if TableManifest.modules else FastStyler("false").colorize.red)
 
 				Columns(Content, sort_by = "Table")
 

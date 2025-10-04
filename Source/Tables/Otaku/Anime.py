@@ -4,7 +4,7 @@ from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.CLI.TextStyler import Styles, TextStyler
+from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates import Confirmation
 
 #==========================================================================================#
@@ -212,7 +212,7 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 			#==========================================================================================#
 			
 			if self._Note.binded_notes:
-				print(TextStyler(f"BINDED NOTES:").decorate.bold)
+				print(FastStyler(f"BINDED NOTES:").decorate.bold)
 				try:
 					for Note in self._Note.binded_notes: print(f"    {Note.id}. {Note.name}")
 
@@ -220,17 +220,17 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 
 			#---> Вывод описания записи.
 			#==========================================================================================#
-			if self._Note.name: print(TextStyler(self._Note.name).decorate.bold, end = "")
+			if self._Note.name: print(FastStyler(self._Note.name).decorate.bold, end = "")
 			print(f"{MSG_TotalProgress} {self._Note.emoji_status}")
 			if self._Note.estimation: print(f"⭐ {self._Note.estimation} / {self._Table.max_estimation}")
-			if self._Note.another_names: print(TextStyler(f"ANOTHER NAMES: ").decorate.bold)
-			for AnotherName in self._Note.another_names: print(TextStyler(f"    {AnotherName}").decorate.italic)
+			if self._Note.another_names: print(FastStyler(f"ANOTHER NAMES: ").decorate.bold)
+			for AnotherName in self._Note.another_names: print(FastStyler(f"    {AnotherName}").decorate.italic)
 
 			#---> Вывод классификаторов записи.
 			#==========================================================================================#
 
 			if self._Note.metainfo:
-				print(TextStyler(f"METAINFO:").decorate.bold)
+				print(FastStyler(f"METAINFO:").decorate.bold)
 				MetaInfo = self._Note.metainfo
 				
 				for Key in MetaInfo.keys():
@@ -238,14 +238,14 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 					print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
 
 			if self._Note.tags:
-				print(TextStyler(f"TAGS: ").decorate.bold, end = "")
+				print(FastStyler(f"TAGS: ").decorate.bold, end = "")
 				print(", ".join(self._Note.tags))
 
 			#---> Вывод частей записи.
 			#==========================================================================================#
 
 			if Parts:
-				print(TextStyler(f"PARTS:").decorate.bold)
+				print(FastStyler(f"PARTS:").decorate.bold)
 
 				for PartIndex in range(0, len(Parts)):
 
@@ -263,9 +263,9 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 					#---> Определение цвета части.
 					#==========================================================================================#
 					TextColor = None
-					if Options["colorize"] and "✅" in MSG_PartStatus: TextColor = Styles.Colors.Green
-					if Options["colorize"] and "ℹ️" in MSG_PartStatus: TextColor = Styles.Colors.Cyan
-					if Options["colorize"] and "🚫" in MSG_PartStatus: TextColor = Styles.Colors.Blue
+					if Options["colorize"] and "✅" in MSG_PartStatus: TextColor = Codes.Colors.Green
+					if Options["colorize"] and "ℹ️" in MSG_PartStatus: TextColor = Codes.Colors.Cyan
+					if Options["colorize"] and "🚫" in MSG_PartStatus: TextColor = Codes.Colors.Blue
 
 					if "series" in Parts[PartIndex].keys():
 
@@ -278,15 +278,15 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 
 						#---> Определение цвета части.
 						#==========================================================================================#
-						if Options["colorize"] and "⏳" in MSG_MarkIndicator: TextColor = Styles.Colors.Yellow
+						if Options["colorize"] and "⏳" in MSG_MarkIndicator: TextColor = Codes.Colors.Yellow
 
 						#---> Вывод части.
 						#==========================================================================================#
-						print(TextStyler(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}{MSG_MarkIndicator}", text_color = TextColor))
+						print(FastStyler(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}{MSG_MarkIndicator}", text_color = TextColor))
 						if not Options["hide_single_series"] or Options["hide_single_series"] and MSG_Series and MSG_Series > 1: print(TextStyler(f"    {MSG_Indent}       {MSG_Mark}{MSG_Series} series{MSG_Progress}", text_color = TextColor))
 
 					else:
-						print(TextStyler(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}", text_color = TextColor))
+						print(FastStyler(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}", text_color = TextColor))
 
 					if Options["links"] and "link" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
 					if Options["comments"] and "comment" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       💭 " + Parts[PartIndex]["comment"])
@@ -310,11 +310,11 @@ class Otaku_Anime_ModuleCLI(ModuleCLI):
 
 		Row = dict()
 		NoteStatus = note.status
-		if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Magenta)
-		if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Cyan)
-		if NoteStatus == "watching": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Yellow)
-		if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Green)
-		if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Styles.Colors.Red)
+		if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Codes.Colors.Magenta)
+		if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Codes.Colors.Cyan)
+		if NoteStatus == "watching": NoteStatus = TextStyler(NoteStatus, text_color = Codes.Colors.Yellow)
+		if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Codes.Colors.Green)
+		if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Codes.Colors.Red)
 		Row["ID"] = note.id
 		Row["Status"] = NoteStatus
 		Row["Name"] = note.name
