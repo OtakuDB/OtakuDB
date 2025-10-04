@@ -31,9 +31,6 @@ class Interpreter:
 			Com.base.add_key("type", description = "Type of table.", important = True)
 			CommandsList.append(Com)
 
-			Com = Command("exit", "Exit from OtakuDB.", category = "Driver")
-			CommandsList.append(Com)
-
 			Com = Command("list", "Print list of tables.", category = "Driver")
 			CommandsList.append(Com)
 
@@ -57,14 +54,14 @@ class Interpreter:
 		Com = Command("clear", "Clear console.")
 		CommandsList.append(Com)
 
-		Com = Command("close", "Close current note, module or table.")
-		CommandsList.append(Com)
-
 		Com = Command("exit", "Exit from OtakuDB.")
 		CommandsList.append(Com)
 
 		Com = Command("open", "Open path.")
 		Com.base.add_argument(description = "Path to open.", important = True)
+		CommandsList.append(Com)
+
+		Com = Command("close", "Close current note, module or table.")
 		CommandsList.append(Com)
 
 		return CommandsList

@@ -1697,7 +1697,8 @@ class Note:
 		"""
 
 		Status = ExecutionStatus()
-
+		data = data.strip()
+		
 		try:
 			Rules = self._Table.manifest.metainfo_rules
 			if key in Rules.fields and Rules[key] and data not in Rules[key]: raise MetainfoBlocked()
@@ -1926,7 +1927,7 @@ class Table:
 		#==========================================================================================#
 		self._PostInitMethod()
 
-	def change_note_id(self, note: int, new_id: int, mode: str | None = None) -> ExecutionStatus:
+	def change_note_id(self, note_id: int | str, new_id: int | str, mode: str | None = None) -> ExecutionStatus:
 		"""
 		Изменяет ID записи согласно указанному режиму.
 			note – ID существующей записи;\n
@@ -1937,9 +1938,9 @@ class Table:
 		Status = ExecutionStatus()
 		IsTargetNoteExists = new_id in self._Notes.keys()
 		
-		if note not in self._Notes.keys():
+		if note_id not in self._Notes.keys():
 			Status.push_error(Errors.Table.NO_NOTE)
-			Status["print"] = note
+			Status["print"] = note_id
 			return Status
 
 		if IsTargetNoteExists and not mode:
@@ -1949,11 +1950,19 @@ class Table:
 		if mode not in [None, "i", "o", "s"]:
 			Status.push_error("Table.UNKNOWN_CHID_MODE")
 			return Status
+
+		try:
+			note_id = int(note_id)
+			new_id = int(new_id)
+
+		except ValueError:
+			Status.push_error(Errors.Table.INCORRECT_NOTE_ID)
+			return Status
 		
 		if IsTargetNoteExists:
 			
 			if mode == "i":
-				self.change_note_id(note, 0)
+				self.change_note_id(note_id, 0)
 				NotesID = list(self._Notes.keys())
 				NotesID = sorted(NotesID)
 				Buffer = list(NotesID)
@@ -1975,39 +1984,39 @@ class Table:
 						break
 
 				NotesID = NewBuffer
-				if note in NotesID: NotesID.remove(note)
+				if note_id in NotesID: NotesID.remove(note_id)
 				NotesID.reverse()
 
 				for ID in NotesID: Status = self.change_note_id(ID, ID + 1)
 				if Status.has_errors: return Status
 				Status = self.change_note_id(0, new_id)
 				if Status.has_errors: return Status
-				Status.push_message(f"Note #{note} inserted to position #{new_id}.")
+				Status.push_message(f"Note #{note_id} inserted to position #{new_id}.")
 
 			elif mode == "o":
 				self.delete_note(new_id)
-				self._Notes[note].set_id(new_id)
+				self._Notes[note_id].set_id(new_id)
 				Status.push_message(f"Note #{new_id} overwritten.")
 
 			elif mode == "s":
 				self._Notes[0] = self._Notes[new_id]
 				self._Notes[0].set_id(0)
 
-				self._Notes[new_id] = self._Notes[note]
+				self._Notes[new_id] = self._Notes[note_id]
 				self._Notes[new_id].set_id(new_id)
 				
-				self._Notes[note] = self._Notes[0]
-				self._Notes[note].set_id(note)
+				self._Notes[note_id] = self._Notes[0]
+				self._Notes[note_id].set_id(note_id)
 
 				del self._Notes[0]
 
-				Status.push_message(f"Note #{note} and #{new_id} swiped.")
+				Status.push_message(f"Note #{note_id} and #{new_id} swiped.")
 
 		else:
-			self._Notes[new_id] = self._Notes[note]
+			self._Notes[new_id] = self._Notes[note_id]
 			self._Notes[new_id].set_id(new_id)
-			del self._Notes[note]
-			if note: Status.push_message(f"Note #{note} changed ID to #{new_id}.")
+			del self._Notes[note_id]
+			if note_id: Status.push_message(f"Note #{note_id} changed ID to #{new_id}.")
 
 		return Status
 
