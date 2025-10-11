@@ -6,7 +6,11 @@ import Source.Tables as TablesTypes
 
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 
+from typing import TYPE_CHECKING
 import os
+
+if TYPE_CHECKING:
+	from Source.Core.Session import Session
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -110,7 +114,7 @@ class Modules:
 #==========================================================================================#
 
 class Driver:
-	"""Драйвер таблиц."""
+	"""Драйвер хранилища."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -151,7 +155,7 @@ class Driver:
 		"""Читает сессионный файл."""
 
 		if os.path.exists("session.json"):
-			self.__Session = ReadJSON("session.json")
+			self.__SessionData = ReadJSON("session.json")
 
 		else:
 			self.__SaveSession()
@@ -165,16 +169,19 @@ class Driver:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, mount: bool = False):
+	def __init__(self, session: "Session", mount: bool = False):
 		"""
-		Драйвер таблиц.
-			mount – указывает, следует ли монтировать директорию хранилища.
+		Драйвер хранилища.
+
+		:param session: Сессия.
+		:type session: Session
+		:param mount: Указывает, нужно ли монтировать последний известный каталог.
+		:type mount: bool
 		"""
 		
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
 		self.__StorageDirectory = None
-		self.__Session = {
+		self.__Session = session
+		self.__SessionData = {
 			"storage-directory": "Data"
 		}
 		self.__Tables = Tables()
@@ -294,7 +301,7 @@ class Driver:
 			if ManifestLoadingStatus:
 				TableManifest: Manifest = ManifestLoadingStatus.value
 				TableToOpen = None
-				TableToOpen = self.__Tables[TableManifest.type](self, self.__StorageDirectory, table, module_name)
+				TableToOpen = self.__Tables[TableManifest.type](self.__Session, self.__StorageDirectory, table, module_name)
 				Status: ExecutionStatus = TableToOpen.open()
 				if not Status.has_errors: self.__Objects[ObjectPath] = Status.value
 
@@ -320,7 +327,7 @@ class Driver:
 
 			if ManifestLoadingStatus:
 				TableManifest: Manifest = ManifestLoadingStatus.value
-				TableToOpen: Table = self.__Tables[TableManifest.type](self, self.__StorageDirectory, table_name)
+				TableToOpen: Table = self.__Tables[TableManifest.type](self.__Session, self.__StorageDirectory, table_name)
 				Status += TableToOpen.open()
 				if not Status.has_errors: self.__Objects[table_name] = Status.value
 				
@@ -336,13 +343,13 @@ class Driver:
 		"""
 
 		Status = ExecutionStatus()
-		storage_dir = self.__Session["storage-directory"] if not storage_dir else storage_dir
+		storage_dir = self.__SessionData["storage-directory"] if not storage_dir else storage_dir
 		
 		try:
 			
 			if os.path.exists(storage_dir): 
 				self.__StorageDirectory = storage_dir
-				self.__Session["storage-directory"] = storage_dir
+				self.__SessionData["storage-directory"] = storage_dir
 				self.__SaveSession()
 				Status.print_messages(f"Mounted: \"{storage_dir}\".")
 

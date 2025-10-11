@@ -1,15 +1,21 @@
-from Source.Core.Session import Session, StorageLevels
+from .Templates import Columns
+
+from Source.Core.Session.Structs import StorageLevels
+from Source.Core.Base.Structs import Interfaces
 from Source.Core.Bus import ExecutionStatus
-from Source.CLI.Templates import Columns
 from Source.Core.Base import Manifest
 
-from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData, Terminalyzer
+from dublib.CLI.Terminalyzer import Command, ParsedCommandData, Terminalyzer
 from dublib.CLI.TextStyler import FastStyler
 from dublib.Methods.System import Clear
 from dublib.Exceptions.CLI import *
 from dublib.CLI import readline
 
+from typing import TYPE_CHECKING
 import shlex
+
+if TYPE_CHECKING:
+	from Source.Core.Session import Session
 
 class Interpreter:
 	"""Обработчик интерфейса командной строки."""
@@ -23,7 +29,7 @@ class Interpreter:
 		"""Список дескрипторов команд."""
 
 		CommandsList = list()
-
+		
 		if self.__Session.storage_level is StorageLevels.DRIVER:
 
 			Com = Command("create", "Create new table.", category = "Driver")
@@ -39,15 +45,15 @@ class Interpreter:
 			CommandsList.append(Com)
 
 		elif self.__Session.storage_level is StorageLevels.TABLE:
-			CommandsList = self.__Session.table.cli(self.__Session.driver, self.__Session.table).commands
+			CommandsList = self.__Session.table.get_interface(Interfaces.CLI).commands
 			for CurrentCommand in CommandsList: CurrentCommand.set_category("Table")
 
 		elif self.__Session.storage_level is StorageLevels.MODULE:
-			CommandsList = self.__Session.module.cli(self.__Session.driver, self.__Session.table, self.__Session.module).commands
+			CommandsList = self.__Session.module.get_interface(Interfaces.CLI).commands
 			for CurrentCommand in CommandsList: CurrentCommand.set_category("Module")
 
 		elif self.__Session.storage_level is StorageLevels.NOTE:
-			CommandsList = self.__Session.note.cli(self.__Session.driver, self.__Session.table, self.__Session.note).commands
+			CommandsList = self.__Session.note.get_interface(Interfaces.CLI).commands
 			for CurrentCommand in CommandsList:
 				if not CurrentCommand.category: CurrentCommand.set_category("Note")
 
@@ -128,9 +134,9 @@ class Interpreter:
 
 			match self.__Session.storage_level:
 				case StorageLevels.DRIVER: Status += self.__ExecuteDriverCommands(parsed_command)
-				case StorageLevels.TABLE: Status += self.__Session.table.cli(self.__Session.driver, self.__Session.table).execute(parsed_command)
-				case StorageLevels.MODULE: Status += self.__Session.module.cli(self.__Session.driver, self.__Session.table, self.__Session.module).execute(parsed_command)
-				case StorageLevels.NOTE: Status += self.__Session.note.cli(self.__Session.driver, self.__Session.module if self.__Session.module else self.__Session.table, self.__Session.note).execute(parsed_command)
+				case StorageLevels.TABLE: Status += self.__Session.table.get_interface(Interfaces.CLI).execute(parsed_command)
+				case StorageLevels.MODULE: Status += self.__Session.module.get_interface(Interfaces.CLI).execute(parsed_command)
+				case StorageLevels.NOTE: Status += self.__Session.note.get_interface(Interfaces.CLI).execute(parsed_command)
 
 		if Status.close: self.__Session.close()
 		if Status.create_table: Status += self.__Session.driver.create_table(Status.create_table.name, Status.create_table.type)
@@ -171,7 +177,7 @@ class Interpreter:
 		except UnknownFlag: Status.push_error("unknown_flag")
 		except UnknownKey: Status.push_error("unknown_key")
 		except MutuallyExclusiveParameters: Status.push_error("mutually_exclusive_parameters")
-		except Exception as ExceptionData:
+		except ZeroDivisionError as ExceptionData:
 			Type = type(ExceptionData).__qualname__
 			Status.push_error(f"{Type}: {ExceptionData}")
 
@@ -181,12 +187,17 @@ class Interpreter:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self):
-		"""Обработчик интерфейса командной строки."""
+	def __init__(self, session: "Session"):
+		"""
+		Обработчик интерфейса командной строки.
+
+		:param session: Сессия.
+		:type session: Session
+		"""
 
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
-		self.__Session = Session()
+		self.__Session = session
 		self.__Driver = self.__Session.driver
 
 		if self.__Session.driver.is_mounted: print(f"Mounted: \"{self.__Driver.storage_directory}\".")

@@ -1,4 +1,4 @@
-from Source.Core.Base import Module, ModuleCLI, Note, NoteCLI
+from Source.Core.Base import Module, Note
 from Source.Core.Bus import ExecutionStatus
 from Source.Core.Messages import Errors
 from Source.Core.Base import Manifest
@@ -8,6 +8,8 @@ from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 
 from os import PathLike
+
+from Source.Interfaces.CLI.Base import *
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #

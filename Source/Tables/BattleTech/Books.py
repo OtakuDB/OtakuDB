@@ -1,4 +1,5 @@
-from Source.Core.Base import Manifest, Module, ModuleCLI, Note, NoteCLI
+from Source.Core.Base.Structs import Interfaces, SupportedInterfaces
+from Source.Core.Base import Manifest, Module, Note
 from Source.Core.Bus import ExecutionStatus
 from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
@@ -8,6 +9,8 @@ from dublib.Methods.Data import RemoveRecurringSubstrings
 from dublib.CLI.TextStyler import FastStyler
 
 from os import PathLike
+
+from Source.Interfaces.CLI.Base import *
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #
@@ -369,7 +372,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 			print(f" {CollectedBooks} books, {CollectedEbooks} ebooks ({CollectedPercentage}%)")
 
 		return Status
-	
+
 #==========================================================================================#
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
 #==========================================================================================#
@@ -882,4 +885,13 @@ class BattleTech_Books(Module):
 
 		self._Table: BattleTech_Books
 		self._Note = BattleTech_Books_Note
-		self._CLI = BattleTech_Books_ModuleCLI
+
+	def _SpecifyInterfaces(self) -> SupportedInterfaces:
+		"""
+		Определяет объекты с реализацией интерфейсов.
+
+		:return: Контейнер поддерживаемых интерфейсов.
+		:rtype: SupportedInterfaces
+		"""
+
+		self._Interfaces[Interfaces.CLI] = BattleTech_Books_ModuleCLI

@@ -1,3 +1,5 @@
-from Source.CLI.Interpreter import Interpreter
+from Source.Core.Session.Manager import SessionsManager
 
-Interpreter().run()
+Manager = SessionsManager()
+Session = Manager.create_session()
+Manager.run_interface(Session)

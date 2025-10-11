@@ -1,3 +1,2 @@
-prettytable
-dublib==0.23.3
+dublib==0.23.4
 pick

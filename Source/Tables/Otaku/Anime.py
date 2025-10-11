@@ -1,4 +1,4 @@
-from Source.Core.Base import Note, NoteCLI, Module, ModuleCLI 
+from Source.Core.Base import Note, Module 
 from Source.Core.Bus import ExecutionStatus
 from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
@@ -6,6 +6,8 @@ from Source.Core.Exceptions import *
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates import Confirmation
+
+from Source.Interfaces.CLI.Base import *
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #

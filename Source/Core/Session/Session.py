@@ -1,35 +1,9 @@
+from .Structs import PathObjects, StorageLevels
+
 from Source.Core.Base import Table, Module, Note
 from Source.Core.Bus import ExecutionStatus
 from Source.Core.Messages import Errors
 from Source.Core.Driver import Driver
-
-from dataclasses import dataclass
-
-import enum
-
-#==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
-#==========================================================================================#
-
-class StorageLevels(enum.Enum):
-	"""Уровни объектов хранилища."""
-
-	DRIVER = None
-	TABLE = "table"
-	MODULE = "module"
-	NOTE = "note"
-
-@dataclass
-class PathObjects:
-	"""Контейнер объектов в пути."""
-
-	table: str = None
-	module: str = None
-	note: int = None
-
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
 
 class Session:
 	"""Сессия работы с хранилищем таблиц."""
@@ -117,7 +91,7 @@ class Session:
 
 		#---> Генерация динамичкских атрибутов.
 		#==========================================================================================#
-		self.__Driver = Driver(mount = True)
+		self.__Driver = Driver(self, mount = True)
 		self.__Level = StorageLevels.DRIVER
 
 		self.__Table: Table = None
@@ -214,3 +188,4 @@ class Session:
 		else: Status.push_error(Errors.UNKNOWN)
 
 		return Status
+	
