@@ -512,6 +512,18 @@ class BattleTech_Books_Note(Note):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
+	def _GetSlotsInfo(self) -> dict[str, str]:
+		"""
+		Возвращает словарь описаний слотов вложений.
+
+		:return: Словарь описаний данных слотов вложений. Ключ – название слота, значение – описание.
+		:rtype: dict[str, str]
+		"""
+
+		return {
+			"ebook": "Ebook file. Automatically update collection status."
+		}
+
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации класса."""
 

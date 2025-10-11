@@ -1177,6 +1177,9 @@ class NoteCLI:
 		Com.base.add_argument(description = "New name.", important = True)
 		CommandsList.append(Com)
 
+		Com = Command("slots", "Print slots info.")
+		CommandsList.append(Com)
+
 		Com = Command("unattach", "Unattach files from note.")
 		ComPos = Com.create_position("FILE", important = True)
 		ComPos.add_argument(description = "Attachment name.")
@@ -1306,6 +1309,23 @@ class NoteCLI:
 
 		elif parsed_command.name == "rename":
 			Status = self._Note.rename(parsed_command.arguments[0])
+
+		elif parsed_command.name == "slots":
+			Info = self._Note.slots_info
+
+			if Info:
+				TableData = {
+					"Slot": list(),
+					"Description": list()
+				}
+
+				for Slot in Info.keys():
+					TableData["Slot"].append(Slot)
+					TableData["Description"].append(Info[Slot])
+
+				Columns(TableData, sort_by = "Slot")
+
+			else: print("No slots info.")
 
 		elif parsed_command.name == "unattach":
 			Slot = parsed_command.get_key_value("slot")
@@ -1760,6 +1780,12 @@ class Note:
 
 		return self._Data["name"]
 
+	@property
+	def slots_info(self) -> dict[str, str]:
+		"""Словарь описаний данных слотов вложений."""
+
+		return self._GetSlotsInfo()
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ СВОЙСТВА <<<<< #
 	#==========================================================================================#
@@ -1800,6 +1826,16 @@ class Note:
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
+
+	def _GetSlotsInfo(self) -> dict[str, str]:
+		"""
+		Возвращает словарь описаний слотов вложений.
+
+		:return: Словарь описаний данных слотов вложений. Ключ – название слота, значение – описание.
+		:rtype: dict[str, str]
+		"""
+
+		return dict()
 
 	def _PostBindMethod(self):
 		"""Метод, выполняющийся после изменения привязанных записей."""
