@@ -1579,7 +1579,9 @@ class TableCLI(BaseTableCLI):
 		CommandsList = list()
 
 		Com = Command("init", "Initialize module.")
-		Com.base.add_argument(description = "Module name.", important = True)
+		ComPos = Com.create_position("MODULE", "Module name.", important = True)
+		ComPos.add_argument()
+		Com.base.add_flag("o", "Open initialized module.")
 		CommandsList.append(Com)
 
 		Com = Command("list", "List of modules.")
@@ -1617,7 +1619,10 @@ class TableCLI(BaseTableCLI):
 				for Module in Modules:
 					if Module.name == parsed_command.arguments[0]: Type = Module.type
 
-				if Type: Status.emit_initialize_module(Type)
+				if Type:
+					Status.emit_initialize_module(Type)
+					if parsed_command.check_flag("o"): Status.emit_navigate(parsed_command.arguments[0])
+
 				else: Status.push_error(Errors.Driver.NO_MODULE_TYPE)
 
 			else: Status.push_error(Errors.Driver.MODULES_NOT_SUPPORTED)

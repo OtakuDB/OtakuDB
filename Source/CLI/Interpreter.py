@@ -132,10 +132,10 @@ class Interpreter:
 				case StorageLevels.MODULE: Status += self.__Session.module.cli(self.__Session.driver, self.__Session.table, self.__Session.module).execute(parsed_command)
 				case StorageLevels.NOTE: Status += self.__Session.note.cli(self.__Session.driver, self.__Session.module if self.__Session.module else self.__Session.table, self.__Session.note).execute(parsed_command)
 
-		if Status.navigate: self.__Session.open_objects(Status.navigate)
 		if Status.close: self.__Session.close()
 		if Status.create_table: Status += self.__Session.driver.create_table(Status.create_table.name, Status.create_table.type)
 		if Status.initialize_module: Status += self.__Session.driver.initialize_module(Status.initialize_module, self.__Session.table)
+		if Status.navigate: Status += self.__Session.open_objects(Status.navigate)
 
 		Status.print_messages()
 

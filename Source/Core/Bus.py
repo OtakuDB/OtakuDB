@@ -97,7 +97,7 @@ class ExecutionStatus(ES):
 		"""
 
 		super().merge(status, overwrite)
-		self.emit_close(status.close)
+		if status.close != None: self.emit_close(status.close)
 		if status.create_table: self.emit_create_table(status.create_table.name, status.create_table.type)
-		self.emit_initialize_module(status.initialize_module)
-		self.emit_navigate(status.navigate)
+		if status.initialize_module: self.emit_initialize_module(status.initialize_module)
+		if status.navigate: self.emit_navigate(status.navigate)
