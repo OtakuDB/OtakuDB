@@ -11,6 +11,7 @@ class Driver(enum.Enum):
 	TABLE_ALREADY_EXISTS = "Table already exists."
 	MISSING_OBJECT = "Missing object."
 	OBJECT_OVERWRITING_DENIED = "Object overwtiting denied."
+	STORAGE_NOT_MOUNTED = "Storage not mounted."
 
 class Table(enum.Enum):
 	NO_NOTE = "No note."

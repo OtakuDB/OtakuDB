@@ -9,11 +9,13 @@ from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates import Confirmation
 from dublib.Methods.System import Clear
 
+from typing import Any, Literal, TYPE_CHECKING
+from os import PathLike
 import shutil
 import os
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING: from Source.Core.Driver import Driver
+if TYPE_CHECKING:
+	from Source.Core.Driver import Driver
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -21,6 +23,10 @@ if TYPE_CHECKING: from Source.Core.Driver import Driver
 
 class ModuleData:
 	"""Данные модуля."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
 
 	@property
 	def is_active(self) -> bool:
@@ -32,27 +38,33 @@ class ModuleData:
 	def name(self) -> str:
 		"""Название модуля."""
 
-		return self.__Data["name"]
+		return self.__Name
 
 	@property
 	def type(self) -> str:
 		"""Тип модуля."""
 
-		return self.__Data["type"]
+		return self.__Type
 
-	def __init__(self, data: dict, manifest: "Manifest"):
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, manifest: "Manifest", name: str, type: str):
 		"""
 		Данные модуля.
-			data – словарь описания;\n
-			manifest – манифест.
+
+		:param manifest: Манифест таблицы.
+		:type manifest: Manifest
+		:param name: Название модуля.
+		:type name: str
+		:param type: Тип модуля.
+		:type type: str
 		"""
 
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
-		self.__Data = data
 		self.__Manifest = manifest
-
-		if "requirements" in self.__Data.keys(): self.__Requirements = self.__Data["requirements"]
+		self.__Name = name
+		self.__Type = type
 
 class Attachments:
 	"""Вложения."""
@@ -526,10 +538,10 @@ class ColumnsOptions:
 	#==========================================================================================#
 
 	@property
-	def important_columns(self) -> list[str]:
+	def important_columns(self) -> tuple[str]:
 		"""Список обязательных колонок."""
 
-		return ["ID", "Name"]
+		return ("ID", "Name")
 
 	@property
 	def is_available(self) -> bool:
@@ -544,48 +556,86 @@ class ColumnsOptions:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, manifest: "Manifest", data: dict):
+	def __init__(self, manifest: "Manifest"):
 		"""
 		Опции отображения колонок таблицы.
-			manifest – манифест таблицы;\n
-			data – словарь опций.
+
+		:param manifest: Манифест таблицы.
+		:type manifest: Manifest
 		"""
 
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
 		self.__Manifest = manifest
-		self.__Data: dict[str, bool] = data
 
+		self.__Data: dict[str, bool] = dict()
 		for Column in self.important_columns: self.__Data[Column] = True
 
 	def __getitem__(self, column: str) -> bool | None:
 		"""
 		Возвращает статус отображения колонки.
-			column – название колонки в любом регистре.
+
+		:param column: Название колонки в любом регистре.
+		:type column: Manifest
 		"""
 
-		IsEnabled = None
-		if column in self.__Data.keys(): IsEnabled = self.__Data[column]
-
-		return IsEnabled
+		return self.__Data.get(column)
 
 	def check_column(self, column: str) -> bool:
 		"""
 		Проверяет, описано ли правило для колонки.
-			column – название колонки в любом регистре.
+
+		:param column: Название колонки. Проверка нечувствительна к регистру.
+		:type column: str
+		:return: Состояние присутствия колонки в списке.
+		:rtype: bool
 		"""
 
-		return column in self.__Data.keys()
+		return column in self.__Data
 	
 	def edit_column_status(self, column: str, status: bool):
 		"""
-		Проверяет, описано ли правило для колонки.
-			column – название колонки в любом регистре;\n
-			status – статус опции.
+		Задаёт статус отображения для колонки.
+
+		:param column: Название колонки.
+		:type column: str
+		:param status: Статус отображения.
+		:type status: bool
+		:raises KeyError: Выбрасывается при отсутствии колонки.
 		"""
 
 		if column not in self.__Data.keys(): raise KeyError(column)
 		self.__Data[column] = status
+		self.__Manifest.save()
+
+	def parse(self, data: dict):
+		"""
+		Парсит данные из переданного словаря.
+
+		:param data: Словарь данных.
+		:type data: dict
+		"""
+
+		self.__Data = data
+		for Column in self.important_columns: self.__Data[Column] = True
+
+	def set_columns(self, columns: tuple[str]):
+		"""
+		Задаёт последовательность колонок.
+
+		:param tuple: Последовательность колонок.
+		:type tuple: tuple[str]
+		"""
+
+		Buffer: dict[str, bool] = dict()
+
+		for Column in columns:
+			Value = self.__getitem__(Column)
+			if Value == None: Value = True
+			Buffer[Column] = True
+
+		for Column in self.important_columns:
+			if Column not in Buffer: Buffer[Column] = True
+
+		self.__Data = Buffer
 		self.__Manifest.save()
 
 	def to_dict(self) -> dict:
@@ -595,6 +645,10 @@ class ColumnsOptions:
 
 class CommonOptions:
 	"""Общие опции таблицы."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
 
 	@property
 	def is_attachments_enabled(self) -> bool:
@@ -608,66 +662,171 @@ class CommonOptions:
 
 		return self.__Data["recycle_id"]
 
-	def __init__(self, data: dict | None):
-		"""
-		Общие опции таблицы.
-			data – словарь опций.
-		"""
+	@property
+	def slots(self) -> dict[str, str | None]:
+		"""Определения слотов, предназначенных для особого взаимодействия."""
 
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
-		self.__Data = data or {
+		return self.__Data["slots"].copy()
+
+	#==========================================================================================#
+	# >>>>> МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, manifest: "Manifest"):
+		"""Общие опции таблицы."""
+
+		self.__Manifest = manifest
+
+		self.__Data = {
 			"recycle_id": True,
-			"attachments": False
+			"attachments": False,
+			"slots": {}
 		}
 
-class CustomOptions:
-	"""Дополнительные опции."""
-
-	def __init__(self, data: dict | None):
+	def switch_recycle_id(self, status: bool):
 		"""
-		Дополнительные опции.
-			data – словарь опций.
-		"""
+		Переключает состояние утилизации свободных ID.
 
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
-		self.__Data = data or dict()
-
-	def __getitem__(self, key: str) -> any:
-		"""
-		Возвращает опцию.
-			key – ключ опции.
+		:param status: Состояние утилизации свободных ID.
+		:type status: bool
 		"""
 
-		return self.__Data[key]
+		self.__Data["recycle_id"] = status
+		self.__Manifest.save()
+
+	def enable_attachments(self, status: bool):
+		"""
+		Переключает использование вложений.
+
+		:param status: Состояние использования вложений.
+		:type status: bool
+		"""
+
+		self.__Data["attachments"] = status
+		self.__Manifest.save()
+
+	def add_slot(self, slot: str, description: str | None):
+		"""
+		Резервирует слот вложений для особого взаимодействия.
+
+		:param slot: Название слота.
+		:type slot: str
+		:param description: Описание слота.
+		:type description: str | None
+		"""
+
+		self.__Data["slots"][slot] = description
+		self.__Manifest.save()
+
+	def parse(self, data: dict):
+		"""
+		Парсит данные из переданного словаря.
+
+		:param data: Словарь данных.
+		:type data: dict
+		"""
+
+		self.__Data = self.__Data | data
+
+	def remove_slot(self, slot: str):
+		"""
+		Удаляет слот вложений.
+
+		:param slot: Название слота.
+		:type slot: str
+		"""
+
+		try: 
+			del self.__Data["slots"][slot]
+			self.__Manifest.save()
+		except KeyError: pass
+
+	def to_dict(self) -> dict[str, bool | dict]:
+		"""
+		Возвращает словарное представление общих опций.
+
+		:return: Словарное представление общих опций.
+		:rtype: dict[str, bool | dict]
+		"""
+
+		return self.__Data.copy()
 
 class MetainfoRules:
 	"""Правила метаданных."""
 
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
 	@property
-	def fields(self) -> list[str]:
+	def fields(self) -> tuple[str]:
 		"""Список названий полей с правилами."""
 
-		return self.__Data.keys()
+		return tuple(self.__Data.keys())
+	
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
 
-	def __init__(self, data: dict | None):
+	def __init__(self, manifest: "Manifest"):
 		"""
-		Общие опции таблицы.
-			data – словарь опций.
+		Правила метаданных.
+
+		:param manifest: Манифест таблицы.
+		:type manifest: Manifest
 		"""
 
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
-		self.__Data = data or dict()
+		self.__Manifest = manifest
 
-	def __getitem__(self, key: str) -> any:
+		self.__Data = dict()
+
+	def __getitem__(self, key: str) -> list | tuple | None:
 		"""
 		Возвращает правило.
-			key – ключ правила.
+
+		:param key: Ключ правила.
+		:type key: str
+		:return: Правило.
+		:rtype: Any
 		"""
 
 		return self.__Data[key]
+
+	def parse(self, data: dict):
+		"""
+		Парсит данные из переданного словаря.
+
+		:param data: Словарь данных.
+		:type data: dict
+		"""
+
+		self.__Data = self.__Data | data
+
+	def remove_rule(self, name: str):
+		"""
+		Удаляет правило проверки поля метаданных.
+
+		:param name: Название поля метаданных.
+		:type name: str
+		"""
+
+		try: 
+			del self.__Data[name]
+			self.__Manifest.save()
+		except KeyError: pass
+
+	def set_rule(self, name: str, rule: list | tuple | None):
+		"""
+		Добавляет правило проверки поля метаданных.
+
+		:param name: Название поля метаданных.
+		:type name: str
+		:param rule: Правило проверки. `None` – любое значение, `list | tuple` – одно и зуказанных значений. 
+		:type rule: list | tuple | None
+		"""
+
+		self.__Data[name] = rule
+		self.__Manifest.save()
 
 class ViewerOptions:
 	"""Опции просмоторщика записей."""
@@ -704,29 +863,70 @@ class ViewerOptions:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, manifest: "Manifest", data: dict | None):
+	def __init__(self, manifest: "Manifest"):
 		"""
 		Опции просмоторщика записей.
-			manifest – манифест таблицы;\n
-			data – словарь опций.
+
+		:param manifest: Манифест таблицы.
+		:type manifest: Manifest
 		"""
 
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
-		self.__Data = data or {
+		self.__Manifest = manifest
+
+		self.__Data = {
 			"autoclear": True,
+			"colorize": True,
 			"columns": {}
 		}
 
-		self.__Columns = ColumnsOptions(manifest, self.__Data["columns"])
+		self.__Columns = ColumnsOptions(manifest)
+		self.__Columns.parse(self.__Data["columns"])
 
-	def __getitem__(self, key: str) -> any:
+	def enable_autoclear(self, status: bool):
 		"""
-		Возвращает опцию.
-			key – ключ опции.
+		Переключает режим автоочистки консоли перед отображением объектов.
+
+		:param status: Состояние автоочистки.
+		:type status: bool
 		"""
 
-		return self.__Data[key]
+		self.__Data["autoclear"] = status
+		self.__Manifest.save()
+
+	def enable_colorize(self, status: bool):
+		"""
+		Переключает режим раскраски вывода.
+
+		:param status: Состояние раскраски вывода.
+		:type status: bool
+		"""
+
+		self.__Data["colorize"] = status
+		self.__Manifest.save()
+
+	def parse(self, data: dict):
+		"""
+		Парсит данные из переданного словаря.
+
+		:param data: Словарь данных.
+		:type data: dict
+		"""
+
+		self.__Data = self.__Data | data
+		self.__Columns.parse(self.__Data["columns"])
+
+	def to_dict(self) -> dict:
+		"""
+		Возвращает словарное представление опций.
+
+		:return: Словарное представление опций.
+		:rtype: dict
+		"""
+
+		Data = self.__Data.copy()
+		Data["columns"] = self.__Columns.to_dict()
+
+		return Data
 
 class Manifest:
 	"""Манифест таблицы."""
@@ -742,19 +942,19 @@ class Manifest:
 		return self.__Common
 
 	@property
-	def custom(self) -> CustomOptions | None:
+	def custom(self) -> dict:
 		"""Дополнительные опции."""
 
-		return self.__Custom
+		return self.__Custom.copy()
 
 	@property
-	def metainfo_rules(self) -> MetainfoRules | None:
+	def metainfo_rules(self) -> MetainfoRules:
 		"""Опции метаданных."""
 
 		return self.__MetainfoRules
 
 	@property
-	def modules(self) -> list[ModuleData]:
+	def modules(self) -> tuple[ModuleData]:
 		"""Список модулей таблицы."""
 
 		return self.__Modules
@@ -769,10 +969,10 @@ class Manifest:
 	def type(self) -> str:
 		"""Тип таблицы."""
 
-		return self.__Data["type"]
+		return self.__Type
 	
 	@property
-	def viewer(self) -> ViewerOptions | None:
+	def viewer(self) -> ViewerOptions:
 		"""Опции просмоторщика записей."""
 
 		return self.__ViewerOptions
@@ -781,13 +981,20 @@ class Manifest:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __ParseModules(self) -> list[ModuleData]:
-		"""Парсит данные модулей."""
+	def __ParseModules(self, modules_data: list[dict] | None) -> list[ModuleData]:
+		"""
+		Парсит данные модулей в структуры.
+
+		:param modules_data: Данные модулей.
+		:type modules_data: list[dict]
+		:return: Структуры данных модулей.
+		:rtype: list[ModuleData]
+		"""
+
+		if not modules_data: return tuple()
 
 		Modules = list()
-
-		if "modules" in self.__Data.keys():
-			for Module in self.__Data["modules"]: Modules.append(ModuleData(Module, self))
+		for Module in modules_data: Modules.append(ModuleData(self, Module["name"], Module["type"]))
 
 		return Modules
 
@@ -795,38 +1002,134 @@ class Manifest:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, path: str, data: dict):
+	def __init__(self, path: str):
 		"""
 		Манифест таблицы.
-			path – путь к директории таблицы;\n
-			data – словарь манифеста.
+
+		:param path: Путь к директории таблицы.
+		:type path: str
 		"""
 
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
 		self.__Path = path
-		self.__Data = data
 
-		self.__Modules = self.__ParseModules()
-		self.__Common = CommonOptions(data["common"] if "common" in data.keys() else None)
-		self.__MetainfoRules = MetainfoRules(data["metainfo_rules"] if "metainfo_rules" in data.keys() else None)
-		self.__ViewerOptions = ViewerOptions(self, data["viewer"] if "viewer" in data.keys() else None) 
-		self.__Custom = CustomOptions(data["custom"] if "custom" in data.keys() else None)
+		self.__Object = None
+		self.__Type = None
+		self.__Common = CommonOptions(self)
+		self.__MetainfoRules = MetainfoRules(self)
+		self.__ViewerOptions = ViewerOptions(self) 
+		self.__Custom = dict()
+		self.__Modules = list()
+
+		self.__SuppressSaving = False
+
+	def add_module(self, module: ModuleData):
+		"""
+		Добавялет данные модуля в манифест.
+
+		:param module: Данные модуля.
+		:type module: ModuleData
+		"""
+
+		self.__Modules.append(module)
+		self.save()
+
+	def load(self):
+		"""
+		Загружает данные манифеста.
+		
+		:return: Манифест.
+		:rtype: Manifest
+		"""
+
+		Data = ReadJSON(f"{self.__Path}/manifest.json")
+		self.__Object = Data["object"]
+		self.__Type = Data["type"]
+		self.__Common.parse(Data.get("common") or dict())
+		self.__MetainfoRules.parse(Data.get("metainfo_rules") or dict())
+		self.__ViewerOptions.parse(Data.get("viewer") or dict())
+		self.__Custom = Data.get("custom") or dict()
+		self.__Modules = self.__ParseModules(Data.get("modules") or dict())
+
+		return self
 
 	def save(self) -> ExecutionStatus:
-		"""Сохраняет манифест."""
+		"""
+		Сохраняет манифест.
+
+		:return: Статус выполнения.
+		:rtype: ExecutionStatus
+		"""
 
 		Status = ExecutionStatus()
 
 		try:
-			ModulesBuffer = list()
-			for Module in self.__Modules: ModulesBuffer.append({"name": Module.name, "type": Module.type, "is_active": Module.is_active})
-			self.__Data["modules"] = ModulesBuffer
-			WriteJSON(f"{self.__Path}/manifest.json", self.__Data)
+			if not self.__SuppressSaving: WriteJSON(f"{self.__Path}/manifest.json", self.to_dict())
 			
 		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
+
+	def suppress_saving(self, status: bool):
+		"""
+		Переключает подавление сохранения.
+
+		:param status: Статус подавление сохранения.
+		:type status: bool
+		"""
+
+		self.__SuppressSaving = status
+
+	def to_dict(self) -> dict[str, Any]:
+		"""
+		Возвращает словарное представление манифеста.
+
+		:return: Словарное представление манифеста.
+		:rtype: dict[str, Any]
+		"""
+
+		Data = {
+			"object": self.__Object,
+			"type": self.__Type,
+			"common": self.__Common.to_dict(),
+			"metainfo_rules": {},
+			"viewer": {
+				"autoclear": False,
+				"colorize": True,
+				"columns": {}
+			},
+			"custom": self.__Custom.copy()
+		}
+
+		ModulesBuffer = list()
+		for Module in self.__Modules: ModulesBuffer.append({"name": Module.name, "type": Module.type, "is_active": Module.is_active})
+		if ModulesBuffer: Data["modules"] = tuple(ModulesBuffer)
+
+		return Data
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ЗАПОЛНЕНИЯ МАНИФЕСТА <<<<< #
+	#==========================================================================================#
+
+	def set_object(self, object: Literal["module", "table"]):
+		"""
+		Задаёт тип объекта.
+
+		:param type: Тип описываемого манифестом объекта.
+		:type type: Literal["module", "table"]
+		"""
+
+		if object not in ("module", "table"): raise ValueError(f"Incorrect object: \"{object}\".")
+		self.__Object = object
+
+	def set_type(self, type: str):
+		"""
+		Задаёт название типа таблицы.
+
+		:param type: Название типа таблицы. Для модуля используется шаблон `{TABLE}:{MODULE}`.
+		:type type: str
+		"""
+
+		self.__Type = type
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #
@@ -1145,18 +1448,14 @@ class BaseTableCLI:
 
 		elif parsed_command.name == "delete":
 			Response = parsed_command.check_flag("y")
-			if not Response: Response = Confirmation("Are you sure to delete \"" + self._BaseTable.name + "\" table?")
+			if not Response: Response = Confirmation(f"Are you sure to delete \"{self._BaseTable.name}\" table?")
 			
 			if Response:
 				Status = self._BaseTable.delete()
 
-				if not Status.has_errors and self._Module:
-					Status.push_message("Module deleted.")
-					Status["interpreter"] = "table"
-
-				else:
-					Status.push_message("Table deleted.")
-					Status["interpreter"] = "driver"
+				if not Status.has_errors:
+					Status.push_message("Module deleted." if self._Module else "Table deleted.")
+					Status.emit_close()
 
 		elif parsed_command.name == "search":
 			Status = self._View(parsed_command, parsed_command.arguments[0])
@@ -1172,7 +1471,7 @@ class BaseTableCLI:
 				parsed_command – описательная структура команды;\n
 				search – поисковый запрос.
 			"""
-
+			
 			Status = ExecutionStatus()
 
 			try:
@@ -1207,7 +1506,7 @@ class BaseTableCLI:
 
 				else: Status.push_message("Notes not found.")
 
-			except ZeroDivisionError: Status.push_error(Errors.UNKNOWN)
+			except: Status.push_error(Errors.UNKNOWN)
 
 			return Status
 
@@ -1335,7 +1634,7 @@ class TableCLI(BaseTableCLI):
 
 				for Module in Modules:
 					ModuleStatus = TextStyler(text_color = Codes.Colors.Green).get_styled_text("active") 
-					if not Module.is_active: TextStyler(text_color = Codes.Colors.Red).get_styled_text("inactive") 
+					if not Module.is_active: ModuleStatus = TextStyler(text_color = Codes.Colors.Red).get_styled_text("inactive") 
 					TableData["Module"].append(Module.name)
 					TableData["Type"].append(FastStyler(Module.type).decorate.italic)
 					TableData["Status"].append(ModuleStatus)
@@ -1358,8 +1657,8 @@ class TableCLI(BaseTableCLI):
 
 		Status = ExecutionStatus()
 
-		if self._Table.manifest.modules: Status += self._ExecuteModuledTableCommands(parsed_command)
-		elif parsed_command.name in self.base_commands_names: Status += self._ExecuteBaseCommands(parsed_command)
+		if parsed_command.name in self.base_commands_names: Status += self._ExecuteBaseCommands(parsed_command)
+		elif self._Table.manifest.modules: Status += self._ExecuteModuledTableCommands(parsed_command)
 		else: Status += self._ExecuteCustomCommands(parsed_command)
 
 		return Status
@@ -1757,21 +2056,6 @@ class Table:
 	#==========================================================================================#
 
 	TYPE: str = "table"
-	MANIFEST: dict = {
-		"object": "table",
-		"type": TYPE,
-		"common": {
-			"recycle_id": True,
-			"attachments": False
-		},
-		"metainfo_rules": {},
-		"viewer": {
-			"autoclear": False,
-			"colorize": True,
-			"columns": {}
-		},
-		"custom": {}
-	}
 
 	#==========================================================================================#
 	# >>>>> ОБЯЗАТЕЛЬНЫЕ СВОЙСТВА <<<<< #
@@ -1882,6 +2166,22 @@ class Table:
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
+	def _GetEmptyManifest(self, path: PathLike) -> Manifest:
+		"""
+		Возвращает пустой манифест. Переопределите для настройки.
+
+		:param path: Путь к каталогу таблицы.
+		:type path: PathLike
+		:return: Пустой манифест.
+		:rtype: Manifest
+		"""
+
+		Buffer = Manifest(path)
+		Buffer.suppress_saving(True)
+		Buffer.set_object("table")
+
+		return Buffer
+
 	def _PostCreateMethod(self):
 		"""Метод, выполняющийся после создания таблицы."""
 
@@ -1902,16 +2202,18 @@ class Table:
 	# >>>>> ОБЯЗАТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 	
-	def __init__(self, driver: "Driver", storage: str, name: str):
+	def __init__(self, driver: "Driver", storage: PathLike, name: str):
 		"""
 		Базовая таблица.
-			driver – драйвер таблиц;\n
-			storage_path – директория хранения таблиц;\n
-			name – название таблицы.
+
+		:param driver: Драйвер.
+		:type driver: Driver
+		:param storage: Путь к каталогу таблицы.
+		:type storage: PathLike
+		:param name: Название таблицы.
+		:type name: str
 		"""
 		
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
 		self._StorageDirectory = NormalizePath(storage)
 		self._Name = name
 
@@ -1923,8 +2225,6 @@ class Table:
 		self._Note = None
 		self._CLI = None
 
-		#---> Пост-процессинг.
-		#==========================================================================================#
 		self._PostInitMethod()
 
 	def change_note_id(self, note_id: int | str, new_id: int | str, mode: str | None = None) -> ExecutionStatus:
@@ -2034,11 +2334,14 @@ class Table:
 				Status.push_error(Errors.Driver.TABLE_ALREADY_EXISTS)
 				return Status
 
-			WriteJSON(f"{self._Path}/manifest.json", self.MANIFEST)
+			self._Manifest = self._GetEmptyManifest(self._Path)
+			self._Manifest.suppress_saving(False)
+			self._Manifest.save()
+
 			self._PostCreateMethod()
 			Status.value = self
 
-		except: Status.print_messages(Errors.UNKNOWN)
+		except: Status.push_message(Errors.UNKNOWN)
 
 		return Status
 
@@ -2138,7 +2441,7 @@ class Table:
 		Status = ExecutionStatus()
 
 		try:
-			self._Manifest = Manifest(self._Path, ReadJSON(f"{self._Path}/manifest.json"))
+			self._Manifest = Manifest(self._Path).load()
 			ListID = self._GetNotesID()
 			for ID in ListID: self._ReadNote(ID)
 			AttachmentsDirectory = f"{self._Path}/.attachments"
@@ -2181,16 +2484,6 @@ class Module(Table):
 	#==========================================================================================#
 
 	TYPE: str = "module"
-	MANIFEST: dict = {
-		"object": "module",
-		"type": TYPE,
-		"common": {
-			"recycle_id": True
-		},
-		"metainfo_rules": {},
-		"viewer": {},
-		"custom": {}
-	}
 
 	#==========================================================================================#
 	# >>>>> ОБЯЗАТЕЛЬНЫЕ СВОЙСТВА <<<<< #
@@ -2218,6 +2511,21 @@ class Module(Table):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
+	def _GetEmptyManifest(self, path: PathLike) -> Manifest:
+		"""
+		Возвращает пустой манифест. Переопределите для настройки.
+
+		:param path: Путь к каталогу таблицы.
+		:type path: PathLike
+		:return: Пустой манифест.
+		:rtype: Manifest
+		"""
+
+		Buffer = super()._GetEmptyManifest(path)
+		Buffer.set_object("module")
+
+		return Buffer
+
 	def _PostCreateMethod(self):
 		"""Метод, выполняющийся после создания таблицы."""
 
@@ -2238,17 +2546,20 @@ class Module(Table):
 	# >>>>> ОБЯЗАТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, driver: "Driver", storage: str, table: Table, name: str):
+	def __init__(self, driver: "Driver", storage: PathLike, table: Table, name: str):
 		"""
-		Базовая таблица.
-			driver – драйвер таблиц;\n
-			storage_path – директория хранения таблиц;\n
-			table – таблица, к которой привязан модуль;\n
-			name – название таблицы.
+		Базовый модуль.
+
+		:param driver: Драйвер.
+		:type driver: Driver
+		:param storage: Путь к каталогу модуля.
+		:type storage: PathLike
+		:param table: Таблица, к которой привязан модуль.
+		:type table: Table
+		:param name: Название модуля.
+		:type name: str
 		"""
 		
-		#---> Генерация динамичкских атрибутов.
-		#==========================================================================================#
 		self._StorageDirectory = NormalizePath(storage)
 		self._Table = table
 		self._Name = name
@@ -2261,8 +2572,6 @@ class Module(Table):
 		self._Note = None
 		self._CLI = None
 
-		#---> Пост-процессинг.
-		#==========================================================================================#
 		self._PostInitMethod()
 
 	def rename(self, name: str) -> ExecutionStatus:

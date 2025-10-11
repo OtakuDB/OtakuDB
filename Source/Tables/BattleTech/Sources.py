@@ -1,10 +1,13 @@
 from Source.Core.Base import Module, ModuleCLI, Note, NoteCLI
 from Source.Core.Bus import ExecutionStatus
 from Source.Core.Messages import Errors
+from Source.Core.Base import Manifest
 from Source.Core.Exceptions import *
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
+
+from os import PathLike
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #
@@ -442,33 +445,36 @@ class BattleTech_Sources(Module):
 	#==========================================================================================#
 
 	TYPE: str = "battletech:sources"
-	MANIFEST: dict = {
-		"object": "module",
-		"type": TYPE,
-		"common": {
-			"recycle_id": True,
-			"attachments": True
-		},
-		"metainfo_rules": {
-			"product_code": None
-		},
-		"viewer": {
-			"autoclear": False,
-			"colorize": True,
-			"columns": {
-				"ID": True,
-				"Status": True,
-				"Code": True,
-				"Name": True,
-				"Ebook": True,
-				"Type": True
-			}
-		}
-	}
 	
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
+
+	def _GetEmptyManifest(self, path: PathLike) -> Manifest:
+		"""
+		Возвращает пустой манифест. Переопределите для настройки.
+
+		:param path: Путь к каталогу таблицы.
+		:type path: PathLike
+		:return: Пустой манифест.
+		:rtype: Manifest
+		"""
+
+		Buffer = super()._GetEmptyManifest(path)
+		Buffer.set_type(self.TYPE)
+		Buffer.metainfo_rules.set_rule("product_code", None)
+		Buffer.viewer.columns.set_columns(
+			(
+				"ID",
+				"Status",
+				"Code",
+				"Name",
+				"Ebook",
+				"Type"
+			)
+		)
+
+		return Buffer
 
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации класса."""

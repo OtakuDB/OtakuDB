@@ -1,4 +1,7 @@
+from Source.Core.Base import Manifest, ModuleData
 from Source.Core.Base import Table
+
+from os import PathLike
 
 #==========================================================================================#
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
@@ -12,27 +15,6 @@ class BattleTech(Table):
 	#==========================================================================================#
 
 	TYPE: str = "battletech"
-	MANIFEST: dict = {
-		"object": "table",
-		"type": TYPE,
-		"modules": [
-			{
-				"name": "books",
-				"type": "battletech:books",
-				"is_active": False
-			},
-			{
-				"name": "mechs",
-				"type": "battletech:mechs",
-				"is_active": False
-			},
-			{
-				"name": "sources",
-				"type": "battletech:sources",
-				"is_active": False
-			}
-		]
-	}
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -125,3 +107,25 @@ class BattleTech(Table):
 		for Era in self.eras: Indexes.append(Era["index"])
 
 		return Indexes
+	
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#	
+
+	def _GetEmptyManifest(self, path: PathLike) -> Manifest:
+		"""
+		Возвращает пустой манифест. Переопределите для настройки.
+
+		:param path: Путь к каталогу таблицы.
+		:type path: PathLike
+		:return: Пустой манифест.
+		:rtype: Manifest
+		"""
+
+		Buffer = super()._GetEmptyManifest(path)
+		Buffer.set_type(self.TYPE)
+		Buffer.add_module(ModuleData(Buffer, "books", "battletech:books"))
+		Buffer.add_module(ModuleData(Buffer, "mechs", "battletech:mechs"))
+		Buffer.add_module(ModuleData(Buffer, "sources", "battletech:sources"))
+
+		return Buffer

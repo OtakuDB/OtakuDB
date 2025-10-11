@@ -192,6 +192,10 @@ class Driver:
 
 		Status = ExecutionStatus()
 
+		if not self.__StorageDirectory or not os.path.exists(self.__StorageDirectory):
+			Status.push_error(Errors.Driver.STORAGE_NOT_MOUNTED)
+			return Status
+
 		try:
 			NewTable: Table = self.__Tables[type](self, self.__StorageDirectory, name)
 			Status += NewTable.create()
@@ -204,9 +208,14 @@ class Driver:
 	
 	def get_loaded_object(self, table_name: str, module_name: str | None = None) -> ExecutionStatus:
 		"""
-		Возвращает загруженный ранее объект.
-			table – название таблицы;\n
-			module – название модуля.
+		Возвращает загруженный в оперативную память объект.
+
+		:param table_name: Имя таблицы.
+		:type table_name: str
+		:param module_name: Имя модуля, если требуется модуль.
+		:type module_name: str | None
+		:return: Статус выполнения.
+		:rtype: ExecutionStatus
 		"""
 
 		Status = ExecutionStatus()
@@ -218,24 +227,28 @@ class Driver:
 
 		return Status
 
-	def initialize_module(self, name: str, table: Table) -> ExecutionStatus:
+	def initialize_module(self, type: str, table: Table) -> ExecutionStatus:
 		"""
 		Инициализирует модуль таблицы.
-			name – название;\n
-			table – таблица, которой принадлежит модуль.
+
+		:param type: Тип модуля в формате `{TABLE}:{MODULE}`.
+		:type type: str
+		:param table: Таблица, к которой привязывается модуль.
+		:type table: Table
+		:return: Статус выполнения.
+		:rtype: ExecutionStatus
 		"""
 
 		Status = ExecutionStatus()
 
 		try:
 
-			for CurrentModule in table.manifest.modules:
+			if type in tuple(Element.type for Element in table.manifest.modules):
+				NewModule: Module = self.__Tables[type](self, self.__StorageDirectory, table, type.split(":")[-1])
+				Status += NewModule.create()
+				Status.push_message("Module initialized.")
 
-				if CurrentModule.name == name:
-					NewModule: Module = self.__Tables[CurrentModule.type](self, self.__StorageDirectory, table, name)
-					Status += NewModule.create()
-
-			if Status: Status.push_message("Module initialized.")
+			else: Status.push_error(Errors.Driver.NO_MODULE_TYPE)
 
 		except KeyError: Status.push_error(Errors.Driver.NO_TABLE_TYPE)
 		except: Status.push_error(Errors.UNKNOWN)
@@ -253,8 +266,8 @@ class Driver:
 
 		try:
 			module = ("/" + module) if module else ""
-			Path = f"{self.__StorageDirectory}/{name}{module}/manifest.json"
-			Status.value = Manifest(Path, ReadJSON(Path))
+			Path = f"{self.__StorageDirectory}/{name}{module}"
+			Status.value = Manifest(Path).load()
 
 		except FileExistsError: Status.push_message(Errors.Driver.BAD_MANIFEST)
 
@@ -273,8 +286,8 @@ class Driver:
 			ManifestLoadingStatus = ExecutionStatus()
 			ObjectPath = f"{table.name}:{module_name}"
 
-			Status += self.get_loaded_object(table.name, module_name)
-			if not Status.has_errors and Status: return Status
+			LoadStatus = self.get_loaded_object(table.name, module_name)
+			if not LoadStatus.has_errors and LoadStatus: return LoadStatus
 
 			ManifestLoadingStatus = self.load_manifest(table.name, module_name)
 			
@@ -286,7 +299,6 @@ class Driver:
 				if not Status.has_errors: self.__Objects[ObjectPath] = Status.value
 
 		except FileNotFoundError: Status.push_error(Errors.PATH_NOT_FOUND)
-		except KeyError: Status.push_error(Errors.Driver.NO_TABLE_TYPE)
 		except ImportError: Status.push_error(Errors.UNKNOWN)
 
 		return Status
@@ -313,7 +325,6 @@ class Driver:
 				if not Status.has_errors: self.__Objects[table_name] = Status.value
 				
 		except FileNotFoundError: Status.push_error(Errors.PATH_NOT_FOUND)
-		except KeyError: Status.push_error(Errors.Driver.NO_TABLE_TYPE)
 		except: Status.push_error(Errors.UNKNOWN)
 		
 		return Status
@@ -390,15 +401,20 @@ class Driver:
 
 		return Status
 
-	def unload_object(self, table: str, module: str | None = None) -> ExecutionStatus:
+	def unload_object(self, table: Table, module: Module | None = None) -> ExecutionStatus:
 		"""
-		Выгружает объект.
-			table – название таблицы;\n
-			module – название модуля.
+		Выгружает объект из оперативной памяти.
+
+		:param table: Таблица.
+		:type table: Table
+		:param module: Модуль. Если указан, таблица не будет выгружена.
+		:type module: Module | None
+		:return: Статус выполнения.
+		:rtype: ExecutionStatus
 		"""
 
 		Status = ExecutionStatus()
-		Name = f"{table}:{module}" if module else table
+		Name = f"{table.name}:{module.name}" if module else table.name
 
 		try: del self.__Objects[Name]
 		except KeyError: Status.push_error(Errors.Driver.MISSING_OBJECT)

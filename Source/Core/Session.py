@@ -136,17 +136,23 @@ class Session:
 			self.__Level = StorageLevels.MODULE if self.__Module else StorageLevels.TABLE
 
 		elif self.__Module:
+			self.__Driver.unload_object(self.__Table, self.__Module)
 			self.__Module = None
 			self.__Level = StorageLevels.TABLE
 
 		elif self.__Table:
+			self.__Driver.unload_object(self.__Table)
 			self.__Table = None
 			self.__Level = StorageLevels.DRIVER
 
 	def open_objects(self, path: str) -> ExecutionStatus:
 		"""
-		Открывает объекты по указанному пути и устанавливает их в качестве активных.
-			path – путь к объектам.
+		Загружает в оперативную память объекты из пути и устанавливает их активными.
+
+		:param path: Путь к целевому объекту.
+		:type path: str
+		:return: Статус выполнения.
+		:rtype: ExecutionStatus
 		"""
 
 		Status = ExecutionStatus()
@@ -193,10 +199,6 @@ class Session:
 		"""
 
 		Status = ExecutionStatus()
-
-		if name.isdigit():
-			Status.push_error("Driver.INCORRECT_OBJECT_NAME")
-			return Status
 
 		if self.storage_level is StorageLevels.TABLE:
 			Status += self.__Driver.rename_loaded_table(self.__Table.name, name)

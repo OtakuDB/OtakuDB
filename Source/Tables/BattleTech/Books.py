@@ -1,4 +1,4 @@
-from Source.Core.Base import Module, ModuleCLI, Note, NoteCLI
+from Source.Core.Base import Manifest, Module, ModuleCLI, Note, NoteCLI
 from Source.Core.Bus import ExecutionStatus
 from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
@@ -6,6 +6,8 @@ from Source.Core.Exceptions import *
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.Methods.Data import RemoveRecurringSubstrings
 from dublib.CLI.TextStyler import FastStyler
+
+from os import PathLike
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #
@@ -810,34 +812,6 @@ class BattleTech_Books(Module):
 	#==========================================================================================#
 
 	TYPE: str = "battletech:books"
-	MANIFEST: dict = {
-		"object": "module",
-		"type": TYPE,
-		"common": {
-			"recycle_id": True,
-			"attachments": True
-		},
-		"metainfo_rules": {
-			"author": None,
-			"publication_date": None,
-			"publisher": None,
-			"series": None
-		},
-		"viewer": {
-			"autoclear": False,
-			"columns": {
-				"ID": True,
-				"Status": True,
-				"Name": True,
-				"Author": True,
-				"Publication": True,
-				"Type": True,
-				"Series": True,
-				"Era": True,
-				"Estimation": True
-			}
-		}
-	}
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -858,6 +832,38 @@ class BattleTech_Books(Module):
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
+
+	def _GetEmptyManifest(self, path: PathLike) -> Manifest:
+		"""
+		Возвращает пустой манифест. Переопределите для настройки.
+
+		:param path: Путь к каталогу таблицы.
+		:type path: PathLike
+		:return: Пустой манифест.
+		:rtype: Manifest
+		"""
+
+		Buffer = super()._GetEmptyManifest(path)
+		Buffer.set_type(self.TYPE)
+		Buffer.metainfo_rules.set_rule("author", None)
+		Buffer.metainfo_rules.set_rule("publisher", None)
+		Buffer.metainfo_rules.set_rule("series", tuple())
+		Buffer.metainfo_rules.set_rule("publication_date", None)
+		Buffer.viewer.columns.set_columns(
+			(
+				"ID",
+				"Status",
+				"Name",
+				"Author",
+				"Publication",
+				"Type",
+				"Series",
+				"Era",
+				"Estimation"
+			)
+		)
+
+		return Buffer
 
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации класса."""
