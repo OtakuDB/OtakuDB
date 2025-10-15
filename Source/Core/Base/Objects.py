@@ -817,7 +817,7 @@ class Table:
 		"""
 
 		Status = ExecutionStatus()
-		Columns = self._Manifest.viewer.columns
+		Columns = self._Manifest.interfaces_options.cli.columns
 
 		if Columns.is_available:
 			

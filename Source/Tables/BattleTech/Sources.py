@@ -104,7 +104,7 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 			}
 
 			for Abbreviation, Type in self._Table.types.items():
-				if not Type and self._Table.manifest.viewer.colorize: Data["Type"].append(FastStyler(Type).colorize.bright_blue)
+				if not Type and self._Table.manifest.interfaces_options.cli.colorize: Data["Type"].append(FastStyler(Type).colorize.bright_blue)
 				else: Data["Type"].append(Type)
 				Data["Abbreviation"].append(Abbreviation)
 				

@@ -207,7 +207,7 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 			self._Note: "Otaku_Anime_Note"
 			self._Table: "Otaku_Anime"
 			Parts = self._Note.parts
-			Options = self._Table.manifest.viewer
+			Options = self._Table.manifest.interfaces_options.cli
 
 			#---> Объявление литералов.
 			#==========================================================================================#

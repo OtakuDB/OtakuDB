@@ -217,7 +217,7 @@ class NoteCLI:
 			Status = self._Note.unattach(Filename, Slot)
 
 		elif parsed_command.name == "view":
-			if self._Table.manifest.viewer.autoclear: Clear()
+			if self._Table.manifest.interfaces_options.cli.autoclear: Clear()
 			self._View()
 
 		else:
@@ -332,7 +332,7 @@ class BaseTableCLI:
 				Status = self._BaseTable.edit_column_status(ColumnName, True)
 
 			else:
-				Data = self._BaseTable.manifest.viewer.columns.to_dict()
+				Data = self._BaseTable.manifest.interfaces_options.cli.columns.to_dict()
 				TableData = {
 						"Column": [],
 						"Status": []
@@ -382,7 +382,7 @@ class BaseTableCLI:
 				Content = dict()
 				SortBy = parsed_command.check_key("sort") or "ID"
 				IsReverse = parsed_command.check_flag("r")
-				for Column in self._BaseTable.manifest.viewer.columns.to_dict().keys(): Content[Column] = list()
+				for Column in self._BaseTable.manifest.interfaces_options.cli.columns.to_dict().keys(): Content[Column] = list()
 				Notes: list["Note"] = self._Module.notes if self._Module else self._Table.notes
 
 				if SortBy not in Content.keys():
@@ -393,7 +393,7 @@ class BaseTableCLI:
 					Status.push_message("Table is empty.")
 					return Status 
 				
-				if self._BaseTable.manifest.viewer.autoclear: Clear()
+				if self._BaseTable.manifest.interfaces_options.cli.autoclear: Clear()
 				
 				if search:
 					print("Search:", FastStyler(search).colorize.yellow)
@@ -404,7 +404,7 @@ class BaseTableCLI:
 				if Notes:
 
 					for ColumnName in list(Content.keys()):
-						if self._BaseTable.manifest.viewer.columns[ColumnName] == False: del Content[ColumnName]
+						if self._BaseTable.manifest.interfaces_options.cli.columns[ColumnName] == False: del Content[ColumnName]
 
 					Columns(Content, SortBy, IsReverse)
 

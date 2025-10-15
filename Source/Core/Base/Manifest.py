@@ -9,7 +9,7 @@ from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 from typing import Any, Literal
 
 #==========================================================================================#
-# >>>>> МАНИФЕСТ <<<<< #
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
 
 class ColumnsOptions:
@@ -88,15 +88,15 @@ class ColumnsOptions:
 		self.__Data[column] = status
 		self.__Manifest.save()
 
-	def parse(self, data: dict):
+	def parse(self, data: dict | None):
 		"""
 		Парсит данные из переданного словаря.
 
 		:param data: Словарь данных.
-		:type data: dict
+		:type data: dict | None
 		"""
 
-		self.__Data = data
+		if data: self.__Data = data
 		for Column in self.important_columns: self.__Data[Column] = True
 
 	def set_columns(self, columns: tuple[str]):
@@ -124,6 +124,10 @@ class ColumnsOptions:
 		"""Возвращает словарь опций отображения."""
 
 		return self.__Data.copy()
+
+#==========================================================================================#
+# >>>>> КОНТЕЙНЕРЫ СЕКЦИЙ <<<<< #
+#==========================================================================================#
 
 class CommonOptions:
 	"""Общие опции таблицы."""
@@ -310,25 +314,82 @@ class MetainfoRules:
 		self.__Data[name] = rule
 		self.__Manifest.save()
 
-class ViewerOptions:
-	"""Опции просмоторщика записей."""
+class InterfacesOptions:
+	"""Опции интерфейсов."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
-	def autoclear(self) -> bool | None:
-		"""Указывает, следует ли очищать консоль перед выводом списков и просмотром содержимого."""
+	def cli(self) -> "OptionsCLI":
 
-		Option = None
-		if "autoclear" in self.__Data.keys(): Option = self.__Data["autoclear"]
+		return self.__OptionsCLI
 
-		return Option
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, manifest: "Manifest"):
+		"""
+		Опции интерфейсов.
+
+		:param manifest: Манифест таблицы.
+		:type manifest: Manifest
+		"""
+
+		self.__Manifest = manifest
+
+		self.__OptionsCLI = OptionsCLI(self.__Manifest)
+
+	def parse(self, data: dict):
+		"""
+		Парсит данные из переданного словаря.
+
+		:param data: Словарь данных.
+		:type data: dict
+		"""
+
+		self.__OptionsCLI.parse(data.get("cli"))
+
+	def to_dict(self) -> dict:
+		"""
+		Возвращает словарное представление опций.
+
+		:return: Словарное представление опций.
+		:rtype: dict
+		"""
+
+		return {
+			"cli": self.__OptionsCLI.to_dict()
+		}
+
+#==========================================================================================#
+# >>>>> ОПЦИИ ИНТЕРФЕЙСОВ <<<<< #
+#==========================================================================================#
+
+class OptionsCLI:
+	"""Опции интерфейса: CLI."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def autoclear(self) -> bool:
+		"""Указывает, следует ли очищать консоль перед просмотром объектов."""
+
+		return self.__Data.get("autoclear")
+	
+	@property
+	def autoview(self) -> bool:
+		"""Указывает, следует ли выводить объекты при их открытии."""
+
+		return self.__Data.get("autoview")
 	
 	@property
 	def colorize(self) -> bool | None:
-		"""Указывает, следует ли окрашивать элементы консольного интерфейса."""
+		"""Указывает, следует ли окрашивать элементы интерфейса."""
 
 		Option = None
 		if "colorize" in self.__Data.keys(): Option = self.__Data["colorize"]
@@ -357,6 +418,7 @@ class ViewerOptions:
 
 		self.__Data = {
 			"autoclear": True,
+			"autoview": True,
 			"colorize": True,
 			"columns": {}
 		}
@@ -375,6 +437,17 @@ class ViewerOptions:
 		self.__Data["autoclear"] = status
 		self.__Manifest.save()
 
+	def enable_autoview(self, status: bool):
+		"""
+		Переключает режим автоображения объектов при открытии.
+
+		:param status: Состояние автоотображения..
+		:type status: bool
+		"""
+
+		self.__Data["view"] = status
+		self.__Manifest.save()
+
 	def enable_colorize(self, status: bool):
 		"""
 		Переключает режим раскраски вывода.
@@ -386,15 +459,15 @@ class ViewerOptions:
 		self.__Data["colorize"] = status
 		self.__Manifest.save()
 
-	def parse(self, data: dict):
+	def parse(self, data: dict | None):
 		"""
 		Парсит данные из переданного словаря.
 
 		:param data: Словарь данных.
-		:type data: dict
+		:type data: dict | None
 		"""
 
-		self.__Data = self.__Data | data
+		if data: self.__Data = self.__Data | data
 		self.__Columns.parse(self.__Data["columns"])
 
 	def to_dict(self) -> dict:
@@ -410,11 +483,31 @@ class ViewerOptions:
 
 		return Data
 
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
+
 class Manifest:
 	"""Манифест таблицы."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def path(self) -> str:
+		"""Путь к директории таблицы."""
+
+		return self.__Path
+
+	@property
+	def type(self) -> str:
+		"""Тип таблицы."""
+
+		return self.__Type
+	
+	#==========================================================================================#
+	# >>>>> СЕКЦИИ <<<<< #
 	#==========================================================================================#
 
 	@property
@@ -436,29 +529,17 @@ class Manifest:
 		return self.__MetainfoRules
 
 	@property
+	def interfaces_options(self) -> InterfacesOptions:
+		"""Опции интерфейсов."""
+
+		return self.__InterfacesOptions
+
+	@property
 	def modules(self) -> tuple[ModuleData]:
 		"""Список модулей таблицы."""
 
 		return self.__Modules
 	
-	@property
-	def path(self) -> str:
-		"""Путь к директории таблицы."""
-
-		return self.__Path
-
-	@property
-	def type(self) -> str:
-		"""Тип таблицы."""
-
-		return self.__Type
-	
-	@property
-	def viewer(self) -> ViewerOptions:
-		"""Опции просмоторщика записей."""
-
-		return self.__ViewerOptions
-
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -496,9 +577,10 @@ class Manifest:
 
 		self.__Object = None
 		self.__Type = None
+
 		self.__Common = CommonOptions(self)
 		self.__MetainfoRules = MetainfoRules(self)
-		self.__ViewerOptions = ViewerOptions(self) 
+		self.__InterfacesOptions = InterfacesOptions(self) 
 		self.__Custom = dict()
 		self.__Modules = list()
 
@@ -528,7 +610,7 @@ class Manifest:
 		self.__Type = Data["type"]
 		self.__Common.parse(Data.get("common") or dict())
 		self.__MetainfoRules.parse(Data.get("metainfo_rules") or dict())
-		self.__ViewerOptions.parse(Data.get("viewer") or dict())
+		self.__InterfacesOptions.parse(Data.get("interfaces_options") or dict())
 		self.__Custom = Data.get("custom") or dict()
 		self.__Modules = self.__ParseModules(Data.get("modules") or dict())
 
@@ -574,11 +656,7 @@ class Manifest:
 			"type": self.__Type,
 			"common": self.__Common.to_dict(),
 			"metainfo_rules": {},
-			"viewer": {
-				"autoclear": False,
-				"colorize": True,
-				"columns": {}
-			},
+			"interfaces_options": self.__InterfacesOptions.to_dict(),
 			"custom": self.__Custom.copy()
 		}
 
