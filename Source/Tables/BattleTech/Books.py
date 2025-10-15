@@ -1,5 +1,7 @@
+from .Sources import BattleTech_Sources_Note
+
 from Source.Core.Base.Structs import Interfaces, SupportedInterfaces
-from Source.Core.Base import Manifest, Module, Note
+from Source.Core.Base import Manifest, Module
 from Source.Core.Bus import ExecutionStatus
 from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
@@ -8,9 +10,13 @@ from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.Methods.Data import RemoveRecurringSubstrings
 from dublib.CLI.TextStyler import FastStyler
 
+from typing import TYPE_CHECKING
 from os import PathLike
 
 from Source.Interfaces.CLI.Base import *
+
+if TYPE_CHECKING:
+	from ..BattleTech import BattleTech
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #
@@ -377,7 +383,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 # >>>>> ОСНОВНЫЕ КЛАССЫ <<<<< #
 #==========================================================================================#
 
-class BattleTech_Books_Note(Note):
+class BattleTech_Books_Note(BattleTech_Sources_Note):
 	"""Запись о прочтении книги по вселенной BattleTech."""
 
 	#==========================================================================================#
@@ -408,24 +414,6 @@ class BattleTech_Books_Note(Note):
 	#==========================================================================================#
 
 	@property
-	def another_names(self) -> list[str]:
-		"""Список альтернативных названий."""
-
-		return self._Data["another_names"]
-
-	@property
-	def collection_status(self) -> str | None:
-		"""Статус коллекционирования."""
-
-		return self._Data["collection_status"]
-
-	@property
-	def comment(self) -> str | None:
-		"""Комментарий."""
-
-		return self._Data["comment"]
-
-	@property
 	def era(self) -> float | int | None:
 		"""Индекс эры."""
 
@@ -444,20 +432,6 @@ class BattleTech_Books_Note(Note):
 				break
 
 		return Name
-
-	@property
-	def emoji_collection_status(self) -> str:
-		"""Статус коллекционирования в видзе эмодзи."""
-
-		Statuses = {
-			"collected": "📦",
-			"ebook": "🌍",
-			"wishlist": "🎁",
-			"ordered": "🚚",
-			None: ""
-		}
-
-		return Statuses[self._Data["collection_status"]]
 
 	@property
 	def emoji_status(self) -> str:
@@ -480,18 +454,6 @@ class BattleTech_Books_Note(Note):
 		"""Оценка."""
 
 		return self._Data["estimation"]
-
-	@property
-	def link(self) -> str | None:
-		"""Ссылка."""
-
-		return self._Data["link"]
-
-	@property
-	def localized_name(self) -> str | None:
-		"""Локализованное название."""
-
-		return self._Data["localized_name"]
 	
 	@property
 	def status(self) -> str | None:
@@ -505,88 +467,23 @@ class BattleTech_Books_Note(Note):
 
 		return self._Table.binder.local.get_binded_notes(self._ID)
 	
-	@property
-	def type(self) -> str | None:
-		"""Тип книги."""
-
-		return self._Data["type"]
-
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
-	def _GetSlotsInfo(self) -> dict[str, str]:
+	def _SpecifyInterfaces(self) -> SupportedInterfaces:
 		"""
-		Возвращает словарь описаний слотов вложений.
+		Определяет объекты с реализацией интерфейсов.
 
-		:return: Словарь описаний данных слотов вложений. Ключ – название слота, значение – описание.
-		:rtype: dict[str, str]
+		:return: Контейнер поддерживаемых интерфейсов.
+		:rtype: SupportedInterfaces
 		"""
 
-		return {
-			"ebook": "Ebook file. Automatically update collection status."
-		}
-
-	def _PostInitMethod(self):
-		"""Метод, выполняющийся после инициализации класса."""
-
-		self._CLI = BattleTech_Books_NoteCLI
+		self._Interfaces[Interfaces.CLI] = BattleTech_Books_NoteCLI
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-
-	def attach(self, path: str, slot: str | None = None, force: bool = False) -> ExecutionStatus:
-		"""
-		Прикрепляет файл к записи.
-			path – путь к файлу;\n
-			slot – именной слот для файла;\n
-			force – включает режим перезаписи.
-		"""
-
-		Status = super().attach(path, slot, force)
-		if not Status.has_errors and slot == "ebook" and not self.collection_status: Status.merge(self.set_collection_status("e"))
-
-		return Status
-
-	def add_another_name(self, another_name: str) -> ExecutionStatus:
-		"""
-		Добавляет альтернативное название.
-			another_name – альтернативное название.
-		"""
-
-		Status = ExecutionStatus()
-
-		try:
-
-			if another_name not in self._Data["another_names"]:
-				self._Data["another_names"].append(another_name)
-				self.save()
-				Status.push_message("Another name added.")
-
-			else: Status.push_message("Another name already exists.")
-
-		except: Status.push_error(Errors.UNKNOWN)
-
-		return Status
-
-	def remove_another_name(self, another_name: str) -> ExecutionStatus:
-		"""
-		Удаляет альтернативное название.
-			another_name – альтернативное название.
-		"""
-
-		Status = ExecutionStatus()
-
-		try:
-			if another_name in self._Data["another_names"]:
-				self._Data["another_names"].remove(another_name)
-				self.save()
-				Status.push_message("Another name removed.")
-
-		except: Status.push_error(Errors.UNKNOWN)
-
-		return Status
 
 	def remove_era(self) -> ExecutionStatus:
 		"""Удаляет эру."""
@@ -616,29 +513,6 @@ class BattleTech_Books_Note(Note):
 				Status.push_message("Estimation updated.")
 
 			else: Status.push_error("Incorrect estimation value. From 1 to 5 expected.")
-
-		except: Status.push_error(Errors.UNKNOWN)
-
-		return Status
-
-	def set_comment(self, comment: str) -> ExecutionStatus:
-		"""
-		Задаёт комментарий.
-			comment – комментарий.
-		"""
-
-		Status = ExecutionStatus()
-
-		try:
-			if comment == "*":
-				comment = None
-				Status.push_message("Comment removed.")
-
-			else: 
-				Status.push_message("Comment updated.")
-
-			self._Data["comment"] = comment
-			self.save()
 
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -685,29 +559,6 @@ class BattleTech_Books_Note(Note):
 
 		return Status
 
-	def set_link(self, link: str) -> ExecutionStatus:
-		"""
-		Задаёт ссылку.
-			link – ссылка.
-		"""
-
-		Status = ExecutionStatus()
-
-		try:
-			if link == "*":
-				link = None
-				Status.push_message("Link removed.")
-
-			else:
-				Status.push_message("Link updated.")
-
-			self._Data["link"] = link
-			self.save()
-
-		except: Status.push_error(Errors.UNKNOWN)
-
-		return Status
-
 	def set_localized_name(self, localized_name: str) -> ExecutionStatus:
 		"""
 		Задаёт локализованное название записи.
@@ -731,32 +582,6 @@ class BattleTech_Books_Note(Note):
 
 			self._Data["localized_name"] = localized_name
 			self.save()
-
-		except: Status.push_error(Errors.UNKNOWN)
-
-		return Status
-
-	def set_collection_status(self, status: str) -> ExecutionStatus:
-		"""
-		Задаёт статус коллекционирования.
-			status – статус.
-		"""
-
-		Status = ExecutionStatus()
-		Statuses = {
-			"c": "collected",
-			"e": "ebook",
-			"w": "whishlist",
-			"o": "ordered",
-			"*": None
-		}
-
-		try:
-			if status in Statuses.keys(): status = Statuses[status]
-			self._Data["collection_status"] = status
-			self.save()
-			if status: Status.push_message("Collection status updated.")
-			else: Status.push_message("Collection status removed.")
 
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -798,11 +623,11 @@ class BattleTech_Books_Note(Note):
 		"""
 
 		Status = ExecutionStatus()
-		AllowedTypes = ("novel", "story", "compilation")
-
+		
 		try:
-			if type.lower() not in AllowedTypes:
-				Status.push_error("Type isn't allowed. Use novel, story or compilation.")
+			if type.lower() not in self._Table.types:
+				Types = ", ".join(self._Table.types)
+				Status.push_error(f"Type isn't allowed. Use one of: {Types}.")
 				return Status
 			
 			if type == "*":
@@ -844,6 +669,12 @@ class BattleTech_Books(Module):
 
 		return self._Table.eras_indexes
 
+	@property
+	def types(self) -> tuple[str]:
+		"""Типы книг."""
+
+		return ("novel", "story", "compilation")
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
@@ -883,9 +714,9 @@ class BattleTech_Books(Module):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации класса."""
 
-		self._Table: BattleTech_Books
 		self._Note = BattleTech_Books_Note
-
+		self._Table: "BattleTech"
+		
 	def _SpecifyInterfaces(self) -> SupportedInterfaces:
 		"""
 		Определяет объекты с реализацией интерфейсов.

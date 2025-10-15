@@ -1,4 +1,5 @@
-from Source.Core.Base import Note, Module 
+from Source.Core.Base.Structs import Interfaces, SupportedInterfaces
+from Source.Core.Base import Note, Manifest, Module
 from Source.Core.Bus import ExecutionStatus
 from Source.Core.Messages import Errors
 from Source.Core.Exceptions import *
@@ -8,6 +9,8 @@ from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates import Confirmation
 
 from Source.Interfaces.CLI.Base import *
+
+from os import PathLike
 
 #==========================================================================================#
 # >>>>> CLI <<<<< #
@@ -265,9 +268,9 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 					#---> Определение цвета части.
 					#==========================================================================================#
 					TextColor = None
-					if Options["colorize"] and "✅" in MSG_PartStatus: TextColor = Codes.Colors.Green
-					if Options["colorize"] and "ℹ️" in MSG_PartStatus: TextColor = Codes.Colors.Cyan
-					if Options["colorize"] and "🚫" in MSG_PartStatus: TextColor = Codes.Colors.Blue
+					if Options.colorize and "✅" in MSG_PartStatus: TextColor = Codes.Colors.Green
+					if Options.colorize and "ℹ️" in MSG_PartStatus: TextColor = Codes.Colors.Cyan
+					if Options.colorize and "🚫" in MSG_PartStatus: TextColor = Codes.Colors.Blue
 
 					if "series" in Parts[PartIndex].keys():
 
@@ -280,20 +283,20 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 
 						#---> Определение цвета части.
 						#==========================================================================================#
-						if Options["colorize"] and "⏳" in MSG_MarkIndicator: TextColor = Codes.Colors.Yellow
+						if Options.colorize and "⏳" in MSG_MarkIndicator: TextColor = Codes.Colors.Yellow
 
 						#---> Вывод части.
 						#==========================================================================================#
-						print(FastStyler(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}{MSG_MarkIndicator}", text_color = TextColor))
-						if not Options["hide_single_series"] or Options["hide_single_series"] and MSG_Series and MSG_Series > 1: print(TextStyler(f"    {MSG_Indent}       {MSG_Mark}{MSG_Series} series{MSG_Progress}", text_color = TextColor))
+						print(TextStyler(text_color = TextColor).get_styled_text(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}{MSG_MarkIndicator}"))
+						if not self._Table.manifest.custom["hide_single_series"] or self._Table.manifest.custom["hide_single_series"] and MSG_Series and MSG_Series > 1: print(TextStyler(text_color = TextColor).get_styled_text(f"    {MSG_Indent}       {MSG_Mark}{MSG_Series} series{MSG_Progress}"))
 
 					else:
-						print(FastStyler(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}", text_color = TextColor))
+						print(TextStyler(text_color = TextColor).get_styled_text(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}"))
 
-					if Options["links"] and "link" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
-					if Options["comments"] and "comment" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       💭 " + Parts[PartIndex]["comment"])
+					if self._Table.manifest.custom["links"] and "link" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
+					if self._Table.manifest.custom["comments"] and "comment" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       💭 " + Parts[PartIndex]["comment"])
 		
-		except: Status.push_error(Errors.UNKNOWN)
+		except ZeroDivisionError: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 	
@@ -312,16 +315,16 @@ class Otaku_Anime_ModuleCLI(ModuleCLI):
 
 		Row = dict()
 		NoteStatus = note.status
-		if NoteStatus == "announced": NoteStatus = TextStyler(NoteStatus, text_color = Codes.Colors.Magenta)
-		if NoteStatus == "planned": NoteStatus = TextStyler(NoteStatus, text_color = Codes.Colors.Cyan)
-		if NoteStatus == "watching": NoteStatus = TextStyler(NoteStatus, text_color = Codes.Colors.Yellow)
-		if NoteStatus == "completed": NoteStatus = TextStyler(NoteStatus, text_color = Codes.Colors.Green)
-		if NoteStatus == "dropped": NoteStatus = TextStyler(NoteStatus, text_color = Codes.Colors.Red)
+		if NoteStatus == "announced": NoteStatus = FastStyler(NoteStatus).colorize.magenta
+		if NoteStatus == "planned": NoteStatus = FastStyler(NoteStatus).colorize.cyan
+		if NoteStatus == "watching": NoteStatus = FastStyler(NoteStatus).colorize.yellow
+		if NoteStatus == "completed": NoteStatus = FastStyler(NoteStatus).colorize.green
+		if NoteStatus == "dropped": NoteStatus = FastStyler(NoteStatus).colorize.red
 		Row["ID"] = note.id
 		Row["Status"] = NoteStatus
 		Row["Name"] = note.name
 		Row["Estimation"] = note.estimation
-		Row["Base"] = TextStyler(note.metainfo["base"]).decorate.italic if "base" in note.metainfo.keys() else None
+		Row["Base"] = FastStyler(note.metainfo["base"]).decorate.italic if "base" in note.metainfo.keys() else None
 
 		return Row
 	
@@ -511,6 +514,16 @@ class Otaku_Anime_Note(Note):
 		"""Метод, выполняющийся после инициализации класса."""
 
 		self._CLI = Otaku_Anime_NoteCLI
+
+	def _SpecifyInterfaces(self) -> SupportedInterfaces:
+		"""
+		Определяет объекты с реализацией интерфейсов.
+
+		:return: Контейнер поддерживаемых интерфейсов.
+		:rtype: SupportedInterfaces
+		"""
+
+		self._Interfaces[Interfaces.CLI] = Otaku_Anime_NoteCLI
 
 	#==========================================================================================#
 	# >>>>> ДОПОЛНИТЕЛЬНЫЕ ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -800,30 +813,6 @@ class Otaku_Anime(Module):
 	#==========================================================================================#
 
 	TYPE: str = "otaku:anime"
-	MANIFEST: dict = {
-		"object": "module",
-		"type": TYPE,
-		"metainfo_rules": {
-			"base": ["game", "manga", "novel", "original", "ranobe"]
-		},
-		"viewer": {
-			"autoclear": True,
-			"columns": {
-				"ID": True,
-				"Status": True,
-				"Name": True,
-				"Base": True,
-				"Estimation": True
-			},
-			"links": True,
-			"comments": True,
-			"colorize": True,
-			"hide_single_series": True
-		},
-		"custom": {
-			"max_estimation": 10
-		}
-	}
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -839,8 +828,44 @@ class Otaku_Anime(Module):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
+	def _GetEmptyManifest(self, path: PathLike) -> Manifest:
+		"""
+		Возвращает пустой манифест. Переопределите для настройки.
+
+		:param path: Путь к каталогу таблицы.
+		:type path: PathLike
+		:return: Пустой манифест.
+		:rtype: Manifest
+		"""
+
+		Buffer = super()._GetEmptyManifest(path)
+		Buffer.set_type(self.TYPE)
+		Buffer.metainfo_rules.set_rule("base", ("game", "manga", "novel", "original", "ranobe"))
+		Buffer.viewer.columns.set_columns(
+			(
+				"ID",
+				"Status",
+				"Name",
+				"Base",
+				"Estimation"
+			)
+		)
+		Buffer.custom["max_estimation"] = 10
+		Buffer.custom["hide_single_series"] = True
+
+		return Buffer
+
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации класса."""
 
 		self._Note = Otaku_Anime_Note
-		self._CLI = Otaku_Anime_ModuleCLI
+
+	def _SpecifyInterfaces(self) -> SupportedInterfaces:
+		"""
+		Определяет объекты с реализацией интерфейсов.
+
+		:return: Контейнер поддерживаемых интерфейсов.
+		:rtype: SupportedInterfaces
+		"""
+
+		self._Interfaces[Interfaces.CLI] = Otaku_Anime_ModuleCLI

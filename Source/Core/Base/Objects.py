@@ -196,12 +196,18 @@ class Note:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РЕДАКТИРОВАНИЯ <<<<< #
 	#==========================================================================================#
 
-	def attach(self, path: str, slot: str | None = None, force: bool = False) -> ExecutionStatus:
+	def attach(self, path: PathLike, slot: str | None = None, force: bool = False) -> ExecutionStatus:
 		"""
 		Прикрепляет файл к записи.
-			path – путь к файлу;\n
-			slot – именной слот для файла;\n
-			force – включает режим перезаписи.
+
+		:param path: Путь к файлу.
+		:type path: PathLike
+		:param slot: Название слота.
+		:type slot: str | None, optional
+		:param force: Переключает режим перезаписи.
+		:type force: bool
+		:return: Статус выполнения.
+		:rtype: ExecutionStatus
 		"""
 
 		Status = ExecutionStatus()
@@ -358,17 +364,27 @@ class Note:
 	def set_metainfo(self, key: str, data: str) -> ExecutionStatus:
 		"""
 		Задаёт значение поля метаданных.
-			key – ключ поля;\n
-			data – значение.
+
+		:param key: Ключ поля.
+		:type key: str
+		:param data: Значение.
+		:type data: str
+		:raises MetainfoBlocked: Выбрасывается при блокировке задаваемых метаданных правилами из манифеста.
+		:return: Статус выполнения.
+		:rtype: ExecutionStatus
 		"""
 
 		Status = ExecutionStatus()
-		data = data.strip()
+		
 		
 		try:
 			Rules = self._Table.manifest.metainfo_rules
 			if key in Rules.fields and Rules[key] and data not in Rules[key]: raise MetainfoBlocked()
-			if type(data) == str and data.isdigit(): data = int(data)
+			
+			if type(data) == str:
+				data = data.strip()
+				if data.isdigit(): data = int(data)
+			
 			self._Data["metainfo"][key] = data
 			self._Data["metainfo"] = dict(sorted(self._Data["metainfo"].items()))
 			self.save()
@@ -602,7 +618,7 @@ class Table:
 
 		self._Path = f"{self._StorageDirectory}/{name}"
 		self._Notes: dict[int, Note] = dict()
-		self._Manifest = None
+		self._Manifest: Manifest = None
 		self._Binder = Binder(self._Session.driver, self)
 		self._Interfaces = SupportedInterfaces()
 		self._IsModule = False
@@ -981,8 +997,8 @@ class Module(Table):
 		self._Name = name
 
 		self._Path = f"{self._StorageDirectory}/{table.name}/{name}"
-		self._Notes = dict()
-		self._Manifest = None
+		self._Notes: dict[int, Note] = dict()
+		self._Manifest: Manifest = None
 		self._Binder = Binder(self._Session.driver, self._Table, self)
 		self._Interfaces = SupportedInterfaces()
 		self._IsModule = True
