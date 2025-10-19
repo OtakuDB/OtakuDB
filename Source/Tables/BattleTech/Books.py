@@ -195,10 +195,22 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 			#---> Вывод описания записи.
 			#==========================================================================================#
-			if UsedName: print(FastStyler(UsedName).decorate.bold, end = "")
-			if self._Note.emoji_collection_status: print(" " + self._Note.emoji_collection_status, end = "")
-			print(f" {self._Note.emoji_status}", end = "")
-			print("")
+			IsFirstLinePrinted = False
+
+			if UsedName:
+				print(FastStyler(UsedName).decorate.bold, end = "")
+				IsFirstLinePrinted = True
+
+			if self._Note.emoji_collection_status:
+				print(" " + self._Note.emoji_collection_status, end = "")
+				IsFirstLinePrinted = True
+
+			if self._Note.emoji_status:
+				if IsFirstLinePrinted: print(" ", end = "")
+				print(self._Note.emoji_status, end = "")
+				IsFirstLinePrinted = True
+				
+			if IsFirstLinePrinted: print("")
 
 			if self._Note.era != None:
 
