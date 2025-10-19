@@ -332,4 +332,4 @@ class Binder:
 		self.__Driver = driver
 
 		self.__General = IntermoduleBinds(self.__Table, self.__Module, self.__Driver) if module else None
-		self.__Local = TableBinds(self.__Table)
+		self.__Local = TableBinds(self.__Module or self.__Table)
