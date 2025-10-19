@@ -278,15 +278,15 @@ class MetainfoRules:
 
 		return self.__Data[key]
 
-	def parse(self, data: dict):
+	def parse(self, data: dict | None):
 		"""
 		Парсит данные из переданного словаря.
 
 		:param data: Словарь данных.
-		:type data: dict
+		:type data: dict | None
 		"""
 
-		self.__Data = self.__Data | data
+		if data: self.__Data = self.__Data | data
 
 	def remove_rule(self, name: str):
 		"""
@@ -313,6 +313,16 @@ class MetainfoRules:
 
 		self.__Data[name] = rule
 		self.__Manifest.save()
+
+	def to_dict(self) -> dict[str, str | None]:
+		"""
+		Возвращает словарное представление объекта.
+
+		:return: Словарное представление объекта.
+		:rtype: dict[str, str | None]
+		"""
+
+		return self.__Data.copy()
 
 class InterfacesOptions:
 	"""Опции интерфейсов."""
@@ -655,7 +665,7 @@ class Manifest:
 			"object": self.__Object,
 			"type": self.__Type,
 			"common": self.__Common.to_dict(),
-			"metainfo_rules": {},
+			"metainfo_rules": self.__MetainfoRules.to_dict(),
 			"interfaces_options": self.__InterfacesOptions.to_dict(),
 			"custom": self.__Custom.copy()
 		}
