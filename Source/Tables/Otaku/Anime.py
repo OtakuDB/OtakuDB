@@ -213,16 +213,6 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 			#==========================================================================================#
 			MSG_TotalProgress = f" ({self._Note.progress}% viewed)" if self._Note.progress else ""
 
-			#---> Вывод связей.
-			#==========================================================================================#
-			
-			if self._Note.binded_notes:
-				print(FastStyler(f"BINDED NOTES:").decorate.bold)
-				try:
-					for Note in self._Note.binded_notes: print(f"    {Note.id}. {Note.name}")
-
-				except Exception as e: input(e)
-
 			#---> Вывод описания записи.
 			#==========================================================================================#
 			if self._Note.name: print(FastStyler(self._Note.name).decorate.bold, end = "")
@@ -233,14 +223,6 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 
 			#---> Вывод классификаторов записи.
 			#==========================================================================================#
-
-			if self._Note.metainfo:
-				print(FastStyler(f"METAINFO:").decorate.bold)
-				MetaInfo = self._Note.metainfo
-				
-				for Key in MetaInfo.keys():
-					CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
-					print(f"    {CustomMetainfoMarker}{Key}: " + str(MetaInfo[Key]))
 
 			if self._Note.tags:
 				print(FastStyler(f"TAGS: ").decorate.bold, end = "")
@@ -296,7 +278,7 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 					if self._Table.manifest.custom["links"] and "link" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
 					if self._Table.manifest.custom["comments"] and "comment" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       💭 " + Parts[PartIndex]["comment"])
 		
-		except ZeroDivisionError: Status.push_error(Errors.UNKNOWN)
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 	

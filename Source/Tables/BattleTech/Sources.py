@@ -148,14 +148,6 @@ class BattleTech_Sources_NoteCLI(NoteCLI):
 			if self._Note.comment: print(GetStyledTextFromHTML(f"    💭 Comment: <i>{self._Note.comment}</i>"))
 			if self._Note.link: print(GetStyledTextFromHTML(f"    🔗 Link: <i>{self._Note.link}</i>"))
 
-			#---> Вывод вложений.
-			#==========================================================================================#
-			Attachments = self._Note.attachments
-
-			if Attachments.count:
-				print(FastStyler("ATTACHMENTS:").decorate.bold)
-				for Slot in Attachments.slots: print(f"    {Slot}: " + FastStyler(Attachments.get_slot_filename(Slot)).decorate.italic)
-
 		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status

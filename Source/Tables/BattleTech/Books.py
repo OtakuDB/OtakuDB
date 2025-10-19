@@ -187,7 +187,8 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 
 			if self._Note.localized_name:
 				UsedName = self._Note.localized_name
-				if self._Note.name: AnotherNames.append(self._Note.name)
+				Mark = "👑 " if self._Note.another_names else ""
+				if self._Note.name: AnotherNames.append(Mark + self._Note.name)
 
 			else: UsedName = self._Note.name
 
@@ -235,25 +236,6 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 			if self._Note.estimation: print(f"    ⭐ Estimation: {self._Note.estimation}")
 			if self._Note.comment: print(f"    💭 Comment: {self._Note.comment}")
 			if self._Note.link: print(f"    🔗 Link: {self._Note.link}")
-
-			Attachments = self._Note.attachments
-
-			if Attachments.count:
-				print(FastStyler("ATTACHMENTS:").decorate.bold)
-				for Slot in Attachments.slots: print(f"    {Slot}: " + FastStyler(Attachments.get_slot_filename(Slot)).decorate.italic)
-
-			#---> Вывод классификаторов записи.
-			#==========================================================================================#
-
-			if self._Note.metainfo:
-				print(FastStyler(f"METAINFO:").decorate.bold)
-				MetaInfo = self._Note.metainfo
-				
-				for Key in MetaInfo.keys():
-					Data: str = MetaInfo[Key]
-					if Key == "author": Data = Data.replace(";", ", ")
-					CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
-					print(f"    {CustomMetainfoMarker}{Key}: {Data}")
 
 		except: Status.push_error(Errors.UNKNOWN)
 

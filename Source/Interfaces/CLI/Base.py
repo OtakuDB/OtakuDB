@@ -96,6 +96,30 @@ class NoteCLI:
 
 		return Status
 
+	def _PrintAttachments(self):
+		"""Выводит вложения."""
+
+		Attachments = self._Note.attachments
+
+		if Attachments.count:
+			print(FastStyler("ATTACHMENTS:").decorate.bold)
+
+			for Slot in Attachments.slots:
+				print(f"    {Slot}: " + FastStyler(Attachments.get_slot_filename(Slot)).decorate.italic)
+
+	def _PrintMetainfo(self):
+		"""Выводит метаданные."""
+
+		if self._Note.metainfo:
+			print(FastStyler(f"METAINFO:").decorate.bold)
+			MetaInfo = self._Note.metainfo
+			
+			for Key in MetaInfo.keys():
+				Data: str = MetaInfo[Key]
+				if Key == "author": Data = Data.replace(";", ", ")
+				CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
+				print(f"    {CustomMetainfoMarker}{Key}: {Data}")
+
 	def _View(self) -> ExecutionStatus:
 		"""Выводит форматированное представление записи."""
 
@@ -219,6 +243,8 @@ class NoteCLI:
 		elif parsed_command.name == "view":
 			if self._Table.manifest.interfaces_options.cli.autoclear: Clear()
 			self._View()
+			self._PrintMetainfo()
+			self._PrintAttachments()
 
 		else:
 			Status = self._ExecuteCustomCommands(parsed_command)
