@@ -257,6 +257,9 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 		Row = dict()
 
 		Name = note.localized_name if note.localized_name else note.name
+		if not Name: Name = ""
+		if len(Name) > 30: Name = Name[:30] + "…"
+
 		Type = note.type or ""
 		Era = FastStyler(note.era_name).decorate.italic if note.era_name else ""
 		Publication = note.metainfo["publication_date"] if "publication_date" in note.metainfo and note.metainfo["publication_date"] else ""
@@ -270,7 +273,6 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 			elif note.estimation in (1, 2): Estimation = FastStyler(Estimation).colorize.red
 
 		NoteStatus = note.status
-		if not Name: Name = ""
 		if not NoteStatus: NoteStatus = "–"
 		Author = note.metainfo["author"] if "author" in note.metainfo.keys() else ""
 
@@ -291,7 +293,7 @@ class BattleTech_Books_ModuleCLI(ModuleCLI):
 
 		Row["ID"] = note.id
 		Row["Status"] = NoteStatus
-		Row["Name"] = note.localized_name if note.localized_name else note.name
+		Row["Name"] = Name
 		Row["Author"]= Author
 		Row["Publication"] = Publication
 		Row["Type"] = Type
