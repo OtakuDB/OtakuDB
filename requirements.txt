@@ -1,2 +1,2 @@
-dublib==0.23.5
+dublib==0.24.1
 pick

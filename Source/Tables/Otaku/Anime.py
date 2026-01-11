@@ -275,8 +275,11 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 					else:
 						print(TextStyler(text_color = TextColor).get_styled_text(f"    {PartIndex} ▸ {MSG_Type}{MSG_Number}:{MSG_Name}{MSG_PartStatus}"))
 
-					if self._Table.manifest.custom["links"] and "link" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
-					if self._Table.manifest.custom["comments"] and "comment" in Parts[PartIndex].keys(): print(f"    {MSG_Indent}       💭 " + Parts[PartIndex]["comment"])
+					if self._Table.manifest.custom["links"] and "link" in Parts[PartIndex].keys():
+						print(f"    {MSG_Indent}       🔗 " + Parts[PartIndex]["link"])
+
+					if self._Table.manifest.custom["comments"] and "comment" in Parts[PartIndex].keys():
+						print(f"    {MSG_Indent}       💭 " + FastStyler(Parts[PartIndex]["comment"]).colorize.gray)
 		
 		except: Status.push_error(Errors.UNKNOWN)
 
@@ -695,6 +698,10 @@ class Otaku_Anime_Note(Note):
 		"""
 
 		Status = ExecutionStatus()
+
+		if not self._Data["parts"][part_index]["series"]:
+			Status.push_error("Marking available only after series count specification.")
+			return Status
 
 		try:
 
