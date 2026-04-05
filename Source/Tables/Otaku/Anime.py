@@ -36,7 +36,7 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 
 		Com = Command("base", "[METAINFO] Set anime base.")
 		ComPos = Com.create_position("BASE", "Anime base.", important = True)
-		ComPos.add_argument(ParametersTypes.Text, "Type of anime base: game, manga, novel, original, ranobe.")
+		ComPos.add_argument(ParametersTypes.Alpha, "Type of anime base: game, manga, novel, original, ranobe.")
 		CommandsList.append(Com)
 
 		Com = Command("delpart", "Remove part.")
@@ -89,7 +89,7 @@ class Otaku_Anime_NoteCLI(NoteCLI):
 
 		Com = Command("status", "Set viewing status.")
 		ComPos = Com.create_position("STATUS", "Status name or code: announced (a), watching (w), completed (c), dropped (d), planned (p) or * to remove.", important = True)
-		ComPos.add_argument(ParametersTypes.Text)
+		ComPos.add_argument(ParametersTypes.Alpha)
 		CommandsList.append(Com)
 
 		Com = Command("tag", "Manage tags.")

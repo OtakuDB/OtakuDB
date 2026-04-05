@@ -85,7 +85,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		CommandsList.append(Com)
 
 		Com = Command("status", "Set reading status.")
-		Com.base.add_argument(description = "Status: announced (a), reading (r), completed (c), dropped (d), skipped (s).", important = True)
+		Com.base.add_argument(description = "Status: announced (a), reading (r), completed (c), dropped (d), planned (p), skipped (s).", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("type", "Set type of book.")

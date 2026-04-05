@@ -36,7 +36,7 @@ class NoteCLI:
 		ComPos = Com.create_position("FILE", important = True)
 		ComPos.add_argument(ParametersTypes.ValidPath, description = "Path to file.")
 		Com.base.add_flag("f", "Enable attachments overwrite.")
-		Com.base.add_key("slot", ParametersTypes.Text, "Name of slot for attachment.")
+		Com.base.add_key("slot", ParametersTypes.Alpha, "Name of slot for attachment.")
 		CommandsList.append(Com)
 
 		Com = Command("bind", "Bind another note to this.")
@@ -67,7 +67,7 @@ class NoteCLI:
 		Com = Command("unattach", "Unattach files from note.")
 		ComPos = Com.create_position("FILE", important = True)
 		ComPos.add_argument(description = "Attachment name.")
-		ComPos.add_key("slot", ParametersTypes.Text, "Name of attachment slot.")
+		ComPos.add_key("slot", ParametersTypes.Alpha, "Name of attachment slot.")
 		CommandsList.append(Com)
 
 		Com = Command("view", "View note in console.")
@@ -406,14 +406,14 @@ class BaseTableCLI:
 
 			try:
 				Content = dict()
-				SortBy = parsed_command.check_key("sort") or "ID"
+				SortBy = parsed_command.get_key_value("sort") or "ID"
 				IsReverse = parsed_command.check_flag("r")
 				for Column in self._BaseTable.manifest.interfaces_options.cli.columns.to_dict().keys(): Content[Column] = list()
 				Notes: list["Note"] = self._Module.notes if self._Module else self._Table.notes
 
-				if SortBy not in Content.keys():
-						Status.push_error("no_column_to_sort")
-						return Status
+				if SortBy not in Content:
+					Status.push_error("no_column_to_sort")
+					return Status
 
 				if not Notes:
 					Status.push_message("Table is empty.")
@@ -436,7 +436,7 @@ class BaseTableCLI:
 
 				else: Status.push_message("Notes not found.")
 
-			except: Status.push_error(Errors.UNKNOWN)
+			except ZeroDivisionError: Status.push_error(Errors.UNKNOWN)
 
 			return Status
 

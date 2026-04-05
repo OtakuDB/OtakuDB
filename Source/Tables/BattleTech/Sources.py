@@ -174,7 +174,7 @@ class BattleTech_Sources_ModuleCLI(ModuleCLI):
 		elif Status == "ordered": Status = TextStyler(text_color = Codes.Colors.Yellow).get_styled_text(Status)
 
 		Row["Status"] = f"{note.emoji_collection_status} {Status}" if Status else ""
-		Row["Code"] = note.code or ""
+		Row["Code"] = str(note.code) or ""
 		Row["Name"] = note.localized_name or note.name
 		Row["Ebook"] = "✅" if note.attachments.check_slot_occupation("ebook") else "❌"
 		Row["Type"] = FastStyler(note.type.replace("_", " ").title()).decorate.italic if note.type else ""
