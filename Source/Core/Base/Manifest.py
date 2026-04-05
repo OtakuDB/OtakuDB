@@ -395,7 +395,7 @@ class OptionsCLI:
 	def autoview(self) -> bool:
 		"""Указывает, следует ли выводить объекты при их открытии."""
 
-		return self.__Data.get("autoview")
+		return bool(self.__Data.get("autoview"))
 	
 	@property
 	def colorize(self) -> bool | None:

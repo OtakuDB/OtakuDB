@@ -76,7 +76,7 @@ class NoteCLI:
 		return CommandsList + self._GenereateCustomCommands()
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ЗАЩИЩЁННЫЕ ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def _GenereateCustomCommands(self) -> list[Command]:
@@ -120,8 +120,16 @@ class NoteCLI:
 				CustomMetainfoMarker = "" if Key in self._Table.manifest.metainfo_rules.fields else "*"
 				print(f"    {CustomMetainfoMarker}{Key}: {Data}")
 
-	def _View(self) -> ExecutionStatus:
-		"""Выводит форматированное представление записи."""
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def view(self) -> ExecutionStatus:
+		"""
+		Выводит форматированное представление записи.
+
+		Переопределите для реализации кастомного вывода.
+		"""
 
 		Status = ExecutionStatus()
 
@@ -241,8 +249,7 @@ class NoteCLI:
 			Status = self._Note.unattach(Filename, Slot)
 
 		elif parsed_command.name == "view":
-			if self._Table.manifest.interfaces_options.cli.autoclear: Clear()
-			self._View()
+			self.view()
 			self._PrintMetainfo()
 			self._PrintAttachments()
 
@@ -388,60 +395,15 @@ class BaseTableCLI:
 					Status.emit_close()
 
 		elif parsed_command.name == "search":
-			Status = self._View(parsed_command, parsed_command.arguments[0])
+			Status = self.view(parsed_command.get_key_value("sort"), parsed_command.check_flag("r"), parsed_command.arguments[0])
 		
 		elif parsed_command.name == "view":
-			Status = self._View(parsed_command)
+			Status = self.view(parsed_command.get_key_value("sort"), parsed_command.check_flag("r"))
 
 		return Status
 
-	def _View(self, parsed_command: ParsedCommandData, search: str | None = None) -> ExecutionStatus:
-			"""
-			Выводит список записей.
-				parsed_command – описательная структура команды;\n
-				search – поисковый запрос.
-			"""
-			
-			Status = ExecutionStatus()
-
-			try:
-				Content = dict()
-				SortBy = parsed_command.get_key_value("sort") or "ID"
-				IsReverse = parsed_command.check_flag("r")
-				for Column in self._BaseTable.manifest.interfaces_options.cli.columns.to_dict().keys(): Content[Column] = list()
-				Notes: list["Note"] = self._Module.notes if self._Module else self._Table.notes
-
-				if SortBy not in Content:
-					Status.push_error("no_column_to_sort")
-					return Status
-
-				if not Notes:
-					Status.push_message("Table is empty.")
-					return Status 
-				
-				if self._BaseTable.manifest.interfaces_options.cli.autoclear: Clear()
-				
-				if search:
-					print("Search:", FastStyler(search).colorize.yellow)
-					Notes = [Note for Note in Notes if any(search.lower() in Variant.lower() for Variant in Note.searchable)]
-				
-				for Note in Notes: Content = self._AddRowToTableContent(Content, Note)
-
-				if Notes:
-
-					for ColumnName in list(Content.keys()):
-						if self._BaseTable.manifest.interfaces_options.cli.columns[ColumnName] == False: del Content[ColumnName]
-
-					Columns(Content, SortBy, IsReverse)
-
-				else: Status.push_message("Notes not found.")
-
-			except ZeroDivisionError: Status.push_error(Errors.UNKNOWN)
-
-			return Status
-
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ЗАЩИЩЁННЫЕ ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def _BuildNoteRow(self, note: "Note") -> dict[str, str]:
@@ -472,6 +434,62 @@ class BaseTableCLI:
 		"""
 
 		Status = ExecutionStatus()
+
+		return Status
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def view(self, sort_by: str | None = None, search: str | None = None, reverse: bool = False) -> ExecutionStatus:
+		"""
+		Выводит список записей. 
+
+		Переопределите данный метод для реализации кастомного вывода.
+
+		:param sort_by: Название колонки, по содержимому которой требуется отсортировать вывод.
+		:type sort_by: str | None
+		:param search: Поисковый запрос для фильтрации записей.
+		:type search: str | None
+		:param reverse: Указывает, следует ли инвертировать вывод.
+		:type reverse: bool
+		:return: Отчёт о выполнении.
+		:rtype: ExecutionStatus
+		"""
+			
+		Status = ExecutionStatus()
+
+		try:
+			Content = dict()
+			sort_by = sort_by or "ID"
+
+			for Column in self._BaseTable.manifest.interfaces_options.cli.columns.to_dict().keys(): Content[Column] = list()
+			Notes: list["Note"] = self._Module.notes if self._Module else self._Table.notes
+
+			if sort_by not in Content:
+				Status.push_error("no_column_to_sort")
+				return Status
+
+			if not Notes:
+				Status.push_message("Table is empty.")
+				return Status 
+			
+			if search:
+				print("Search:", FastStyler(search).colorize.yellow)
+				Notes = [Note for Note in Notes if any(search.lower() in Variant.lower() for Variant in Note.searchable)]
+			
+			for Note in Notes: Content = self._AddRowToTableContent(Content, Note)
+
+			if Notes:
+
+				for ColumnName in list(Content.keys()):
+					if self._BaseTable.manifest.interfaces_options.cli.columns[ColumnName] == False: del Content[ColumnName]
+
+				Columns(Content, sort_by, reverse)
+
+			else: Status.push_message("Notes not found.")
+
+		except: Status.push_error(Errors.UNKNOWN)
 
 		return Status
 

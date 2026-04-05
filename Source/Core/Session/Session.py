@@ -13,6 +13,23 @@ class Session:
 	#==========================================================================================#
 
 	@property
+	def current_notes_container(self) -> Module | Table | None:
+		"""Текущий контейнер записей."""
+
+		return self.__Module or self.__Table
+
+	@property
+	def current_object(self) -> Module | Table | Note | None:
+		"""Текущий объект."""
+
+		return {
+			StorageLevels.DRIVER: None,
+			StorageLevels.TABLE: self.__Table,
+			StorageLevels.MODULE: self.__Module,
+			StorageLevels.NOTE: self.__Note
+		}[self.__Level]
+
+	@property
 	def table(self) -> Table | None:
 		"""Объект открытой таблицы."""
 

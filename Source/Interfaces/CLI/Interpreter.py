@@ -125,10 +125,23 @@ class Interpreter:
 
 		Status = ExecutionStatus()
 
-		if parsed_command.name == "open": Status += self.__Session.open_objects(parsed_command.arguments[0])
-		elif parsed_command.name == "clear": Clear()
-		elif parsed_command.name == "close": self.__Session.close()
-		elif parsed_command.name == "rename": Status += self.__Session.rename_current_object(parsed_command.arguments[0])
+		if parsed_command.name == "open":
+			Status += self.__Session.open_objects(parsed_command.arguments[0])
+
+			Container = self.__Session.current_notes_container
+			if Container and Container.manifest.interfaces_options.cli.autoview: self.__Session.current_object.get_interface(Interfaces.CLI).view()
+
+		elif parsed_command.name == "clear":
+			Clear()
+
+		elif parsed_command.name == "close":
+			self.__Session.close()
+
+			Container = self.__Session.current_notes_container
+			if Container and Container.manifest.interfaces_options.cli.autoview: self.__Session.current_object.get_interface(Interfaces.CLI).view()
+
+		elif parsed_command.name == "rename":
+			Status += self.__Session.rename_current_object(parsed_command.arguments[0])
 		
 		else:
 
@@ -230,6 +243,9 @@ class Interpreter:
 				else: raise ValueError(str(ExceptionData))
 
 			if InputLine:
+				Container = self.__Session.current_notes_container
+				if Container and Container.manifest.interfaces_options.cli.autoclear: Clear()
+
 				Status = self.__ParseCommandData(InputLine)
 				if Status: self.__Execute(Status.value)	
 				else: Status.print_messages()		
