@@ -61,7 +61,7 @@ class BattleTech_Books_NoteCLI(NoteCLI):
 		CommandsList.append(Com)
 
 		Com = Command("estimate", "Set estimation.")
-		Com.base.add_argument(ParametersTypes.Number, description = "Estimation.", important = True)
+		Com.base.add_argument(ParametersTypes.Number, description = "Estimation from 1 to 5. Set 0 for removing.", important = True)
 		CommandsList.append(Com)
 
 		Com = Command("link", "Attach link to note.")
@@ -500,7 +500,11 @@ class BattleTech_Books_Note(BattleTech_Sources_Note):
 	def estimate(self, estimation: int) -> ExecutionStatus:
 		"""
 		Выставляет оценку.
-			estimation – оценка.
+
+		:param estimation: Оценка от 1 до 5. При указании 0 оценка удаляется.
+		:type estimation: int
+		:return: Статус выполнения.
+		:rtype: ExecutionStatus
 		"""
 
 		Status = ExecutionStatus()
@@ -511,6 +515,11 @@ class BattleTech_Books_Note(BattleTech_Sources_Note):
 				self._Data["estimation"] = estimation
 				self.save()
 				Status.push_message("Estimation updated.")
+
+			elif estimation == 0:
+				self._Data["estimation"] = None
+				self.save()
+				Status.push_message("Estimation removed.")
 
 			else: Status.push_error("Incorrect estimation value. From 1 to 5 expected.")
 
