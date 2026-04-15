@@ -126,10 +126,16 @@ class Interpreter:
 		Status = ExecutionStatus()
 
 		if parsed_command.name == "open":
-			Status += self.__Session.open_objects(parsed_command.arguments[0])
+			# Статус выполнения автоочистки.
+			# При открытии контейнера с высшего уровня автоочистка проверяет манифест раньше его загрузки.
+			IsCleared = bool(self.__Session.current_notes_container)
 
+			Status += self.__Session.open_objects(parsed_command.arguments[0])
 			Container = self.__Session.current_notes_container
-			if Container and Container.manifest.interfaces_options.cli.autoview: self.__Session.current_object.get_interface(Interfaces.CLI).view()
+
+			if Container:
+				if not IsCleared and Container.manifest.interfaces_options.cli.autoclear: Clear()
+				if Container.manifest.interfaces_options.cli.autoview: self.__Session.current_object.get_interface(Interfaces.CLI).view()
 
 		elif parsed_command.name == "clear":
 			Clear()
@@ -190,7 +196,7 @@ class Interpreter:
 		except UnknownFlag: Status.push_error("unknown_flag")
 		except UnknownKey: Status.push_error("unknown_key")
 		except MutuallyExclusiveParameters: Status.push_error("mutually_exclusive_parameters")
-		except ZeroDivisionError as ExceptionData:
+		except Exception as ExceptionData:
 			Type = type(ExceptionData).__qualname__
 			Status.push_error(f"{Type}: {ExceptionData}")
 

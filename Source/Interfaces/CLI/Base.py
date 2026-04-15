@@ -256,6 +256,8 @@ class NoteCLI:
 		else:
 			Status = self._ExecuteCustomCommands(parsed_command)
 
+		if self._Table.manifest.interfaces_options.cli.autoview: self.view()
+
 		return Status
 
 class BaseTableCLI:
@@ -395,10 +397,10 @@ class BaseTableCLI:
 					Status.emit_close()
 
 		elif parsed_command.name == "search":
-			Status = self.view(parsed_command.get_key_value("sort"), parsed_command.check_flag("r"), parsed_command.arguments[0])
+			Status = self.view(parsed_command.get_key_value("sort"), parsed_command.arguments[0], parsed_command.check_flag("r"))
 		
 		elif parsed_command.name == "view":
-			Status = self.view(parsed_command.get_key_value("sort"), parsed_command.check_flag("r"))
+			Status = self.view(parsed_command.get_key_value("sort"), None, parsed_command.check_flag("r"))
 
 		return Status
 
