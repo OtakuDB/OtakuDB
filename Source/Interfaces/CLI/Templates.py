@@ -1,12 +1,22 @@
 from prettytable import PLAIN_COLUMNS, PrettyTable
 from dublib.CLI.TextStyler import FastStyler
-from pick import pick
 
 #==========================================================================================#
 # >>>>> ШАБЛОНЫ МЕТОДОВ ВВОДА-ВЫВОДА <<<<< #
 #==========================================================================================#
 
-def Columns(columns: dict[str, list], sort_by: str = "ID", reverse: bool = False):
+def PrintTable(columns: dict[str, list], sort_by: str = "ID", reverse: bool = False):
+	"""
+	Выводит таблицу.
+
+	:param columns: Словарь, в которором ключи – названия колнок, а значения – списки значений.
+	:type columns: dict[str, list]
+	:param sort_by: Указывает название колонки, по которой идёт сортировка.
+	:type sort_by: str
+	:param reverse: Переключает реверсирование отображаемого контента.
+	:type reverse: bool
+	"""
+
 	TableObject = PrettyTable()
 	TableObject.set_style(PLAIN_COLUMNS)
 	TableObject.left_padding_width = 0
@@ -21,14 +31,3 @@ def Columns(columns: dict[str, list], sort_by: str = "ID", reverse: bool = False
 	TableObject.sort_key = lambda x: 0 if x[0] == "" else x[0]
 	TableObject.sortby = FastStyler(sort_by).decorate.bold
 	print(TableObject)
-
-def Pick(title: str, variants: list[int, str], indicator: str = ">", default_index: int = 0):
-	"""
-	Предлагает пользователю выбрать один из предложенных вариантов.
-		title – описание запроса;\n
-		variants – список вариантов.
-	"""
-
-	Variant, Index = pick(variants, title, indicator = indicator, default_index = default_index)
-
-	return variants[Index]

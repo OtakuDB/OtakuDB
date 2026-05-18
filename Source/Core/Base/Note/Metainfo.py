@@ -33,7 +33,7 @@ class Metainfo:
 		"""
 
 		self.__Note = note
-		self.__Data: dict[str, int | str] = dict() | data
+		self.__Data: dict[str, int | float | str | None] = data
 
 		self.__MetainfoRules = self.__Note.table.manifest.metainfo_rules
 
@@ -61,18 +61,18 @@ class Metainfo:
 		del self.__Data[field]
 		self.__Note.save()
 
-	def set_field_value(self, field: str, value: int | float | str):
+	def set_field_value(self, field: str, value: int | float | str | None):
 		"""
 		Задаёт значение поля метаданных.
 
 		:param field: Имя поля.
 		:type field: str
 		:param value: Значение.
-		:type value: str
+		:type value: int | float | str | None
 		:raises MetainfoBlocked: Прикрепление метаданных заброкировано фильтром манифеста.
 		"""
 
-		if not self.__MetainfoRules.check_metainfo_value(field, value): raise Exceptions.Note.MetainfoBlocked()
+		if value != None and not self.__MetainfoRules.check_metainfo_value(field, value): raise Exceptions.Note.MetainfoBlocked()
 		
 		self.__Data[field] = value
 		self.__Data[field] = dict(sorted(self.__Data.items()))

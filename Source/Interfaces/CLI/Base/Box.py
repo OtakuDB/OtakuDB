@@ -27,11 +27,11 @@ class BaseBoxCLI:
 		Com.base.add_argument(description = "Virtual path to box like POSIX.")
 		CommandsList.append(Com)
 
-		Com = Command("load", "Load table data and open CLI.")
-		Com.base.add_argument(description = "Table name.")
+		Com = Command("ls", "List box content.")
 		CommandsList.append(Com)
 
-		Com = Command("ls", "List box content.")
+		Com = Command("open", "Load table data and open CLI.")
+		Com.base.add_argument(description = "Table name.")
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -57,30 +57,6 @@ class BaseBoxCLI:
 		NewBox = self._Session.navigator.navigate(Path(target_path))
 		self._Interface.set_current_object(NewBox)
 
-	def _load(self, table_name: str):
-		"""
-		Загружает данные таблицы и открывает её CLI.
-
-		:param table_name: Имя таблицы.
-		:type table_name: str
-		"""
-
-		CurrentBox = self._Session.driver.current_box
-		Descriptor: "TableDescriptor | None" = None
-		
-		try:
-			Descriptor = CurrentBox.get_item(table_name)
-
-			if Descriptor.__class__.__name__ == "Box":
-				PrintError(f"Object \"{table_name}\" is box. Unable to use load operation.")
-				return
-
-		except KeyError:
-			PrintError(f"Current box doesn't contain table \"{table_name}\".")
-			return
-		
-		self._Interface.set_current_object(Descriptor.table)
-
 	def _ls(self):
 		"""Выводит содержимое текущего контейнера."""
 
@@ -96,7 +72,32 @@ class BaseBoxCLI:
 		Descriptors = sorted(Descriptors, key = lambda CurrentDescriptor: CurrentDescriptor.name)
 		
 		for CurrentBox in Boxes: print("📁", CurrentBox.name)
-		for CurrentDescriptor in Descriptors: print("💼", CurrentDescriptor.name)
+		for CurrentDescriptor in Descriptors: print("📦", CurrentDescriptor.name)
+
+	def _open(self, table_name: str):
+		"""
+		Загружает данные таблицы и открывает её CLI.
+
+		:param table_name: Имя таблицы.
+		:type table_name: str
+		"""
+
+		CurrentBox = self._Session.navigator.current_box
+		Descriptor: "TableDescriptor | None" = None
+		
+		try:
+			Descriptor = CurrentBox.get_item(table_name)
+
+			if Descriptor.__class__.__name__ == "Box":
+				PrintError(f"Object \"{table_name}\" is box. Unable to use load operation.")
+				return
+
+		except KeyError:
+			PrintError(f"Current box doesn't contain table \"{table_name}\".")
+			return
+		
+		Descriptor.table.load_data()
+		self._Interface.set_current_object(Descriptor.table)
 
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
@@ -112,8 +113,8 @@ class BaseBoxCLI:
 
 		match command.name:
 			case "cd": self._cd(command.arguments[0])
-			case "load": self._load(command.arguments[0])
 			case "ls": self._ls()
+			case "open": self._open(command.arguments[0])
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #

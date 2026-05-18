@@ -149,21 +149,6 @@ class BaseTable:
 
 		shutil.rmtree(self._TotalPath)
 
-	def get_note(self, note_id: int) -> "BaseNote":
-		"""
-		Возвращает запись.
-
-		:param note_id: ID записи.
-		:type note_id: int
-		:return: Запись.
-		:rtype: Note
-		:raises NoteNotFound: Запись не найдена в таблице.
-		"""
-
-		if note_id not in self._Notes: raise Exceptions.Table.NoteNotFound(note_id)
-
-		return self._Note[note_id]
-
 	def load_data(self):
 		"""Загружает данные таблицы."""
 
@@ -247,16 +232,15 @@ class BaseTable:
 					self._Notes[note_id].set_id(new_id)
 
 				case "s":
-					self._Notes[0] = self._Notes[new_id]
-					self._Notes[0].set_id(0)
+					FirstNote = self._Notes[note_id]
+					SecondNote = self._Notes[new_id]
 
-					self._Notes[new_id] = self._Notes[note_id]
-					self._Notes[new_id].set_id(new_id)
-					
-					self._Notes[note_id] = self._Notes[0]
-					self._Notes[note_id].set_id(note_id)
+					FirstNote.set_id(0)
+					SecondNote.set_id(note_id)
+					FirstNote.set_id(new_id)
 
-					del self._Notes[0]
+					self._Notes[note_id] = SecondNote
+					self._Notes[new_id] = FirstNote
 
 		else:
 			self._Notes[new_id] = self._Notes[note_id]
@@ -288,3 +272,30 @@ class BaseTable:
 		if note_id not in self._Notes: raise Exceptions.Table.NoteNotFound(note_id)
 		del self._Notes[note_id]
 		os.remove(self._TotalPath / f"{note_id}.json")
+
+	def get_note(self, note_id: int) -> "BaseNote":
+		"""
+		Возвращает запись.
+
+		:param note_id: ID записи.
+		:type note_id: int
+		:return: Запись.
+		:rtype: Note
+		:raises NoteNotFound: Запись не найдена в таблице.
+		"""
+
+		if note_id not in self._Notes: raise Exceptions.Table.NoteNotFound(note_id)
+
+		return self._Notes[note_id]
+	
+	def is_note_exists(self, note_id: int) -> bool:
+		"""
+		Проверяет, существует ли запись с указанным ID.
+
+		:param note_id: ID записи.
+		:type note_id: int
+		:return: Возвращает `True`, если запись существует.
+		:rtype: bool
+		"""
+
+		return note_id in self._Notes

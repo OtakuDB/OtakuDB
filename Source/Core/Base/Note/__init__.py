@@ -78,7 +78,11 @@ class BaseNote:
 		:rtype: dict[str, Any]
 		"""
 
-		return dict()
+		return {
+			"name": None,
+			"metainfo": dict(),
+			"attachments": dict()
+		}
 
 	def _GetSearchableStrings(self) -> list[str]:
 		"""
@@ -116,6 +120,7 @@ class BaseNote:
 		:type table: BaseTable
 		:param note_id: ID записи.
 		:type note_id: int
+		:raises ValueError: Обязательный ключ отсутствует в файле записи.
 		"""
 
 		self._Driver = driver
@@ -124,38 +129,23 @@ class BaseNote:
 
 		self._Path = self._Driver.storage_directory / self._Table.path / f"{note_id}.json"
 		
-		self._Data = self._GetEmptyNote() | {
-			"name": None,
-			"metainfo": dict(),
-			"attachments": dict()
-		}
-		self._Attachments = Attachments(self._Path.parent, self, self._Data["attachments"])
-		self._Metainfo = Metainfo(self, self._Data["metainfo"])
-		
+		self._Data = self._GetEmptyNote()
 		self._LoadData()
+
+		for Key in ("name",):
+			if Key not in self._Data: raise ValueError(f"Important key \"{Key}\" missing in note.")
+
+		self._Attachments = Attachments(self._Path.parent, self, self._Data.get("attachments") or dict())
+		self._Metainfo = Metainfo(self, self._Data.get("metainfo") or dict())
+		
 		self._PostInitMethod()
 
-	def set_id(self, id: int):
-		"""
-		Задаёт новый ID записи.
+	def delete(self):
+		"""Удаляет запись."""
 
-		:param id: Новый ID записи.
-		:type id: int
-		"""
+		self._Table.delete_note(self._ID)
 
-		OldID = self._ID
-		self._ID = id
-
-		OldPath = self._Path
-		NewPath = self._Path.parent / f"{id}.json"
-		os.rename(OldPath, self._Path)
-
-		if self.attachments.count > 0:
-			OldPath = OldPath.parent / f".attachments/{OldID}"
-			NewPath =  OldPath.parent / f".attachments/{id}"
-			shutil.move(OldPath, NewPath)
-
-	def set_name(self, name: str | None):
+	def rename(self, name: str | None):
 		"""
 		Задаёт имя записи.
 
@@ -166,6 +156,26 @@ class BaseNote:
 		if type(name) == str: name = name.strip()
 		self._Data["name"] = name
 		self.save()
+
+	def set_id(self, id: int):
+		"""
+		Задаёт новый ID и переименовывает файл записи.
+
+		:param id: Новый ID записи.
+		:type id: int
+		"""
+		
+		OldID = self._ID
+		OldPath = self._Path
+		NewPath = self._Path.parent / f"{id}.json"
+		os.rename(self._Path, NewPath)
+		self._ID = id
+		self._Path = NewPath
+
+		if self.attachments.count > 0:
+			OldPath = OldPath.parent / f".attachments/{OldID}"
+			NewPath =  OldPath.parent / f".attachments/{self._ID}"
+			shutil.move(OldPath, NewPath)
 
 	def save(self):
 		"""Сохраняет запись атомарно."""

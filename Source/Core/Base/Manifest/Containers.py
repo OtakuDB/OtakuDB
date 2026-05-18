@@ -353,7 +353,23 @@ class InterfacesOptions:
 
 		self.__Manifest = manifest
 
-		self.__Data = dict().fromkeys(tuple(Element.value for Element in Interfaces), dict())
+		self.__Data = {Element.value: dict() for Element in Interfaces}
+
+	def get_options(self, interface: Interfaces) -> dict[str, Any]:
+		"""
+		Возвращает копию словаря параметров интерфейса.
+
+		:param interface: Интерфейс.
+		:type interface: Interfaces
+		:return: Копия словаря параметров интерфейса.
+		:rtype: dict[str, Any]
+		"""
+
+		Value = self.__Data.get(interface.value)
+		if Value: Value = Value.copy()
+		else: Value = dict()
+		
+		return Value
 
 	def parse(self, data: dict):
 		"""
@@ -365,37 +381,22 @@ class InterfacesOptions:
 
 		self.__Data = self.__Data | data
 
-	def remove_option(self, interface: Interfaces, key: str):
-		"""
-		Удаляет опцию интерфейса.
-
-		:param interface: Тип интерфейса.
-		:type interface: Interfaces
-		:param key: Ключ опции.
-		:type key: str
-		"""
-
-		del self.__Data[interface.value]
-		self.save()
-
 	def save(self):
 		"""Сохраняет манифест."""
 
 		self.__Manifest.save()
 
-	def set_option(self, interface: Interfaces, key: str, value: Any):
+	def set_options(self, interface: Interfaces, options: dict[str, Any]):
 		"""
-		Задаёт значение опции интерфейса.
+		Задаёт словарь параметров интерфейса.
 
-		:param interface: Тип интерфейса.
+		:param interface: Интерфейс.
 		:type interface: Interfaces
-		:param key: Ключ опции.
-		:type key: str
-		:param value: Значение опции.
-		:type value: Any
+		:param options: Словарь параметров.
+		:type options: dict[str, Any]
 		"""
 
-		self.__Data[interface.value] = value
+		self.__Data[interface.value] = options
 		self.save()
 
 	def to_dict(self) -> dict:

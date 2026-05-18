@@ -1,4 +1,5 @@
 from .Base import BaseBoxCLI, BaseTableCLI, BaseNoteCLI
+from .Options.Local import TableInterfaceOptions
 from .Enums import InterractionLevels
 
 from dublib.CLI.Terminalyzer import Command, ParametersTypes,ParsedCommandData, Terminalyzer
@@ -32,13 +33,13 @@ class Interface:
 
 		CommandsList = list()
 
-		Com = Command("clear", "Clear terminal.")
+		Com = Command("clear", "Clear terminal.", "Global")
 		CommandsList.append(Com)
 
-		Com = Command("exit", "Exit from OtakuBD CLI.")
+		Com = Command("exit", "Exit from OtakuBD CLI.", "Global")
 		CommandsList.append(Com)
 
-		Com = Command("mount", "Mount storage directory.")
+		Com = Command("mount", "Mount storage directory.", "Global")
 		ComPos = Com.create_position("PATH", "Path to storage directory.", important = True)
 		ComPos.add_argument(ParametersTypes.ValidPath)
 		CommandsList.append(Com)
@@ -130,6 +131,7 @@ class Interface:
 			Analyzer = Terminalyzer(parameters)
 			Analyzer.helper.enable()
 			Analyzer.helper.enable_sorting()
+			Analyzer.helper.set_category("Global")
 			CommandData = Analyzer.check_commands(self.__GetInterractionLevelCommands())
 
 			if not CommandData: PrintError("Command not found.")
