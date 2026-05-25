@@ -1,3 +1,4 @@
+from Source.Interfaces.CLI.Templates import PrintTable
 from Source.Interfaces.CLI.Functions import Unstar
 
 from dublib.CLI.Terminalyzer import Command, ParsedCommandData
@@ -35,6 +36,9 @@ class BaseNoteCLI:
 		ComPos.set_argument()
 		CommandsList.append(Com)
 
+		Com = Command("slots", "Print slots descriptions.")
+		CommandsList.append(Com)
+
 		Com = Command("view", "View note.")
 		CommandsList.append(Com)
 
@@ -62,6 +66,26 @@ class BaseNoteCLI:
 		self._Note.delete()
 		self._Interface.set_current_object(self._Note.table)
 
+	def _slots(self):
+		"""Выводит описания слотов."""
+
+		SlotsInfo = self._Note.table.manifest.attachments.slots
+
+		if not SlotsInfo:
+			print("Slots info not provided.")
+			return
+		
+		Columns = {
+			"Slot": list(),
+			"Description": list()
+		}
+
+		for Name, Description in SlotsInfo.items():
+			Columns["Slot"].append(Name)
+			Columns["Description"].append(Description or "")
+
+		PrintTable(Columns, sort_by = "Slot")
+
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -79,6 +103,7 @@ class BaseNoteCLI:
 			case "delete": self._delete(command.check_flag("-y"))
 			case "rename": self._Note.rename(Unstar(command.get_position_value("NAME")))
 			case "view": self.view()
+			case "slots": self._slots()
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #

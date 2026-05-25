@@ -1,4 +1,6 @@
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData
+from Source.Core import Exceptions
+
+from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData
 from dublib.CLI.Templates.Bus import PrintError
 
 from typing import TYPE_CHECKING
@@ -28,12 +30,22 @@ class BaseBoxCLI:
 		ComPos.set_argument()
 		CommandsList.append(Com)
 
+		Com = Command("create", "Create table.")
+		ComPos = Com.create_position("TYPE", "Type of table.", important = True)
+		ComPos.set_argument(ParametersTypes.Alpha)
+		ComPos = Com.create_position("NAME", "Name of table. Used type name as default.")
+		ComPos.set_argument()
+		CommandsList.append(Com)
+
 		Com = Command("ls", "List box content.")
 		CommandsList.append(Com)
 
 		Com = Command("open", "Load table data and open CLI.")
 		ComPos = Com.create_position("TABLE", "Name of table.", important = True)
 		ComPos.set_argument()
+		CommandsList.append(Com)
+
+		Com = Command("tables", "Prints all tables types.")
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -58,6 +70,21 @@ class BaseBoxCLI:
 
 		NewBox = self._Session.navigator.navigate(Path(target_path))
 		self._Interface.set_current_object(NewBox)
+
+	def _create(self, table_type: str, name: str | None):
+		"""
+		Создаёт новую таблицу.
+
+		:param table_type: Тип таблицы.
+		:type table_type: str
+		:param name: Имя таблицы. По умолчанию будет использован тип.
+		:type name: str | None
+		"""
+
+		Name = name or table_type
+
+		try: self._Session.navigator.current_box.create_table(table_type, Name)
+		except Exceptions.Driver.TableAlreadyExists: PrintError("Table with same name already exists.")
 
 	def _ls(self):
 		"""Выводит содержимое текущего контейнера."""
@@ -101,6 +128,14 @@ class BaseBoxCLI:
 		Descriptor.table.load_data()
 		self._Interface.set_current_object(Descriptor.table)
 
+	def _tables(self):
+		"""Выводит список доступных типов таблиц."""
+
+		Types = self._Session.driver.tables_types
+
+		if not Types: print("No tables available.")
+		else: print(", ".join(Types))
+
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -115,8 +150,10 @@ class BaseBoxCLI:
 
 		match command.name:
 			case "cd": self._cd(command.get_position_value("PATH"))
+			case "create": self._create(command.get_position_value("TYPE"), command.get_position_value("NAME"))
 			case "ls": self._ls()
 			case "open": self._open(command.get_position_value("TABLE"))
+			case "tables": self._tables()
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #

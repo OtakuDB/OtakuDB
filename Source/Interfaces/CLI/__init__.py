@@ -107,12 +107,11 @@ class Interface:
 
 		Module: ModuleType | None = None
 
-		try: Module = importlib.import_module(f"Source.Tables.{table_type}.interfaces.cli")
-		except ImportError: PrintCritical(f"Table \"{table_type}\" doesn't support CLI.")
-
 		try:
+			Module = importlib.import_module(f"Source.Tables.{table_type}.interfaces.cli")
 			Module.TableCLI
 			Module.NoteCLI
+		except ImportError: PrintCritical(f"Table \"{table_type}\" doesn't support CLI.")
 		except AttributeError: PrintCritical(f"Table \"{table_type}\" doesn't provide all CLI interpretators.")
 
 		return Module
@@ -140,7 +139,7 @@ class Interface:
 		except Exceptions.CLI.Terminalyzer.NotEnoughParameters: PrintError("Not enough parameters.", origin = "terminalyzer")
 		except Exceptions.CLI.Terminalyzer.InvalidParameterType: PrintError("Invalid parameter type.", origin = "terminalyzer")
 		except Exceptions.CLI.Terminalyzer.TooManyParameters: print("too_many_parameters")
-		except Exception as ExceptionData:
+		except ZeroDivisionError as ExceptionData:
 			Type = type(ExceptionData).__qualname__
 			print(f"{Type}: {ExceptionData}")
 
@@ -165,7 +164,7 @@ class Interface:
 		self.__Interpreter: BaseBoxCLI | BaseTableCLI | BaseNoteCLI | None = None
 		self.__CurrentObject = None
 
-		# Clear()
+		Clear()
 		print("OtakuDB v0.2.0-alpha")
 
 		if self.__Driver.storage_directory:

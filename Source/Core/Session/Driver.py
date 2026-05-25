@@ -93,7 +93,10 @@ class Driver:
 		TotalPath = self.__StorageDirectory / parent_box.path / name
 		os.makedirs(TotalPath, exist_ok = True)
 
-		return Box(self, parent_box.path, name)
+		NewBox = Box(self, parent_box.path, name)
+		parent_box.reload()
+
+		return NewBox
 
 	def create_table(self, type: str, name: str, parent_box: Box) -> TableDescriptor:
 		"""

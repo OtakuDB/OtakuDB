@@ -1,11 +1,14 @@
 from Source.Interfaces.CLI.Options.Local import TableInterfaceOptions
-from Source.Interfaces.CLI.Templates import PrintTable
 from Source.Core import Exceptions
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
+from dublib.CLI.TextStyler import Escapes, FastStyler
 from dublib.CLI.Templates.Bus import PrintError
 from dublib.CLI.Templates import Confirmation
+
 from typing import TYPE_CHECKING
+
+from prettytable import PLAIN_COLUMNS, PrettyTable
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Table import BaseTable
@@ -161,6 +164,40 @@ class BaseTableCLI:
 			case "rename": self._Table.rename(command.arguments[0])
 			case "view": self.view(command.check_flag("r"))
 
+	def _PrintTable(self, columns: dict[str, list], sort_by: str | None = None, reverse: bool = False):
+		"""
+		Выводит таблицу в консоль.
+
+		:param columns: Словарь, в которором ключи – названия колнок, а значения – списки значений.
+		:type columns: dict[str, list]
+		:param sort_by: Указывает название колонки, по которой идёт сортировка.
+		:type sort_by: str | None
+		:param reverse: Переключает реверсирование отображаемого контента.
+		:type reverse: bool
+		"""
+
+		TableObject = PrettyTable()
+		TableObject.set_style(PLAIN_COLUMNS)
+		TableObject.left_padding_width = 0
+		TableObject.right_padding_width = 3
+
+		for ColumnName in columns.keys():
+			Options = self._InterfaceOptions.columns.get_column_options(ColumnName)
+			if not Options.is_enabled: continue
+
+			if Options.max_width:
+				for Index in range(len(columns[ColumnName])):
+					if len(columns[ColumnName][Index]) > Options.max_width:
+						columns[ColumnName][Index] = columns[ColumnName][Index][:Options.max_width] + "…"
+
+			Buffer = FastStyler(ColumnName).decorate.bold
+			TableObject.add_column(Buffer, columns[ColumnName])
+
+		TableObject.align = "l"
+		TableObject.reversesort = reverse
+		if sort_by: TableObject.sortby = FastStyler(sort_by).decorate.bold
+		print(TableObject)
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -275,4 +312,4 @@ class BaseTableCLI:
 				if Value == None: Value = ""
 				Columns[ColumnName].append(Value)
 
-		PrintTable(Columns, reverse = reverse)
+		self._PrintTable(Columns, reverse = reverse)

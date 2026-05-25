@@ -78,11 +78,7 @@ class BaseNote:
 		:rtype: dict[str, Any]
 		"""
 
-		return {
-			"name": None,
-			"metainfo": dict(),
-			"attachments": dict().fromkeys(self._Table.manifest.attachments.slots.keys(), None)
-		}
+		return dict()
 
 	def _GetSearchableStrings(self) -> list[str]:
 		"""
@@ -129,7 +125,12 @@ class BaseNote:
 
 		self._Path = self._Driver.storage_directory / self._Table.path / f"{note_id}.json"
 		
-		self._Data = self._GetEmptyNote()
+		self._Data = {
+			"name": None,
+			"metainfo": dict(),
+			"attachments": dict().fromkeys(self._Table.manifest.attachments.slots.keys(), None)
+		} | self._GetEmptyNote()
+		
 		self._LoadData()
 
 		for Key in ("name",):
