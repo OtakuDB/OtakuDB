@@ -3,6 +3,8 @@ from .Box import Box
 
 from Source.Core import Exceptions
 
+from dublib.Methods.Filesystem import ListDir
+
 from typing import TYPE_CHECKING
 from pathlib import Path
 from os import PathLike
@@ -28,6 +30,15 @@ class Driver:
 		"""Директория хранилища."""
 
 		return self.__StorageDirectory
+
+	@property
+	def tables_types(self) -> tuple[str]:
+		"""Последовательность названий доступных типов таблиц."""
+
+		Types = ListDir("Source/Tables")
+		if "__pycache__" in Types: Types.remove("__pycache__")
+
+		return tuple(Types)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -64,12 +75,12 @@ class Driver:
 		if not os.path.exists(directory): raise FileNotFoundError(directory)
 		self.__StorageDirectory = Path(directory)
 
-	def create_box(self, parent_path: Path | None, name: str) -> Box:
+	def create_box(self, parent_box: Box | None, name: str) -> Box:
 		"""
 		Создаёт новый контейнер.
 
-		:param parent_path: Путь к родительскому контейнеру.
-		:type parent_path: Path | None
+		:param parent_box: Путь к родительскому контейнеру.
+		:type parent_box: Box | None
 		:param name: Название контейнера.
 		:type name: str
 		:return: Новый контейнер.
@@ -79,12 +90,12 @@ class Driver:
 
 		if not self.__StorageDirectory: raise Exceptions.Driver.StorageUnmounted()
 
-		TotalPath = self.__StorageDirectory / parent_path / name
+		TotalPath = self.__StorageDirectory / parent_box.path / name
 		os.makedirs(TotalPath, exist_ok = True)
 
-		return Box(self, parent_path, name)
+		return Box(self, parent_box.path, name)
 
-	def create_table(self, type: str, name: str, path: Path) -> TableDescriptor:
+	def create_table(self, type: str, name: str, parent_box: Box) -> TableDescriptor:
 		"""
 		Создаёт новую таблицу.
 
@@ -92,8 +103,8 @@ class Driver:
 		:type type: str
 		:param name: Название таблицы.
 		:type name: str
-		:param path: Виртуальный путь к контейнеру таблицы.
-		:type path: Path
+		:param parent_box: Родительский контейнер.
+		:type parent_box: Box
 		:return: Дескриптор таблицы.
 		:rtype: TableDescriptor
 		:raises StorageUnmounted: Хранилище отмонтировано.
@@ -102,18 +113,20 @@ class Driver:
 
 		if not self.__StorageDirectory: raise Exceptions.Driver.StorageUnmounted()
 
-		path = path / name
-		TotalPath = self.__StorageDirectory / path
+		TableVirtualPath = parent_box.path / name
+		TableTotalPath = self.__StorageDirectory / TableVirtualPath
 
-		if TotalPath.exists(): raise Exceptions.Driver.TableAlreadyExists(path)
+		if TableTotalPath.exists(): raise Exceptions.Driver.TableAlreadyExists(TableVirtualPath)
 
-		os.makedirs(TotalPath, exist_ok = True)
+		os.makedirs(TableTotalPath, exist_ok = True)
 
 		ManifestGeneratorModule = importlib.import_module(f"Source.Tables.{type}.manifest")
-		ManifestGenerator: "ManifestGenerator" = ManifestGeneratorModule.Generator(TotalPath, type)
+		ManifestGenerator: "ManifestGenerator" = ManifestGeneratorModule.Generator(TableTotalPath, type)
 		Manifest = ManifestGenerator.generate()
 
-		return TableDescriptor(self, self.__WorkTree, path, Manifest)
+		parent_box.reload()
+
+		return TableDescriptor(self, parent_box, TableVirtualPath, Manifest)
 	
 	def get_box(self, virtual_path: Path | None = None) -> Box:
 		"""

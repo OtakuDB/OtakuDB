@@ -18,7 +18,7 @@ class Box:
 
 	@property
 	def name(self) -> str:
-		"""Имя представления."""
+		"""Имя контейнера."""
 
 		return self.__VirtualPath.name
 	
@@ -32,10 +32,7 @@ class Box:
 	def parent(self) -> "Box | None":
 		"""Родительский контейнер."""
 
-		if not self.__ParentPath: return
-
-		try: return self.__Driver.get_box(self.__ParentPath)
-		except FileNotFoundError: pass
+		return self.__ParentBox
 
 	@property
 	def path(self) -> Path:
@@ -47,28 +44,28 @@ class Box:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, driver: "Driver", parent_path: Path | None = None, name: str | None = None):
+	def __init__(self, driver: "Driver", parent_box: "Box | None" = None, name: str | None = None):
 		"""
 		Контейнер.
 
 		:param driver: Драйвер хранилища.
 		:type driver: Driver
-		:param parent_path: Виртуальный путь к родительскому контейнеру.
-		:type parent_path: Path | None
+		:param parent_box: Родительский контейнер.
+		:type parent_box: Box | None
 		:param name: Имя контейнера. Обязательно при наличии родительского контейнера.
 		:type name: str | None
 		:raises FileNotFoundError: Директория контейнера не найдена.
 		:raises ValueError: Не назначено имя для вложенного контейнера.
 		"""
 
-		if parent_path and not name: raise ValueError("Box must have name.")
+		if parent_box and not name: raise ValueError("Box must have name.")
 		
 		self.__Driver = driver
-		self.__ParentPath = parent_path
+		self.__ParentBox = parent_box
 		self.__Name = name
 
 		self.__VirtualPath = Path()
-		if self.__ParentPath: self.__VirtualPath = self.__ParentPath / self.__Name
+		if self.__ParentBox: self.__VirtualPath = self.__ParentBox.path / self.__Name
 		self.__TotalPath = self.__Driver.storage_directory / self.__VirtualPath
 
 		if not self.__TotalPath.exists(): raise FileNotFoundError(self.__TotalPath)
@@ -106,7 +103,7 @@ class Box:
 		:rtype: Box
 		"""
 
-		return self.__Driver.create_box(name, self.__TotalPath / name)
+		return self.__Driver.create_box(name, self)
 	
 	def create_table(self, type: str, name: str) -> "TableDescriptor":
 		"""
@@ -116,11 +113,13 @@ class Box:
 		:type type: str
 		:param name: Имя таблицы.
 		:type name: str
-		:return: Представление созданного контейнера.
-		:rtype: Box
+		:return: Дескриптор таблицы.
+		:rtype: TableDescriptor
+		:raises StorageUnmounted: Хранилище отмонтировано.
+		:raises TableAlreadyExists: Таблица уже существует.
 		"""
 
-		return self.__Driver.create_table(type, name, self.__VirtualPath)
+		return self.__Driver.create_table(type, name, self)
 
 	def delete(self):
 		"""Удаляет текущее представление."""

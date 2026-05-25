@@ -81,7 +81,7 @@ class BaseNote:
 		return {
 			"name": None,
 			"metainfo": dict(),
-			"attachments": dict()
+			"attachments": dict().fromkeys(self._Table.manifest.attachments.slots.keys(), None)
 		}
 
 	def _GetSearchableStrings(self) -> list[str]:
