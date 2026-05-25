@@ -48,7 +48,10 @@ class BaseNoteCLI:
 	def commands(self) -> list[Command]:
 		"""Полный список команд интерпретатора."""
 
-		return self.base_commands + self._GenerateCustomCommands()
+		CustomCommands = self._GenerateCustomCommands()
+		for Index in range(len(CustomCommands)): CustomCommands[Index].set_category("Note")
+
+		return self.base_commands + CustomCommands
 	
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ ОБРАБОТЧИКИ КОМАНД <<<<< #

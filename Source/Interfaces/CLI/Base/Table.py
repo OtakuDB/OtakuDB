@@ -76,7 +76,10 @@ class BaseTableCLI:
 	def commands(self) -> list[Command]:
 		"""Полный список команд интерпретатора."""
 
-		return self.base_commands + self._GenerateCustomCommands()
+		CustomCommands = self._GenerateCustomCommands()
+		for Index in range(len(CustomCommands)): CustomCommands[Index].set_category("Table")
+
+		return self.base_commands + CustomCommands
 	
 	@property
 	def interface_options(self) -> TableInterfaceOptions:
@@ -158,11 +161,11 @@ class BaseTableCLI:
 		match command.name:
 			case "chid": self._chid(command)
 			case "close": self._Interface.set_current_object(self._Session.navigator.current_box)
-			case "delete": self._delete(command.check_flag("y"))
-			case "new": self._new(command.check_flag("o"))
+			case "delete": self._delete(command.check_flag("-y"))
+			case "new": self._new(command.check_flag("-o"))
 			case "open": self._open(command.arguments[0])
 			case "rename": self._Table.rename(command.arguments[0])
-			case "view": self.view(command.check_flag("r"))
+			case "view": self.view(command.check_flag("-r"))
 
 	def _PrintTable(self, columns: dict[str, list], sort_by: str | None = None, reverse: bool = False):
 		"""

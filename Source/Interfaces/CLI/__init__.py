@@ -3,8 +3,8 @@ from .Options.Local import TableInterfaceOptions
 from .Enums import InterractionLevels
 
 from dublib.CLI.Terminalyzer import Command, ParametersTypes,ParsedCommandData, Terminalyzer
+from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates.Bus import PrintCritical, PrintError
-from dublib.CLI.TextStyler import FastStyler
 from dublib.Methods.System import Clear
 from dublib.CLI import readline
 from dublib import Exceptions
@@ -198,7 +198,9 @@ class Interface:
 		if VirtualPath == ".": VirtualPath = ""
 		Selector = "-".join((Storage, VirtualPath, Note)).strip("-")
 
-		return FastStyler(f"{Selector} -> ").decorate.bold
+		BoldGreen = TextStyler(decorations = Codes.Decorations.Bold, text_color = Codes.Colors.Green)
+
+		return BoldGreen.get_styled_text(f"{Selector} -> ")
 
 	def set_current_object(self, object: "Box | BaseTable | BaseNote | None"):
 		"""
