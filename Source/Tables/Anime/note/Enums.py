@@ -1,5 +1,14 @@
 from enum import Enum
 
+class Bases(Enum):
+	"""Основы аниме."""
+
+	Game = "game"
+	Manga = "manga"
+	Novel = "novel"
+	Original = "original"
+	Ranobe = "ranobe"
+
 class PartsTypes(Enum):
 	"""Типы частей."""
 

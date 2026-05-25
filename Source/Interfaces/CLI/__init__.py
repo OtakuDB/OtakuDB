@@ -4,10 +4,10 @@ from .Enums import InterractionLevels
 
 from dublib.CLI.Terminalyzer import Command, ParametersTypes,ParsedCommandData, Terminalyzer
 from dublib.CLI.Templates.Bus import PrintCritical, PrintError
-from dublib.Exceptions import CLI as TerminalyzerExceptions
 from dublib.CLI.TextStyler import FastStyler
 from dublib.Methods.System import Clear
 from dublib.CLI import readline
+from dublib import Exceptions
 
 from typing import TYPE_CHECKING
 from types import ModuleType
@@ -41,7 +41,7 @@ class Interface:
 
 		Com = Command("mount", "Mount storage directory.", "Global")
 		ComPos = Com.create_position("PATH", "Path to storage directory.", important = True)
-		ComPos.add_argument(ParametersTypes.ValidPath)
+		ComPos.set_argument(ParametersTypes.ValidPath)
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -137,13 +137,10 @@ class Interface:
 			if not CommandData: PrintError("Command not found.")
 			else: return CommandData
 
-		except TerminalyzerExceptions.NotEnoughParameters: PrintError("Not enough parameters.", origin = "terminalyzer")
-		except TerminalyzerExceptions.InvalidParameterType: PrintError("Invalid parameter type.", origin = "terminalyzer")
-		except TerminalyzerExceptions.TooManyParameters: print("too_many_parameters")
-		except TerminalyzerExceptions.UnknownFlag: print("unknown_flag")
-		except TerminalyzerExceptions.UnknownKey: print("unknown_key")
-		except TerminalyzerExceptions.MutuallyExclusiveParameters: print("mutually_exclusive_parameters")
-		except ZeroDivisionError as ExceptionData:
+		except Exceptions.CLI.Terminalyzer.NotEnoughParameters: PrintError("Not enough parameters.", origin = "terminalyzer")
+		except Exceptions.CLI.Terminalyzer.InvalidParameterType: PrintError("Invalid parameter type.", origin = "terminalyzer")
+		except Exceptions.CLI.Terminalyzer.TooManyParameters: print("too_many_parameters")
+		except Exception as ExceptionData:
 			Type = type(ExceptionData).__qualname__
 			print(f"{Type}: {ExceptionData}")
 
@@ -168,7 +165,7 @@ class Interface:
 		self.__Interpreter: BaseBoxCLI | BaseTableCLI | BaseNoteCLI | None = None
 		self.__CurrentObject = None
 
-		Clear()
+		# Clear()
 		print("OtakuDB v0.2.0-alpha")
 
 		if self.__Driver.storage_directory:

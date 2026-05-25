@@ -27,12 +27,12 @@ class BaseNoteCLI:
 		CommandsList.append(Com)
 
 		Com = Command("delete", "Delete note.")
-		Com.base.add_flag("y", "Automatically confirms deletion.")
+		Com.base.add_flag("-y", description = "Automatically confirms deletion.")
 		CommandsList.append(Com)
 
 		Com = Command("rename", "Rename note.")
 		ComPos = Com.create_position("NAME", "New note name or * to clear.", important = True)
-		ComPos.add_argument()
+		ComPos.set_argument()
 		CommandsList.append(Com)
 
 		Com = Command("view", "View note.")
@@ -76,8 +76,8 @@ class BaseNoteCLI:
 
 		match command.name:
 			case "close": self._Interface.set_current_object(self._Note.table)
-			case "delete": self._delete(command.check_flag("y"))
-			case "rename": self._Note.rename(Unstar(command.arguments[0]))
+			case "delete": self._delete(command.check_flag("-y"))
+			case "rename": self._Note.rename(Unstar(command.get_position_value("NAME")))
 			case "view": self.view()
 
 	#==========================================================================================#

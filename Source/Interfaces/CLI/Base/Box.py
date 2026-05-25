@@ -24,14 +24,16 @@ class BaseBoxCLI:
 		CommandsList = list()
 
 		Com = Command("cd", "Change box directory.")
-		Com.base.add_argument(description = "Virtual path to box like POSIX.")
+		ComPos = Com.create_position("PATH", "Virtual path to box like POSIX.", important = True)
+		ComPos.set_argument()
 		CommandsList.append(Com)
 
 		Com = Command("ls", "List box content.")
 		CommandsList.append(Com)
 
 		Com = Command("open", "Load table data and open CLI.")
-		Com.base.add_argument(description = "Table name.")
+		ComPos = Com.create_position("TABLE", "Name of table.", important = True)
+		ComPos.set_argument()
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -112,9 +114,9 @@ class BaseBoxCLI:
 		"""
 
 		match command.name:
-			case "cd": self._cd(command.arguments[0])
+			case "cd": self._cd(command.get_position_value("PATH"))
 			case "ls": self._ls()
-			case "open": self._open(command.arguments[0])
+			case "open": self._open(command.get_position_value("TABLE"))
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #

@@ -28,41 +28,43 @@ class BaseTableCLI:
 
 		Com = Command("chid", "Change ID of note.")
 		ComPos = Com.create_position("NOTE_ID", description = "Exists note ID.", important = True)
-		ComPos.add_argument(ParametersTypes.Number)
+		ComPos.set_argument(ParametersTypes.Number)
 		ComPos = Com.create_position("NEW_ID", description = "New note ID", important = True)
-		ComPos.add_argument(ParametersTypes.Number)
-		ComPos = Com.create_position("MODE", "Mode of ID changing.")
-		ComPos.add_flag("o", "Overwtite exists note.")
-		ComPos.add_flag("s", "Swipe with exists note.")
-		ComPos.add_flag("i", "Insert to exists note place.")
+		ComPos.set_argument(ParametersTypes.Number)
+		ComPos = Com.create_position("MODE", description = "Mode of ID changing.")
+		ComPos.add_flag("o", description = "Overwtite exists note.")
+		ComPos.add_flag("s", description = "Swipe with exists note.")
+		ComPos.add_flag("i", description = "Insert to exists note place.")
 		CommandsList.append(Com)
 
 		Com = Command("close", "Close table.")
 		CommandsList.append(Com)
 
 		Com = Command("delete", "Delete table.")
-		Com.base.add_flag("y", "Automatically confirms deletion.")
+		Com.base.add_flag("-y", description = "Automatically confirms deletion.")
 		CommandsList.append(Com)
 
 		Com = Command("new", "Create new note.")
-		Com.base.add_flag("o", "Open note after creation.")
+		Com.base.add_flag("-o", description = "Open note after creation.")
 		CommandsList.append(Com)
 
 		Com = Command("open", "Open note CLI.")
 		ComPos = Com.create_position("ID", "Note ID.", important = True)
-		ComPos.add_argument(ParametersTypes.Number)
+		ComPos.set_argument(ParametersTypes.Number)
 		CommandsList.append(Com)
 
 		Com = Command("rename", "Rename table.")
-		Com.base.add_argument(description = "New table name.")
+		ComPos = Com.create_position("NAME", description = "New table name.")
+		ComPos.set_argument()
 		CommandsList.append(Com)
 
 		Com = Command("search", "Search notes.")
-		Com.base.add_argument(description = "Search query (part of name or another names).", important = True)
+		ComPos = Com.create_position("QUERY", description = "Search query (part of name or another names).", important = True)
+		ComPos.set_argument()
 		CommandsList.append(Com)
 
 		Com = Command("view", "Show list of notes.")
-		Com.base.add_flag("r", "Reverse list.")
+		Com.base.add_flag("-r", description = "Reverse list.")
 		CommandsList.append(Com)
 
 		return CommandsList

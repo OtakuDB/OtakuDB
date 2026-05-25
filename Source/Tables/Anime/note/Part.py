@@ -73,15 +73,17 @@ class Part:
 		:type data: dict
 		"""
 
-		for Key in self.__Data.keys(): self.__Data[Key] = data[Key]
-		if self.type == PartsTypes.Film: del self.__Data["series"]
-
 		#---> Обработка Legacy-файлов.
 		#==========================================================================================#
-		if self.__Data["type"] == "special": self.__Data["type"] = PartsTypes.Specials.value
-		if data.get("skipped"): self.__Data["viewed"] = -1
-		if data.get("watched"): self.__Data["viewed"] = data.get("series") or 1
-		if data.get("mark"): self.__Data["viewed"] = data.get("mark")
+		if data["type"] == "special": data["type"] = PartsTypes.Specials.value
+		if data["type"] == PartsTypes.Film.value and "series" in data: del data["series"]
+		
+		if data.get("skipped"): data["viewed"] = -1
+		if data.get("watched"): data["viewed"] = data.get("series") or 1
+		if data.get("mark"): data["viewed"] = data.get("mark")
+
+		for Key in self.__Data.keys():
+			if Key in data: self.__Data[Key] = data[Key]
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
