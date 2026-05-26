@@ -17,7 +17,7 @@ class SlotInfo:
 	"""Информация о слоте."""
 
 	name: str
-	file: str
+	file: str | None
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -34,7 +34,7 @@ class Attachments:
 	def count(self) -> int:
 		"""Количество вложений."""
 
-		return len(self.__Data["slots"]) + len(self.__Data["free"])
+		return len(self.__Data["free"]) + sum(1 for slot in self.slots if slot.file)
 
 	@property
 	def free(self) -> tuple[Path]:
@@ -66,7 +66,7 @@ class Attachments:
 
 		self.__Directory = directory
 		self.__Note = note
-		self.__Data: dict[str, dict | list] = {
+		self.__Data: dict[str, dict[str | None] | list[str]] = {
 			"slots": data.get("slots") or dict(),
 			"free": data.get("free") or list()
 		}
