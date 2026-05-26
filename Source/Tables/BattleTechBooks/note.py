@@ -1,4 +1,4 @@
-from .Structs import CollectionStatusses, Era, Statusses, Types
+from .Structs import CollectionStatuses, Era, Statuses, Types
 
 from Source.Core.Base.Note import BaseNote
 
@@ -25,11 +25,17 @@ class Note(BaseNote):
 		return tuple(self._Data["another_names"])
 
 	@property
-	def collection_status(self) -> CollectionStatusses | None:
+	def collection_status(self) -> CollectionStatuses | None:
 		"""Статус коллекционирования."""
 
 		Status = self._Data.get("collection_status")
-		if Status: return CollectionStatusses(Status)
+		if Status: return CollectionStatuses(Status)
+
+	@property
+	def comment(self) -> str | None:
+		"""Комментарий к записи."""
+
+		return self._Data.get("comment")
 
 	@property
 	def era(self) -> Era | None:
@@ -54,11 +60,11 @@ class Note(BaseNote):
 		return self._Data.get("localized_name")
 
 	@property
-	def status(self) -> Statusses | None:
+	def status(self) -> Statuses | None:
 		"""Статус прочтения."""
 
 		Status = self._Data.get("status")
-		if Status: return Statusses(Status)
+		if Status: return Statuses(Status)
 
 	@property
 	def type(self) -> Types | None:
@@ -145,6 +151,29 @@ class Note(BaseNote):
 		self._Data["era"] = None
 		self.save()
 
+	def set_collection_status(self, status: CollectionStatuses | None):
+		"""
+		Задаёт статус коллекционирования.
+
+		:param status: Статус коллекционирования.
+		:type status: CollectionStatuses | None
+		"""
+
+		if status: status = status.value
+		self._Data["collection_status"] = status
+		self.save()
+
+	def set_comment(self, comment: str | None):
+		"""
+		Задаёт комментарий.
+
+		:param comment: Текст комментария.
+		:type comment: str | None
+		"""
+
+		self._Data["comment"] = comment
+		self.save()
+
 	def set_era_by_index(self, era_index: int | float):
 		"""
 		Задаёт эру по индексу.
@@ -190,12 +219,12 @@ class Note(BaseNote):
 		self._Data["localized_name"] = localized_name
 		self.save()
 
-	def set_status(self, status: Statusses | None):
+	def set_status(self, status: Statuses | None):
 		"""
 		Задаёт статус прочтения.
 
 		:param status: Статус прочтения.
-		:type status: Statusses | None
+		:type status: Statuses | None
 		"""
 
 		if status: status = status.value

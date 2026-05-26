@@ -17,7 +17,7 @@ class Era:
 # >>>>> ПЕРЕЧИСЛЕНИЯ <<<<< #
 #==========================================================================================#
 
-class CollectionStatusses(Enum):
+class CollectionStatuses(Enum):
 	"""Статусы коллекционирования."""
 
 	Collected = "collected"
@@ -25,7 +25,7 @@ class CollectionStatusses(Enum):
 	Wishlist = "wishlist"
 	Ordered = "ordered"
 
-class Statusses(Enum):
+class Statuses(Enum):
 	"""Статусы прочтения."""
 
 	Announced = "announced"

@@ -1,10 +1,12 @@
-from ..Structs import CollectionStatusses, Statusses, Types
+from ..Structs import CollectionStatuses, Statuses, Types
 
 from Source.Interfaces.CLI.Base import BaseTableCLI, BaseNoteCLI
 from Source.Interfaces.CLI.Functions import Unstar
+from Source.Core import Exceptions
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.CLI.TextStyler import FastStyler
+from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
+from dublib.CLI.Templates.Bus import PrintError
 
 from typing import TYPE_CHECKING
 
@@ -40,10 +42,10 @@ class TableCLI(BaseTableCLI):
 			elif CurrentNote.type == Types.Compilation: Compilations += 1
 			else: Undefined += 1
 
-			if CurrentNote.status == Statusses.Completed: Completed += 1
+			if CurrentNote.status == Statuses.Completed: Completed += 1
 
-			if CurrentNote.collection_status == CollectionStatusses.Ebook: CollectedEbooks += 1
-			elif CurrentNote.collection_status == CollectionStatusses.Collected: CollectedBooks += 1
+			if CurrentNote.collection_status == CollectionStatuses.Ebook: CollectedEbooks += 1
+			elif CurrentNote.collection_status == CollectionStatuses.Collected: CollectedBooks += 1
 
 		if Undefined: Undefined = f", {Undefined} undefined"
 		else: Undefined = ""
@@ -108,19 +110,19 @@ class TableCLI(BaseTableCLI):
 		#---> Status
 		#==========================================================================================#
 		match note.status:
-			case Statusses.Announced: container["Status"] = FastStyler(Statusses.Announced.value).colorize.magenta
-			case Statusses.Planned: container["Status"] = FastStyler(Statusses.Planned.value).colorize.blue
-			case Statusses.Reading: container["Status"] = FastStyler(Statusses.Reading.value).colorize.yellow
-			case Statusses.Completed: container["Status"] = FastStyler(Statusses.Completed.value).colorize.green
-			case Statusses.Dropped: container["Status"] = FastStyler(Statusses.Dropped.value).colorize.red
-			case Statusses.Skipped: container["Status"] = FastStyler(Statusses.Skipped.value).colorize.cyan
+			case Statuses.Announced: container["Status"] = FastStyler(Statuses.Announced.value).colorize.magenta
+			case Statuses.Planned: container["Status"] = FastStyler(Statuses.Planned.value).colorize.blue
+			case Statuses.Reading: container["Status"] = FastStyler(Statuses.Reading.value).colorize.yellow
+			case Statuses.Completed: container["Status"] = FastStyler(Statuses.Completed.value).colorize.green
+			case Statuses.Dropped: container["Status"] = FastStyler(Statuses.Dropped.value).colorize.red
+			case Statuses.Skipped: container["Status"] = FastStyler(Statuses.Skipped.value).colorize.cyan
 			case None: container["Status"] = ""
 
 		container["Status"] = {
-			CollectionStatusses.Collected: "📦 ",
-			CollectionStatusses.Ebook: "🌍 ",
-			CollectionStatusses.Wishlist: "🎁 ",
-			CollectionStatusses.Ordered: "🚚 ",
+			CollectionStatuses.Collected: "📦 ",
+			CollectionStatuses.Ebook: "🌍 ",
+			CollectionStatuses.Wishlist: "🎁 ",
+			CollectionStatuses.Ordered: "🚚 ",
 			None: "   "
 		}[note.collection_status] + container["Status"]
 
@@ -150,7 +152,14 @@ class TableCLI(BaseTableCLI):
 
 		#---> Estimation
 		#==========================================================================================#
-		container["Estimation"] = str(note.estimation) if note.estimation else ""
+		container["Estimation"] = ""
+
+		if note.estimation:
+			Estimation = "★ " * note.estimation
+			if note.estimation == 5: Estimation = FastStyler(Estimation).colorize.green
+			elif note.estimation in (3, 4): Estimation = FastStyler(Estimation).colorize.yellow
+			elif note.estimation in (1, 2): Estimation = FastStyler(Estimation).colorize.red
+			container["Estimation"] = Estimation
 
 		#---> Era
 		#==========================================================================================#
@@ -165,8 +174,69 @@ class NoteCLI(BaseNoteCLI):
 	"""Интерпретатор CLI записи."""
 
 	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __SetMetainfo(self, key: str, value: int | float | str | None):
+		"""
+		Устанавливает значение поля метаданных.
+
+		:param key: Имя поля.
+		:type key: str
+		:param value: Значение.
+		:type value: int | float | str | None
+		"""
+
+		value = Unstar(value)
+
+		try: self._Note.metainfo.set_field_value(key, value)
+		except Exceptions.Note.MetainfoBlocked: PrintError("Metainfo blocked by manifest rule.")
+
+	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ ОБРАБОТЧИКИ КОМАНД <<<<< #
 	#==========================================================================================#
+
+	def _altname(self, name: str, remove: bool):
+		"""
+		Управляет альтернативными названиями.
+
+		:param name: Альтернативное название.
+		:type name: str
+		:param remove: Переключает режимы добавления/удаления названия.
+		:type remove: bool
+		"""
+
+		if remove: self._Note.remove_another_name(name)
+		else: self._Note.add_another_name(name)
+
+	def _collection(self, command: ParsedCommandData):
+		"""
+		Задаёт статус коллекционирования.
+
+		:param command: Данные команды.
+		:type command: ParsedCommandData
+		"""
+
+		Flag = command.get_position_parameter("STATUS")
+
+		match Flag.name:
+			case "-c": self._Note.set_collection_status(CollectionStatuses.Collected)
+			case "-e": self._Note.set_collection_status(CollectionStatuses.Ebook)
+			case "-w": self._Note.set_collection_status(CollectionStatuses.Wishlist)
+			case "-o": self._Note.set_collection_status(CollectionStatuses.Ordered)
+
+	def _era(self, command: ParsedCommandData):
+		"""
+		Задаёт статус коллекционирования.
+
+		:param command: Данные команды.
+		:type command: ParsedCommandData
+		"""
+
+		if command.check_key("--year"): self._Note.set_era_by_year(command.get_key_value("--year"))
+		else:
+			try: self._Note.set_era_by_index(command.get_position_value("SOURCE"))
+			except ValueError: print("Incorrect era index.")
 
 	def _eras(self):
 		"""Выводит список эр BattleTech."""
@@ -178,6 +248,60 @@ class NoteCLI(BaseNoteCLI):
 			EndYear = Era.end_year or "now"
 			print(FastStyler(str(Era.index).ljust(8)).decorate.bold, end = "")
 			print(f": {Era.name} [{StartYear} – {EndYear}]")
+
+	def _estimate(self, estimation: int):
+		"""
+		Задаёт оценку.
+
+		:param estimation: Оценка.
+		:type estimation: int
+		"""
+
+		try: self._Note.estimate(estimation or None)
+		except ValueError as ExceptionData: PrintError(str(ExceptionData))
+
+	def _localname(self, localized_name: str | None):
+		"""
+		Задаёт локализованное название.
+
+		:param localized_name: Локализованное название.
+		:type localized_name: str | None
+		"""
+
+		try: self._Note.set_localized_name(localized_name)
+		except ValueError as ExceptionData: PrintError(str(ExceptionData))
+
+	def _status(self, command: ParsedCommandData):
+		"""
+		Задаёт статус прочтения.
+
+		:param command: Данные команды.
+		:type command: ParsedCommandData
+		"""
+
+		Flag = command.get_position_parameter("STATUS")
+
+		match Flag.name:
+			case "-a": self._Note.set_status(Statuses.Announced)
+			case "-c": self._Note.set_status(Statuses.Completed)
+			case "-d": self._Note.set_status(Statuses.Dropped)
+			case "-p": self._Note.set_status(Statuses.Planned)
+			case "-r": self._Note.set_status(Statuses.Reading)
+			case "-s": self._Note.set_status(Statuses.Skipped)
+
+	def _type(self, command: ParsedCommandData):
+		"""
+		Задаёт тип произведения.
+
+		:param command: Данные команды.
+		:type command: ParsedCommandData
+		"""
+
+		Flag = command.get_position_parameter("TYPE")
+
+		match Flag.name:
+			case "-n": self._Note.set_collection_status(Types.Novel)
+			case "-s": self._Note.set_collection_status(Types.Story)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -192,7 +316,19 @@ class NoteCLI(BaseNoteCLI):
 		"""
 
 		match command.name:
+			case "altname": self._altname()
+			case "author": self.__SetMetainfo("author", command.get_position_value("AUTHOR"))
+			case "collection": self._collection(command)
+			case "comment": self._Note.set_comment(Unstar(command.get_position_value("COMMENT")))
 			case "eras": self._eras()
+			case "era": self._era(command)
+			case "estimate": self._estimate(command.get_position_value("ESTIMATION"))
+			case "localname": self._localname(Unstar(command.get_position_value("LOCALNAME")))
+			case "pubdate": self.__SetMetainfo("publication_date", command.get_position_value("DATE"))
+			case "publisher": self.__SetMetainfo("publisher", command.get_position_value("PUBLISHER"))
+			case "series": self.__SetMetainfo("series", command.get_position_value("SERIES"))
+			case "status": self._status(command)
+			case "type": self._type(command)
 
 	def _GenerateCustomCommands(self) -> list[Command]:
 		"""
@@ -204,14 +340,156 @@ class NoteCLI(BaseNoteCLI):
 
 		CommandsList = list()
 
+		Com = Command("altname", "Manage alternative names.")
+		ComPos = Com.create_position("ALT_NAME", "Alternative name.", important = True)
+		ComPos.set_argument()
+		Com.base.add_flag("-r", description = "Remove another name if exists.")
+		CommandsList.append(Com)
+
+		Com = Command("author", "Set author.", category = "Metainfo")
+		ComPos = Com.create_position("AUTHOR", "Author or authors list, splitted by \";\" character. Put * to clear.", important = True)
+		ComPos.set_argument()
+		CommandsList.append(Com)
+
+		Com = Command("collection", "Set collection status.")
+		ComPos = Com.create_position("STATUS", "Collection status.", important = True)
+		ComPos.add_flag("-c", description = "Collected.")
+		ComPos.add_flag("-e", description = "Collected as E-book.")
+		ComPos.add_flag("-w", description = "In wishlist.")
+		ComPos.add_flag("-o", description = "Ordered or payed.")
+		CommandsList.append(Com)
+
+		Com = Command("comment", "Set comment to note.")
+		ComPos = Com.create_position("COMMENT", "Comment text. Put * to clear.", important = True)
+		ComPos.set_argument()
+		CommandsList.append(Com)
+
+		Com = Command("era", "Set BattleTech era.")
+		ComPos = Com.create_position("SOURCE", "Source of era data.", important = True)
+		ComPos.set_argument(ParametersTypes.Integer, "Era index.")
+		ComPos.add_key("--year", type = ParametersTypes.Integer, description = "Year of book events.")
+		CommandsList.append(Com)
+
 		Com = Command("eras", "Show list of BattleTech eras.")
+		CommandsList.append(Com)
+
+		Com = Command("estimate", "Set estimation.")
+		ComPos = Com.create_position("ESTIMATION", f"Estimation from 1 to 5. Put 0 to clear.", important = True)
+		ComPos.set_argument(ParametersTypes.Integer)
+		CommandsList.append(Com)
+
+		Com = Command("localname", "Set localized name.")
+		ComPos = Com.create_position("LOCALNAME", "Localized name. Put * to clear.", important = True)
+		ComPos.set_argument()
+		CommandsList.append(Com)
+
+		Com = Command("pubdate", "Set publication date.", category = "Metainfo")
+		ComPos = Com.create_position("DATE", "Publication date. Put * to clear.", important = True)
+		ComPos.set_argument()
+		CommandsList.append(Com)
+
+		Com = Command("publisher", "Set publisher.", category = "Metainfo")
+		ComPos = Com.create_position("PUBLISHER", "Publication date. Put * to clear.", important = True)
+		ComPos.set_argument()
+		CommandsList.append(Com)
+
+		Com = Command("series", "Set series.", category = "Metainfo")
+		ComPos = Com.create_position("SERIES", "Book series. Put * to clear.", important = True)
+		ComPos.set_argument()
+		CommandsList.append(Com)
+
+		Com = Command("status", "Set reading status.")
+		ComPos = Com.create_position("STATUS", "Reading status.", important = True)
+		ComPos.add_flag("-a", description = "Announced.")
+		ComPos.add_flag("-r", description = "Reading.")
+		ComPos.add_flag("-c", description = "Completed.")
+		ComPos.add_flag("-d", description = "Dropped.")
+		ComPos.add_flag("-p", description = "Planned.")
+		ComPos.add_flag("-s", description = "Skipped.")
+		CommandsList.append(Com)
+
+		Com = Command("type", "Set type of book.")
+		ComPos = Com.create_position("TYPE", "Type of book.", important = True)
+		ComPos.add_flag("-n", description = "Novel.")
+		ComPos.add_flag("-s", description = "Story.")
 		CommandsList.append(Com)
 
 		return CommandsList
 
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
+
+		self._Note: "Note"
+
 	def _ViewNote(self):
 		"""Отображает запись."""
 
-		NoteName = self._Note.name or ""
-		if NoteName: NoteName = NoteName + " "
-		print(f"{NoteName}#{self._Note.id}")
+		#---> Объявление стилей.
+		#==========================================================================================#
+		BOLD = TextStyler(decorations = Codes.Decorations.Bold)
+
+		#---> Генерация литералов.
+		#==========================================================================================#
+		UsedName = self._Note.name
+		AnotherNames = list(self._Note.another_names)
+
+		if self._Note.localized_name:
+			UsedName = self._Note.localized_name
+			Mark = "👑 " if self._Note.another_names else ""
+			if self._Note.name: AnotherNames = [Mark + self._Note.name] + AnotherNames
+
+		CollectionStatusEmoji = {
+			CollectionStatuses.Collected: "📦",
+			CollectionStatuses.Ebook: "🌎",
+			CollectionStatuses.Ordered: "🚚",
+			CollectionStatuses.Wishlist: "🎁",
+			None: ""
+		}[self._Note.collection_status]
+
+		StatusEmoji = {
+			Statuses.Announced: "ℹ️",
+			Statuses.Reading: "📖",
+			Statuses.Completed: "✅",
+			Statuses.Dropped: "⛔",
+			Statuses.Skipped: "🚫",
+			Statuses.Planned: "📋",
+			None: ""
+		}[self._Note.status]
+
+		#---> Вывод данных записи.
+		#==========================================================================================#
+		IsFirstLinePrinted = False
+
+		if UsedName:
+			print(BOLD.get_styled_text(UsedName), end = "")
+			IsFirstLinePrinted = True
+
+		if CollectionStatusEmoji:
+			print(f" {CollectionStatusEmoji}", end = "")
+			IsFirstLinePrinted = True
+
+		if StatusEmoji:
+			if IsFirstLinePrinted: print(" ", end = "")
+			print(StatusEmoji, end = "")
+			IsFirstLinePrinted = True
+
+		if IsFirstLinePrinted: print("")
+		for CurrentLine in AnotherNames: print(" " * 4 + CurrentLine)
+
+		#---> Вывод свойств записи.
+		#==========================================================================================#
+		if any((self._Note.type, self._Note.era, self._Note.estimation, self._Note.comment)): print(BOLD.get_styled_text("PROPERTIES:"))
+		if self._Note.type: print(" " * 4 + f"✒️  Type: {self._Note.type.value}")
+		if self._Note.era: print(" " * 4 + f"🏺 Era: {self._Note.era.name}")
+		if self._Note.estimation: print(" " * 4 + f"⭐ Estimation: {self._Note.estimation}")
+		if self._Note.comment: print(" " * 4 + f"💭 Comment: {self._Note.comment}")
+
+		# #---> Вывод историй.
+		# #==========================================================================================#
+		# Stories = self._Note.stories
+		# if Stories: print(FastStyler("STORIES:").decorate.bold)
+
+		# for Story in Stories:
+		# 	Localname = Story.localized_name
+		# 	if Localname: Localname = " / " + Localname
+		# 	print(f"    > {Story.id}. {Story.name}{Localname} {Story.emoji_status}")
