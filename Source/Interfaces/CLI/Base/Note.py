@@ -49,7 +49,8 @@ class BaseNoteCLI:
 		"""Полный список команд интерпретатора."""
 
 		CustomCommands = self._GenerateCustomCommands()
-		for Index in range(len(CustomCommands)): CustomCommands[Index].set_category("Note")
+		for Index in range(len(CustomCommands)):
+			if not CustomCommands[Index].category: CustomCommands[Index].set_category("Note")
 
 		return self.base_commands + CustomCommands
 	
@@ -132,6 +133,11 @@ class BaseNoteCLI:
 
 		return list()
 
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
 	def _ViewNote(self):
 		"""Отображает запись."""
 
@@ -156,6 +162,8 @@ class BaseNoteCLI:
 		self._Session = session
 		self._Interface = interface
 		self._Note = note
+
+		self._PostInitMethod()
 
 	def execute(self, command: ParsedCommandData) -> bool:
 		"""

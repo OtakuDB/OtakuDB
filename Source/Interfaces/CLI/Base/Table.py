@@ -77,7 +77,8 @@ class BaseTableCLI:
 		"""Полный список команд интерпретатора."""
 
 		CustomCommands = self._GenerateCustomCommands()
-		for Index in range(len(CustomCommands)): CustomCommands[Index].set_category("Table")
+		for Index in range(len(CustomCommands)):
+			if not CustomCommands[Index].category: CustomCommands[Index].set_category("Table")
 
 		return self.base_commands + CustomCommands
 	
@@ -166,6 +167,7 @@ class BaseTableCLI:
 			case "open": self._open(command.arguments[0])
 			case "rename": self._Table.rename(command.arguments[0])
 			case "view": self.view(command.check_flag("-r"))
+			case "search": self.view(command.get_position_value("QUERY"))
 
 	def _PrintTable(self, columns: dict[str, list], sort_by: str | None = None, reverse: bool = False):
 		"""
@@ -242,6 +244,11 @@ class BaseTableCLI:
 
 		return container
 
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -263,6 +270,8 @@ class BaseTableCLI:
 		self._Table = table
 
 		self._InterfaceOptions = TableInterfaceOptions(self._Table.manifest.interfaces_options)
+
+		self._PostInitMethod()
 
 	def execute(self, command: ParsedCommandData) -> bool:
 		"""
@@ -292,15 +301,18 @@ class BaseTableCLI:
 		if search_query:
 			print("Search by:", search_query)
 			SearchResult = list()
+			search_query = search_query.lower()
 
 			for CurrentNote in Notes:
 				for String in CurrentNote.searchable_strings:
-					if search_query in String:
+					if search_query in String.lower():
 						SearchResult.append(CurrentNote)
 						break
 
-			if not SearchResult: print("No results.")
-			else: Notes = tuple(SearchResult)
+			if SearchResult: Notes = tuple(SearchResult)
+			else:
+				print("No results.")
+				return
 
 		#---> Вывод записей.
 		#==========================================================================================#
@@ -315,4 +327,4 @@ class BaseTableCLI:
 				if Value == None: Value = ""
 				Columns[ColumnName].append(Value)
 
-		self._PrintTable(Columns, reverse = reverse)
+		self._PrintTable(Columns, sort_by = "ID", reverse = reverse)

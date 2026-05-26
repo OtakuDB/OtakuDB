@@ -62,7 +62,7 @@ class BaseNote:
 		"""Считывает данные записи или создаёт файл при отсутствии такового."""
 
 		if self._Path.exists(): self._Data = ReadJSON(self._Path)
-		else: self.save()
+		else: WriteJSON(self._Path, self._Data, atomic = True)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -95,12 +95,17 @@ class BaseNote:
 		for Key in ("localized_name", "another_name", "another_names"):
 			NameObject = self._Data.get(Key)
 			if type(NameObject) == list: Strings += NameObject
-			else: Strings.append(NameObject)
+			elif NameObject: Strings.append(NameObject)
 
 		return Strings
 
 	def _PostInitMethod(self):
-		"""Метод, выполняющийся после инициализации класса."""
+		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
+	def _PreSaveMethod(self):
+		"""Метод, выполняющийся перед сохранением записи."""
 
 		pass
 
@@ -181,4 +186,5 @@ class BaseNote:
 	def save(self):
 		"""Сохраняет запись атомарно."""
 
+		self._PreSaveMethod()
 		WriteJSON(self._Path, self._Data, atomic = True)

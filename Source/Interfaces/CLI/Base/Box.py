@@ -179,6 +179,11 @@ class BaseBoxCLI:
 
 		return list()
 
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -196,6 +201,8 @@ class BaseBoxCLI:
 		self._Session = session
 		self._Interface = interface
 		self._Box = box
+
+		self._PostInitMethod()
 
 	def execute(self, command: ParsedCommandData) -> bool:
 		"""
