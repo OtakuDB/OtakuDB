@@ -9,6 +9,15 @@ class Bases(Enum):
 	Original = "original"
 	Ranobe = "ranobe"
 
+class PartStatuses(Enum):
+	"""Статусы просмотра частей."""
+
+	Announced = "announced"
+	Skipped = "skipped"
+	Unwatched = "unwatched"
+	Watching = "watching"
+	Watched = "watched"
+
 class PartsTypes(Enum):
 	"""Типы частей."""
 
@@ -18,7 +27,7 @@ class PartsTypes(Enum):
 	Season = "season"
 	Specials = "specials"
 
-class Statusses(Enum):
+class Statuses(Enum):
 	"""Статусы просмотра."""
 
 	Announced = "announced"

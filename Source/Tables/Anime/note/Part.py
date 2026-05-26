@@ -1,4 +1,4 @@
-from .Enums import PartsTypes
+from .Enums import PartStatuses, PartsTypes
 
 from typing import Any, TYPE_CHECKING
 
@@ -22,7 +22,7 @@ class Part:
 	def name(self) -> str | None:
 		"""Название части."""
 
-		return self.__Data.get("type")
+		return self.__Data.get("name")
 	
 	@property
 	def number(self) -> int | None:
@@ -50,6 +50,17 @@ class Part:
 		else: return self.__Data.get("series")
 
 	@property
+	def status(self) -> PartStatuses:
+		"""Статус просмотра части."""
+
+		if self.viewed == -2: return PartStatuses.Announced
+		if self.viewed == -1: return PartStatuses.Skipped
+		if self.viewed == 0: return PartStatuses.Unwatched
+		if self.viewed == self.series: return PartStatuses.Watched
+
+		return PartStatuses.Watching
+
+	@property
 	def type(self) -> PartsTypes:
 		"""Тип части."""
 
@@ -57,7 +68,7 @@ class Part:
 	
 	@property
 	def viewed(self) -> int:
-		"""Состояние просмотра: -1 – не планируется, 0 – не просмотрено, 1 и более – количество просмотренных элементов."""
+		"""Состояние просмотра: -2 – анонсировано, -1 – не планируется, 0 – не просмотрено, 1 и более – количество просмотренных элементов."""
 
 		return self.__Data.get("viewed")
 
@@ -146,7 +157,7 @@ class Part:
 		self.__Data["number"] = number
 		self.__Note.save()
 
-	def set_series(self, series: int | None):
+	def set_series_count(self, series: int | None):
 		"""
 		Задаёт количество элементов в части.
 
@@ -176,13 +187,13 @@ class Part:
 		"""
 		Задаёт состояние просмтра.
 
-		:param viewed: Состояние просмотра: -1 – не планируется, 0 – не просмотрено, 1 и более – количество просмотренных элементов.
+		:param viewed: Состояние просмотра: -2 – анонсировано, -1 – не планируется, 0 – не просмотрено, 1 и более – количество просмотренных элементов.
 		:type viewed: int
 		:raises ValueError: Неверное или неподдерживаемое значение.
 		"""
 
 		if viewed > 1 and self.type == PartsTypes.Film: raise ValueError("Films not supported series.")
-		if viewed < -1: raise ValueError("Minimal value is -1.")
+		if viewed < -2: raise ValueError("Minimal value is -2.")
 		if self.series and viewed > self.series: raise ValueError("Viewed elements must be less than or same as series.")
 		self.__Data["viewed"] = viewed
 		self.__Note.save()

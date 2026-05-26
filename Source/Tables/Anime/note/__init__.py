@@ -1,4 +1,4 @@
-from .Enums import PartsTypes, Statusses
+from .Enums import PartStatuses, PartsTypes, Statuses
 from .Part import Part
 
 from Source.Core.Base.Note import BaseNote
@@ -29,6 +29,16 @@ class Note(BaseNote):
 		return self._Data.get("estimation")
 
 	@property
+	def is_dropped(self) -> bool:
+		"""Состояние: заброшен ли просмотр данного аниме."""
+
+		if self._Data.get("is_dropped"): return True
+		# Поддержка Legacy-статусов.
+		if self._Data.get("status") == "dropped": return True
+
+		return False
+
+	@property
 	def parts(self) -> tuple[Part]:
 		"""Последовательность частей."""
 
@@ -38,16 +48,29 @@ class Note(BaseNote):
 	def progress(self) -> float:
 		"""Доля прогресса просмотра."""
 
+		if not self.__Parts: return 0.0
+
 		Viewed = sum(Element.progress for Element in self.__Parts)
 		Total = float(len(self.__Parts))
 
 		return round(Viewed / Total, 2)
 
 	@property
-	def status(self) -> Statusses:
+	def status(self) -> Statuses:
 		"""Статус просмотра."""
 
-		return Statusses(self._Data["status"])
+		if self.is_dropped: return Statuses.Dropped
+
+		PartsStatusesTuple = tuple(CurrentPart.status for CurrentPart in self.__Parts)
+
+		IsAnnounced = PartStatuses.Announced in PartsStatusesTuple
+		IsUnwatched = PartStatuses.Unwatched in PartsStatusesTuple
+		IsWatching = PartStatuses.Watching in PartsStatusesTuple
+
+		if IsAnnounced and not IsWatching and not IsUnwatched: return Statuses.Announced
+		if not IsUnwatched and not IsWatching: return Statuses.Completed
+		if IsWatching: return Statuses.Watching
+		if IsUnwatched: return Statuses.Planned
 
 	@property
 	def tags(self) -> tuple[str]:
@@ -90,16 +113,21 @@ class Note(BaseNote):
 			"name": None,
 			"another_names": list(),
 			"estimation": None,
-			"status": Statusses.Watching.value,
+			"is_dropped": False,
 			"tags": list(),
 			"metainfo": dict(),
 			"parts": list()
 		}
 
 	def _PostInitMethod(self):
-		"""Метод, выполняющийся после инициализации класса."""
+		"""Метод, выполняющийся после инициализации объекта."""
 
 		self.__Parts: list[Part] = self.__ParseParts() 
+
+	def _PreSaveMethod(self):
+		"""Метод, выполняющийся перед сохранением записи."""
+
+		self._Data["parts"] = tuple(CurrentPart.to_dict() for CurrentPart in self.__Parts)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -113,7 +141,7 @@ class Note(BaseNote):
 		:type another_name: str
 		"""
 
-		if another_name not in self._Data["another_names"]:
+		if another_name not in self._Data["another_names"] and another_name != self._Data["name"]:
 			self._Data["another_names"].append(another_name)
 			self.save()
 
@@ -129,24 +157,24 @@ class Note(BaseNote):
 			self._Data["tags"].append(tag)
 			self.save()
 
-	def create_part(self, type: PartsTypes) -> Part:
+	def create_part(self, type: PartsTypes) -> int:
 		"""
 		Создаёт часть.
 
 		:param type: Тип части.
 		:type type: PartsTypes
-		:return: Часть.
-		:rtype: Part
+		:return: Индекс части.
+		:rtype: int
 		"""
 
 		NewPart = Part(self, {"type": type.value})
 		self.__Parts.append(NewPart)
 
-		return NewPart
+		return len(self.__Parts) - 1
 
 	def down_part(self, index: int, count: int = 1) -> int:
 		"""
-		Опускает часть на указанное количество вниз (уменьшает индекс).
+		Опускает часть на указанное количество вниз (увеличивает индекс).
 
 		:param index: Индекс части.
 		:type index: int
@@ -221,7 +249,7 @@ class Note(BaseNote):
 
 		:param index: Индекс части.
 		:type index: int
-		:raises ValueError: Часть не найдена.
+		:raises IndexError: Часть не найдена.
 		"""
 
 		self.__Parts.pop(index)
