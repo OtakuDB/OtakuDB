@@ -138,6 +138,17 @@ class NoteCLI(BaseNoteCLI):
 					case "-w": Part.set_viewed(Part.series)
 			except ValueError as ExceptionData: PrintError(str(ExceptionData))
 
+	def _estimate(self, estimation: int):
+		"""
+		Задаёт оценку.
+
+		:param estimation: Оценка.
+		:type estimation: int
+		"""
+
+		try: self._Note.estimate(estimation or None)
+		except ValueError as ExceptionData: PrintError(str(ExceptionData))
+
 	def _mark(self, index: int, mark: int):
 		"""
 		Задаёт прогресс просмотра части.
@@ -235,7 +246,7 @@ class NoteCLI(BaseNoteCLI):
 			case "base": self._Note.metainfo.set_field_value("base", Unstar(command.get_position_value("VALUE")))
 			case "delpart": self._delpart(command.get_position_value("INDEX"), command.check_flag("-y"))
 			case "editpart": self._editpart(command)
-			case "estimate": self._Note.estimate(command.get_position_value("ESTIMATION") or None)
+			case "estimate": self._estimate(command.get_position_value("ESTIMATION"))
 			case "mark": self._mark(command.get_position_value("INDEX"), command.get_position_value("MARK"))
 			case "move": self._move(command)
 			case "newpart": self._newpart(command.get_position_value("TYPE"))

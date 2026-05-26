@@ -136,12 +136,10 @@ class Interface:
 			if not CommandData: PrintError("Command not found.")
 			else: return CommandData
 
-		except Exceptions.CLI.Terminalyzer.NotEnoughParameters: PrintError("Not enough parameters.", origin = "terminalyzer")
-		except Exceptions.CLI.Terminalyzer.InvalidParameterType: PrintError("Invalid parameter type.", origin = "terminalyzer")
-		except Exceptions.CLI.Terminalyzer.TooManyParameters: print("too_many_parameters")
-		except ZeroDivisionError as ExceptionData:
-			Type = type(ExceptionData).__qualname__
-			print(f"{Type}: {ExceptionData}")
+		except Exceptions.CLI.Terminalyzer.NotEnoughParameters: PrintError("Not enough parameters.", origin = "CLI")
+		except Exceptions.CLI.Terminalyzer.InvalidParameterType: PrintError("Invalid parameter type.", origin = "CLI")
+		except Exceptions.CLI.Terminalyzer.TooManyParameters: PrintError("Too many parameters.", origin = "CLI")
+		except Exception as ExceptionData: PrintError(str(ExceptionData), origin = type(ExceptionData).__qualname__)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #

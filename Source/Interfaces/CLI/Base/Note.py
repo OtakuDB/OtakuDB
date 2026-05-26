@@ -3,6 +3,7 @@ from Source.Interfaces.CLI.Functions import Unstar
 
 from dublib.CLI.Terminalyzer import Command, ParsedCommandData
 from dublib.CLI.Templates import Confirmation
+from dublib.CLI.TextStyler import FastStyler
 
 from typing import TYPE_CHECKING
 
@@ -138,6 +139,26 @@ class BaseNoteCLI:
 
 		pass
 
+	def _ViewAttachments(self):
+		"""Выводит данные вложений."""
+
+		print(FastStyler("ATTACHMENTS:").decorate.bold)
+
+		for Slot in self._Note.attachments.slots:
+			File = FastStyler(Slot.file).decorate.italic
+			print(" " * 4 + f"{Slot.name}: {File}")
+
+	def _ViewMetainfo(self):
+		"""Выводит значения полей метаданных."""
+
+		print(FastStyler(f"METAINFO:").decorate.bold)
+		
+		for Field in self._Note.metainfo.fields:
+			Value = self._Note.metainfo[Field]
+			if Value == None: continue
+			if Field not in self._Note.table.manifest.metainfo_rules.fields: Field = FastStyler(Field).colorize.blue
+			print(" " * 4 + f"{Field}: {Value}")
+
 	def _ViewNote(self):
 		"""Отображает запись."""
 
@@ -184,3 +205,6 @@ class BaseNoteCLI:
 		"""Отображает запись."""
 
 		self._ViewNote()
+		if self._Note.metainfo.has_values: self._ViewMetainfo()
+		if self._Note.attachments.count: self._ViewAttachments()
+		
