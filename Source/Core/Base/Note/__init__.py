@@ -61,7 +61,11 @@ class BaseNote:
 	def _LoadData(self):
 		"""Считывает данные записи или создаёт файл при отсутствии такового."""
 
-		if self._Path.exists(): self._Data = ReadJSON(self._Path)
+		if self._Path.exists():
+			self._Data = self._Data | ReadJSON(self._Path)
+			self._Metainfo = Metainfo(self, self._Data.get("metainfo") or dict())
+			self._Attachments = Attachments(self._Path.parent, self, self._Data.get("attachments") or dict())
+
 		else: self.save(use_presaver = False)
 
 	#==========================================================================================#
@@ -135,15 +139,10 @@ class BaseNote:
 			"metainfo": dict(),
 			"attachments": dict().fromkeys(self._Table.manifest.attachments.slots.keys(), None)
 		} | self._GetEmptyNote()
+		self._Metainfo = Metainfo(self, self._Data["metainfo"])
+		self._Attachments = Attachments(self._Path.parent, self, self._Data["attachments"])
 		
 		self._LoadData()
-
-		for Key in ("name",):
-			if Key not in self._Data: raise ValueError(f"Important key \"{Key}\" missing in note.")
-
-		self._Attachments = Attachments(self._Path.parent, self, self._Data.get("attachments") or dict())
-		self._Metainfo = Metainfo(self, self._Data.get("metainfo") or dict())
-		
 		self._PostInitMethod()
 
 	def delete(self):
@@ -193,4 +192,5 @@ class BaseNote:
 
 		if use_presaver: self._PreSaveMethod()
 		self._Data["metainfo"] = self._Metainfo.to_dict()
+		self._Data["attachments"] = self._Attachments.to_dict()
 		WriteJSON(self._Path, self._Data, atomic = True)

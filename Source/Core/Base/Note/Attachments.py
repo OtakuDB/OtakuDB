@@ -121,6 +121,16 @@ class Attachments:
 
 		return self.__Data["slots"][slot]
 
+	def to_dict(self) -> dict[str, dict[str | None] | list[str]]:
+		"""
+		Возвращает словарное представление данных вложений.
+
+		:return: Словарное представление данных вложений.
+		:rtype: dict[str, dict[str | None] | list[str]]
+		"""
+
+		return self.__Data.copy()
+
 	def unnatach(self, filename: str):
 		"""
 		Удаляет вложение по имени.

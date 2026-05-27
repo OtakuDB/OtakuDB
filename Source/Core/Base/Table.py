@@ -192,7 +192,7 @@ class BaseTable:
 
 		if note_id not in self._Notes: raise Exceptions.Table.NoteNotFound(note_id)
 		if mode not in ("i", "o", "s"): raise ValueError("Incorrect changing mode.")
-		if IsTargetNoteExists and mode == "i": raise Exceptions.Table.OperationError("Unable insert. Target ID already exists.")
+		# if IsTargetNoteExists and mode == "i": raise Exceptions.Table.OperationError("Unable insert. Target ID already exists.")
 
 		if IsTargetNoteExists:
 
