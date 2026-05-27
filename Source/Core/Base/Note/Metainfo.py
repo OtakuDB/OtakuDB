@@ -81,5 +81,14 @@ class Metainfo:
 		if value != None and not self.__MetainfoRules.check_metainfo_value(field, value): raise Exceptions.Note.MetainfoBlocked()
 		
 		self.__Data[field] = value
-		self.__Data[field] = dict(sorted(self.__Data.items()))
 		self.__Note.save()
+
+	def to_dict(self) -> dict[str, int | float | str | None]:
+		"""
+		Возвращает словарное представление метаданных.
+
+		:return: Словарное представление метаданных.
+		:rtype: dict[str, int | float | str | None]
+		"""
+
+		return self.__Data.copy()

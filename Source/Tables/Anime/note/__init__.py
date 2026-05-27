@@ -60,6 +60,7 @@ class Note(BaseNote):
 		"""Статус просмотра."""
 
 		if self.is_dropped: return Statuses.Dropped
+		if not self.__Parts: return Statuses.Planned
 
 		PartsStatusesTuple = tuple(CurrentPart.status for CurrentPart in self.__Parts)
 
@@ -169,6 +170,7 @@ class Note(BaseNote):
 
 		NewPart = Part(self, {"type": type.value})
 		self.__Parts.append(NewPart)
+		self.save()
 
 		return len(self.__Parts) - 1
 
@@ -196,6 +198,8 @@ class Note(BaseNote):
 			else:
 				self.__Parts.insert(index - 1, self.__Parts.pop(index))
 				self.save()
+
+		self.save()
 
 		return NewIndex
 
@@ -291,5 +295,7 @@ class Note(BaseNote):
 			else:
 				self.__Parts.insert(index + 1, self.__Parts.pop(index))
 				self.save()
+
+		self.save()
 
 		return NewIndex

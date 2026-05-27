@@ -62,7 +62,7 @@ class BaseNote:
 		"""Считывает данные записи или создаёт файл при отсутствии такового."""
 
 		if self._Path.exists(): self._Data = ReadJSON(self._Path)
-		else: WriteJSON(self._Path, self._Data, atomic = True)
+		else: self.save(use_presaver = False)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -183,8 +183,14 @@ class BaseNote:
 			NewPath =  OldPath.parent / f".attachments/{self._ID}"
 			shutil.move(OldPath, NewPath)
 
-	def save(self):
-		"""Сохраняет запись атомарно."""
+	def save(self, use_presaver: bool = True):
+		"""
+		Сохраняет данные записи в локальный файл JSON.
 
-		self._PreSaveMethod()
+		:param use_presaver: Указывает, нужно ли вызывать переопределяемый метод, выполняющийся перед сохранением.
+		:type use_presaver: bool, optional
+		"""
+
+		if use_presaver: self._PreSaveMethod()
+		self._Data["metainfo"] = self._Metainfo.to_dict()
 		WriteJSON(self._Path, self._Data, atomic = True)
