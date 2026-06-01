@@ -90,7 +90,7 @@ class BaseNote:
 
 		self._Metainfo = Metainfo(self, self._Data.get("metainfo") or dict())
 		self._Attachments = Attachments(self, self._Data.get("attachments") or dict())
-		self._Binds = Binds(self, self._Data.get("attachments") or dict())
+		self._Binds = Binds(self, self._Data.get("binds") or dict())
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #

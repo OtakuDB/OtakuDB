@@ -6,7 +6,7 @@ from Source.Core import Exceptions
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
-from dublib.CLI.Templates.Bus import PrintError
+from dublib.CLI.Templates.Bus import PrintError, PrintWarning
 
 from typing import TYPE_CHECKING
 
@@ -271,6 +271,17 @@ class NoteCLI(BaseNoteCLI):
 		try: self._Note.set_localized_name(localized_name)
 		except ValueError as ExceptionData: PrintError(str(ExceptionData))
 
+	def _scount(self, count: int):
+		"""
+		Задаёт количество историй.
+
+		:param count: Количество историй.
+		:type count: int
+		"""
+
+		if count and self._Note.type != Types.Compilation: PrintWarning("Stories count expected only for compilations.")
+		self._Note.set_stories_count(count)
+
 	def _status(self, command: ParsedCommandData):
 		"""
 		Задаёт статус прочтения.
@@ -326,6 +337,7 @@ class NoteCLI(BaseNoteCLI):
 			case "localname": self._localname(Unstar(command.get_position_value("LOCALNAME")))
 			case "pubdate": self.__SetMetainfo("publication_date", command.get_position_value("DATE"))
 			case "publisher": self.__SetMetainfo("publisher", command.get_position_value("PUBLISHER"))
+			case "scount": self._scount(command.get_position_value("COUNT"))
 			case "series": self.__SetMetainfo("series", command.get_position_value("SERIES"))
 			case "status": self._status(command)
 			case "type": self._type(command)
@@ -367,7 +379,7 @@ class NoteCLI(BaseNoteCLI):
 		Com = Command("era", "Set BattleTech era.")
 		ComPos = Com.create_position("SOURCE", "Source of era data.", important = True)
 		ComPos.set_argument(ParametersTypes.Integer, "Era index.")
-		ComPos.add_key("--year", type = ParametersTypes.Integer, description = "Year of book events.")
+		ComPos.add_key("--year", type = ParametersTypes.UnsignedInteger, description = "Year of book events.")
 		CommandsList.append(Com)
 
 		Com = Command("eras", "Show list of BattleTech eras.")
@@ -375,7 +387,7 @@ class NoteCLI(BaseNoteCLI):
 
 		Com = Command("estimate", "Set estimation.")
 		ComPos = Com.create_position("ESTIMATION", f"Estimation from 1 to 5. Put 0 to clear.", important = True)
-		ComPos.set_argument(ParametersTypes.Integer)
+		ComPos.set_argument(ParametersTypes.UnsignedInteger)
 		CommandsList.append(Com)
 
 		Com = Command("localname", "Set localized name.")
@@ -391,6 +403,11 @@ class NoteCLI(BaseNoteCLI):
 		Com = Command("publisher", "Set publisher.", category = "Metainfo")
 		ComPos = Com.create_position("PUBLISHER", "Publication date. Put * to clear.", important = True)
 		ComPos.set_argument()
+		CommandsList.append(Com)
+
+		Com = Command("scount", "Set stories count (for compilation type).")
+		ComPos = Com.create_position("COUNT", f"Stories count. Put 0 to clear.", important = True)
+		ComPos.set_argument(ParametersTypes.UnsignedInteger)
 		CommandsList.append(Com)
 
 		Com = Command("series", "Set series.", category = "Metainfo")
@@ -432,7 +449,7 @@ class NoteCLI(BaseNoteCLI):
 		#==========================================================================================#
 		UsedName = self._Note.name
 		AnotherNames = list(self._Note.another_names)
-
+		
 		if self._Note.localized_name:
 			UsedName = self._Note.localized_name
 			Mark = "👑 " if self._Note.another_names else ""
@@ -485,15 +502,23 @@ class NoteCLI(BaseNoteCLI):
 		if self._Note.era: print(" " * 4 + f"🏺 Era: {self._Note.era.name}")
 		if self._Note.estimation: print(" " * 4 + f"⭐ Estimation: {self._Note.estimation}")
 		if self._Note.comment: print(" " * 4 + f"💭 Comment: {self._Note.comment}")
+		if all((not self._Note.binds.local, self._Note.stories_count)): print(" " * 4 + f"📜 Stories: {self._Note.stories_count}")
 
 		#---> Вывод историй.
 		#==========================================================================================#
-		Stories = self._Note.binds.local.notes_id
+		if self._Note.binds.local:
+			StoriesID = self._Note.binds.local.notes_id
+			MaxStoriesCount = self._Note.stories_count
 
-		if Stories:
-			print(BOLD.get_styled_text("STORIES:"))
+			if MaxStoriesCount:
+				StoriesCount = len(StoriesID)
+				MaxStoriesCount = f" ({StoriesCount} / {MaxStoriesCount})"
 
-			for NoteID in Stories:
+			else: MaxStoriesCount = ""
+			
+			print(BOLD.get_styled_text(f"STORIES{MaxStoriesCount}:"))
+
+			for NoteID in StoriesID:
 				Story: "Note" = self._Note.table.get_note(NoteID)
 
 				StoryNames = list()

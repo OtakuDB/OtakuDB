@@ -39,6 +39,16 @@ class LocalBinds:
 		self.__Note = note
 		self.__LocalBinds = data
 
+	def __bool__(self) -> bool:
+		"""
+		Возвращает логическую интерпретацию содержимого объекта.
+
+		:return: Логическая интерпретация содержимого объекта.
+		:rtype: bool
+		"""
+		
+		return bool(self.__LocalBinds)
+
 	def bind(self, note_id: int):
 		"""
 		Привязывает запись из текущей таблицы.
@@ -117,7 +127,7 @@ class Binds:
 			"local": [],
 			"global": []
 		} | data
-
+		
 		self.__LocalBinds = LocalBinds(self.__Note, self.__Data["local"])
 
 	def to_dict(self, copy: bool = True) -> dict[str, list]:

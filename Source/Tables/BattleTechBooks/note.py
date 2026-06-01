@@ -67,6 +67,12 @@ class Note(BaseNote):
 		if Status: return Statuses(Status)
 
 	@property
+	def stories_count(self) -> int | None:
+		"""Количество историй в произведении."""
+
+		return self._Data.get("stories_count")
+
+	@property
 	def type(self) -> Types | None:
 		"""Тип произведения."""
 
@@ -90,6 +96,7 @@ class Note(BaseNote):
 			"localized_name": None,
 			"another_names": [],
 			"type": "novel",
+			"stories_count": None,
 			"era": None,
 			"estimation": None,
 			"comment": None,
@@ -229,6 +236,18 @@ class Note(BaseNote):
 
 		if status: status = status.value
 		self._Data["status"] = status
+		self.save()
+
+	def set_stories_count(self, count: int | None):
+		"""
+		Задаёт количество историй в произведении.
+
+		:param count: Количество историй в произведении.
+		:type count: int | None
+		"""
+
+		if count == 0: count = None
+		self._Data["stories_count"] = count
 		self.save()
 
 	def set_type(self, type: Types):
