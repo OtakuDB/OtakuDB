@@ -72,8 +72,8 @@ class TableDescriptor:
 
 		self.__Driver = driver
 		self.__Box = box
-		self.__VirtualPath = virtual_path
 
+		self.__VirtualPath = virtual_path
 		self.__TotalPath = self.__Driver.storage_directory / self.__VirtualPath
 		if not self.__TotalPath.exists(): raise FileNotFoundError(self.__TotalPath)
 

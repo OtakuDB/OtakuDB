@@ -3,6 +3,7 @@ from Source.Core import Exceptions
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from pathlib import Path
+import shutil
 import os
 
 if TYPE_CHECKING:
@@ -52,27 +53,23 @@ class Attachments:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, directory: Path, note: "BaseNote", data: dict):
+	def __init__(self, note: "BaseNote", data: dict):
 		"""
 		Оператор вложений.
 
-		:param directory: Полный путь к директории таблицы.
-		:type directory: Path
 		:param note: Запись.
 		:type note: BaseNote
 		:param data: Словарь данных вложений.
 		:type data: dict
 		"""
 
-		self.__Directory = directory
 		self.__Note = note
 		self.__Data: dict[str, dict[str | None] | list[str]] = {
 			"slots": data.get("slots") or dict(),
 			"free": data.get("free") or list()
 		}
 
-		self.__AttachmentsDirectory = self.__Directory / ".attachments"
-		if bool(note.table.manifest.attachments.rule): os.makedirs(self.__AttachmentsDirectory, exist_ok = True)
+		if bool(note.table.manifest.attachments.rule): os.makedirs(self.__Note.table.get_path() / ".attachments", exist_ok = True)
 
 	def attach(self, file: Path, slot: str | None = None):
 		"""
@@ -91,7 +88,7 @@ class Attachments:
 
 		else: self.__Data["free"] = file.name
 
-		os.replace(file, self.__AttachmentsDirectory / file.name)
+		os.replace(file, self.__Note.table.get_path() / ".attachments" / file.name)
 		self.__Note.save()
 
 	def clear_slot(self, slot: str):
@@ -121,6 +118,19 @@ class Attachments:
 
 		return self.__Data["slots"][slot]
 
+	def move(self, new_id: int):
+		"""
+		Перемещает вложения в каталог соответствующий новому ID записи.
+
+		:param new_id: Новый ID записи.
+		:type new_id: int
+		"""
+
+		if self.count > 0:
+			OldAttachmentsPath = self.__Note.table.get_path() / ".attachments" / str(self.__Note.id)
+			NewAttachmentsPath =  self.__Note.table.get_path() / ".attachments" / str(new_id)
+			shutil.move(OldAttachmentsPath, NewAttachmentsPath)
+
 	def to_dict(self) -> dict[str, dict[str | None] | list[str]]:
 		"""
 		Возвращает словарное представление данных вложений.
@@ -140,7 +150,7 @@ class Attachments:
 		:raises FileNotFoundError: Вложение не найдено.
 		"""
 
-		os.remove(self.__AttachmentsDirectory / filename)
+		os.remove(self.__Note.table.get_path() / ".attachments" / filename)
 		if self.get_slot_file(filename): self.clear_slot(filename)
 		else: self.__Data["free"].remove(filename)
 		self.__Note.save()

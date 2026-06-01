@@ -2,9 +2,9 @@ from Source.Interfaces.CLI.Options.Local import TableInterfaceOptions
 from Source.Core import Exceptions
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.CLI.TextStyler import Escapes, FastStyler
 from dublib.CLI.Templates.Bus import PrintError
 from dublib.CLI.Templates import Confirmation
+from dublib.CLI.TextStyler import FastStyler
 
 from typing import TYPE_CHECKING
 
@@ -35,9 +35,9 @@ class BaseTableCLI:
 		ComPos = Com.create_position("NEW_ID", description = "New note ID", important = True)
 		ComPos.set_argument(ParametersTypes.UnsignedInteger)
 		ComPos = Com.create_position("MODE", description = "Mode of ID changing. By default may insert only on free index.")
-		ComPos.add_flag("o", description = "Overwtite exists note.")
-		ComPos.add_flag("s", description = "Swipe with exists note.")
-		ComPos.add_flag("i", description = "Insert to filled note place with offset. If index is free same as default.")
+		ComPos.add_flag("-o", description = "Overwtite exists note.")
+		ComPos.add_flag("-s", description = "Swipe with exists note.")
+		ComPos.add_flag("-i", description = "Insert to filled note place with offset. If index is free same as default.")
 		CommandsList.append(Com)
 
 		Com = Command("close", "Close table.")
@@ -104,9 +104,9 @@ class BaseTableCLI:
 		NewID = command.arguments[1]
 		Mode = None
 
-		if command.check_flag("i"): Mode = "i"
-		elif command.check_flag("o"): Mode = "o"
-		elif command.check_flag("s"): Mode = "s"
+		if command.check_flag("-i"): Mode = "i"
+		elif command.check_flag("-o"): Mode = "o"
+		elif command.check_flag("-s"): Mode = "s"
 		
 		try: self._Table.change_note_id(NoteID, NewID, Mode)
 		except Exceptions.Table.NoteNotFound: PrintError(f"Note with ID #{NoteID} not found.")

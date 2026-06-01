@@ -4,7 +4,7 @@ from .Metainfo import Metainfo
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 
 from typing import Any, TYPE_CHECKING
-import shutil
+from pathlib import Path
 import os
 
 if TYPE_CHECKING:
@@ -61,10 +61,12 @@ class BaseNote:
 	def _LoadData(self):
 		"""Считывает данные записи или создаёт файл при отсутствии такового."""
 
-		if self._Path.exists():
-			self._Data = self._Data | ReadJSON(self._Path)
+		NoteFullPath = self.get_path()
+
+		if NoteFullPath.exists():
+			self._Data = self._Data | ReadJSON(NoteFullPath)
 			self._Metainfo = Metainfo(self, self._Data.get("metainfo") or dict())
-			self._Attachments = Attachments(self._Path.parent, self, self._Data.get("attachments") or dict())
+			self._Attachments = Attachments(self, self._Data.get("attachments") or dict())
 
 		else: self.save(use_presaver = False)
 
@@ -131,8 +133,6 @@ class BaseNote:
 		self._Driver = driver
 		self._Table = table
 		self._ID = note_id
-
-		self._Path = self._Driver.storage_directory / self._Table.path / f"{note_id}.json"
 		
 		self._Data = {
 			"name": None,
@@ -140,7 +140,7 @@ class BaseNote:
 			"attachments": dict().fromkeys(self._Table.manifest.attachments.slots.keys(), None)
 		} | self._GetEmptyNote()
 		self._Metainfo = Metainfo(self, self._Data["metainfo"])
-		self._Attachments = Attachments(self._Path.parent, self, self._Data["attachments"])
+		self._Attachments = Attachments(self, self._Data["attachments"])
 		
 		self._LoadData()
 		self._PostInitMethod()
@@ -149,6 +149,21 @@ class BaseNote:
 		"""Удаляет запись."""
 
 		self._Table.delete_note(self._ID)
+
+	def get_path(self, full: bool = True) -> Path:
+		"""
+		Возвращает путь к записи.
+
+		:param full: Указывает, требуется полный или виртуальный путь.
+		:type full: bool
+		:return: Путь к записи.
+		:rtype: Path
+		"""
+
+		ResultPath = self._Table.path / f"{self._ID}.json"
+		if full: ResultPath = self._Driver.storage_directory / ResultPath 
+
+		return ResultPath
 
 	def rename(self, name: str | None):
 		"""
@@ -169,18 +184,12 @@ class BaseNote:
 		:param id: Новый ID записи.
 		:type id: int
 		"""
-		
-		OldID = self._ID
-		OldPath = self._Path
-		NewPath = self._Path.parent / f"{id}.json"
-		os.rename(self._Path, NewPath)
-		self._ID = id
-		self._Path = NewPath
 
-		if self.attachments.count > 0:
-			OldPath = OldPath.parent / f".attachments/{OldID}"
-			NewPath =  OldPath.parent / f".attachments/{self._ID}"
-			shutil.move(OldPath, NewPath)
+		OldPath = self.get_path()
+		NewPath = OldPath.parent / f"{id}.json"
+		os.rename(OldPath, NewPath)
+		self._Attachments.move(id)
+		self._ID = id
 
 	def save(self, use_presaver: bool = True):
 		"""
@@ -193,4 +202,4 @@ class BaseNote:
 		if use_presaver: self._PreSaveMethod()
 		self._Data["metainfo"] = self._Metainfo.to_dict()
 		self._Data["attachments"] = self._Attachments.to_dict()
-		WriteJSON(self._Path, self._Data, atomic = True)
+		WriteJSON(self.get_path(), self._Data, atomic = True)

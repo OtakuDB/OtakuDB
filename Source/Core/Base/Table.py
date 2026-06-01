@@ -95,7 +95,7 @@ class BaseTable:
 		"""
 
 		ListID = list()
-		Files = ListDir(self._TotalPath)
+		Files = ListDir(self.get_path())
 		Files = list(filter(lambda File: File.endswith(".json"), Files))
 
 		for File in Files: 
@@ -138,7 +138,6 @@ class BaseTable:
 		self._Driver = driver
 		self._Descriptor = descriptor
 
-		self._TotalPath = self._Driver.storage_directory / self._Descriptor.path
 		self._Notes: "dict[int, BaseNote]" = dict()
 		self._NoteClass = self._GetNoteClass()
 		
@@ -147,7 +146,22 @@ class BaseTable:
 	def delete(self):
 		"""Удаляет таблицу."""
 
-		shutil.rmtree(self._TotalPath)
+		shutil.rmtree(self.get_path())
+
+	def get_path(self, full: bool = True) -> Path:
+		"""
+		Возвращает путь к таблице.
+
+		:param full: Указывает, требуется полный или виртуальный путь.
+		:type full: bool
+		:return: Путь к таблице.
+		:rtype: Path
+		"""
+
+		ResultPath = self._Descriptor.path
+		if full: ResultPath = self._Driver.storage_directory / ResultPath 
+
+		return ResultPath
 
 	def load_data(self):
 		"""Загружает данные таблицы."""
@@ -161,11 +175,13 @@ class BaseTable:
 
 		:param name: Новое название таблицы.
 		:type name: str
+		:raises ValueError: Невозможное имя.
 		"""
 
-		# To-Do: проверка валидности имени.
-		OldPath = self._TotalPath
-		NewPath = self._TotalPath.parent / name
+		if "/" in name or "\"" in name: raise ValueError("Name can't contains slashes.")
+		TableFullPath = self.get_path()
+		OldPath = TableFullPath
+		NewPath = TableFullPath.parent / name
 		os.rename(OldPath, NewPath)
 		self._Descriptor.rename(name)
 
@@ -192,65 +208,53 @@ class BaseTable:
 		if note_id not in self._Notes: raise Exceptions.Table.NoteNotFound(note_id)
 		if mode not in (None, "i", "o", "s"): raise ValueError("Incorrect changing mode.")
 
-		if IsTargetNoteExists:
+		match mode:
 
-			match mode:
+			case None:
+				if IsTargetNoteExists: raise Exceptions.Table.OperationError("Unable insert. Target ID already exists.")
+				self._Notes[new_id] = self._Notes[note_id]
+				self._Notes[new_id].set_id(new_id)
+				del self._Notes[note_id]
 
-				case None:
-					if IsTargetNoteExists: raise Exceptions.Table.OperationError("Unable insert. Target ID already exists.")
-					Buffer = self._Notes[note_id]
-					del self._Notes[note_id]
-					Buffer.set_id(new_id)
-					self._Notes[new_id] = Buffer
+			case "i":
 
-				case "i":
-					self.change_note_id(note_id, 0)
-					NotesID = list(self._Notes.keys())
-					NotesID = sorted(NotesID)
-					Buffer = list(NotesID)
+				if not IsTargetNoteExists:
+					self.change_note_id(note_id, new_id)
+					return
 
-					for ID in Buffer:
-						if ID < new_id: NotesID.remove(ID)
+				self.change_note_id(note_id, 0)
 
-					Buffer = list(NotesID)
-					NewBuffer = list()
-					IsFirst = True
+				AffectedNotesID = sorted(CurrentNote.id for CurrentNote in self._Notes.values() if CurrentNote.id >= new_id)
+				Buffer = list()
 
-					for ID in Buffer:
+				for CurrentID in AffectedNotesID:
 
-						if ID + 1 in Buffer:
-							NewBuffer.append(ID)
+					if not Buffer:
+						Buffer.append(CurrentID)
+						continue
 
-						elif IsFirst: 
-							NewBuffer.append(ID)
-							break
+					if CurrentID - Buffer[-1] != 1: break 
+					Buffer.append(CurrentID)
 
-					NotesID = NewBuffer
-					if note_id in NotesID: NotesID.remove(note_id)
-					NotesID.reverse()
+				AffectedNotesID = list(reversed(Buffer))
+				for CurrentID in AffectedNotesID: self.change_note_id(CurrentID, CurrentID + 1)
+				self.change_note_id(0, new_id)
 
-					for ID in NotesID: self.change_note_id(ID, ID + 1)
-					self.change_note_id(0, new_id)
+			case "o":
+				self.delete_note(new_id)
+				self._Notes[note_id].set_id(new_id)
 
-				case "o":
-					self.delete_note(new_id)
-					self._Notes[note_id].set_id(new_id)
+			case "s":
+				if not IsTargetNoteExists: raise Exceptions.Table.OperationError("Unable swap. Target ID is free.")
+				FirstNote = self._Notes[note_id]
+				SecondNote = self._Notes[new_id]
 
-				case "s":
-					FirstNote = self._Notes[note_id]
-					SecondNote = self._Notes[new_id]
+				FirstNote.set_id(0)
+				SecondNote.set_id(note_id)
+				FirstNote.set_id(new_id)
 
-					FirstNote.set_id(0)
-					SecondNote.set_id(note_id)
-					FirstNote.set_id(new_id)
-
-					self._Notes[note_id] = SecondNote
-					self._Notes[new_id] = FirstNote
-
-		else:
-			self._Notes[new_id] = self._Notes[note_id]
-			self._Notes[new_id].set_id(new_id)
-			del self._Notes[note_id]
+				self._Notes[note_id] = SecondNote
+				self._Notes[new_id] = FirstNote
 
 	def create_note(self) -> "BaseNote":
 		"""
@@ -276,7 +280,7 @@ class BaseTable:
 
 		if note_id not in self._Notes: raise Exceptions.Table.NoteNotFound(note_id)
 		del self._Notes[note_id]
-		os.remove(self._TotalPath / f"{note_id}.json")
+		os.remove(self.get_path() / f"{note_id}.json")
 
 	def get_note(self, note_id: int) -> "BaseNote":
 		"""
