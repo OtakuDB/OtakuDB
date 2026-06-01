@@ -79,14 +79,56 @@ class Note(BaseNote):
 		return Types(self._Data["type"])
 
 	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __UpdateEstimationByLocalBinds(self):
+		"""Вычисляет оценку сборника на основе оценок привязанных записей."""
+
+		EstimatedBindedNotes: "tuple[Note]" = tuple(CurrentNote for CurrentNote in self._Binds.local.binded_notes if CurrentNote.estimation)
+		Estimation = round(sum(CurrentNote.estimation for CurrentNote in EstimatedBindedNotes) / len(EstimatedBindedNotes))
+		if self.estimation != Estimation: self.estimate(Estimation)
+
+	def __UpdateStatusByLocalBinds(self):
+		"""Определяет статус сборника на основе статусов привязанных записей."""
+
+		BindedNotes: "tuple[Note]" = self._Binds.local.binded_notes
+		BindedNotesStatuses = tuple(CurrentNote.status for CurrentNote in BindedNotes)
+
+		IsAnnounced = Statuses.Announced in BindedNotesStatuses
+		IsCompleted = Statuses.Completed in BindedNotesStatuses
+		IsDropped = Statuses.Dropped in BindedNotesStatuses
+		IsPlanned = Statuses.Planned in BindedNotesStatuses
+		IsReading = Statuses.Reading in BindedNotesStatuses
+		IsSkipped = Statuses.Skipped in BindedNotesStatuses
+
+		if IsReading: self.set_status(Statuses.Reading)
+		if IsAnnounced and not all((IsDropped, IsPlanned, IsReading, IsSkipped)): self.set_status(Statuses.Announced)
+		if IsCompleted and not all((IsAnnounced, IsDropped, IsPlanned, IsReading, IsSkipped)): self.set_status(Statuses.Completed)
+		if IsDropped: self.set_status(Statuses.Dropped)
+		if IsPlanned and not all((IsDropped, IsAnnounced, IsReading, IsSkipped)): self.set_status(Statuses.Planned)
+		if IsSkipped and not all((IsDropped, IsAnnounced, IsReading, IsPlanned)): self.set_status(Statuses.Skipped)
+
+	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
+
+	def _AfterLocalBindSavingCallback(self, note: "BaseNote"):
+		"""
+		Вызывается после выполнения привязанной записью операции сохранения.
+
+		:param note: Привязанная запись.
+		:type note: BaseNote
+		"""
+
+		self.__UpdateEstimationByLocalBinds()
+		self.__UpdateStatusByLocalBinds()
 
 	def _GetEmptyNote(self) -> dict[str, Any]:
 		"""
 		Возвращает пустую структуру записи.
 
-		Поля _name_, _metainfo_, _attachments_ будут добавлены автоматически, но их можно указать для определения порядка.
+		Поля _name_, _metainfo_, _binds_, _attachments_ будут добавлены автоматически, но их можно указать для определения порядка.
 
 		:return: Пустая структура записи.
 		:rtype: dict[str, Any]
@@ -104,6 +146,29 @@ class Note(BaseNote):
 			"status": None,
 			"collection_status": None
 		}
+
+	def _PostLocalBindMethod(self, note: "Note"):
+		"""
+		Метод, выполняющийся после привязки локальной записи.
+
+		:param note: Привязанная запись.
+		:type note: Note
+		"""
+
+		#---> Автообновление типа.
+		#==========================================================================================#
+		if self.type != Types.Compilation: self.set_type(Types.Compilation)
+
+		#---> Автоматический подсчёт количества историй, если не указано большее значение.
+		#==========================================================================================#
+		StoriesCount = self.stories_count or 0
+		BindsCount = len(self._Binds.local.notes_id)
+		if BindsCount - StoriesCount == 1: self.set_stories_count(BindsCount)
+
+		#---> Автоматический подсчёт оценки и определение статуса.
+		#==========================================================================================#
+		self.__UpdateEstimationByLocalBinds()
+		self.__UpdateStatusByLocalBinds()
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #

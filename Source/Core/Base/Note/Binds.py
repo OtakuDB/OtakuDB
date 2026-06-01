@@ -17,6 +17,15 @@ class LocalBinds:
 	#==========================================================================================#
 
 	@property
+	def binded_notes(self) -> "tuple[BaseNote]":
+		"""Привязанные записи."""
+
+		BindedNotes = list()
+		for CurrentID in self.__LocalBinds: BindedNotes.append(self.__Note.table.get_note(CurrentID))
+
+		return tuple(BindedNotes)
+
+	@property
 	def notes_id(self) -> tuple[int]:
 		"""Последовательность ID привязанных локальных записей."""
 
@@ -77,18 +86,19 @@ class LocalBinds:
 			self.__Note.save()
 		except ValueError: pass
 
-	def update(self, old_id: int, new_id: int):
+	def update(self, old_id: int, new_id: int | None):
 		"""
 		Обновляет ID привязанной записи в контейнере локальных связей.
 
 		:param old_id: Старый ID записи.
 		:type old_id: int
 		:param new_id: Новый ID записи.
-		:type new_id: int
+		:type new_id: int | None
 		"""
 
 		Index = self.__LocalBinds.index(old_id)
-		self.__LocalBinds[Index] = new_id
+		if new_id == None: self.__LocalBinds.pop(Index)
+		else: self.__LocalBinds[Index] = new_id
 		self.__Note.save()
 
 #==========================================================================================#

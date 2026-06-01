@@ -63,7 +63,7 @@ class BaseNote:
 		return self._Table
 
 	#==========================================================================================#
-	# >>>>> ЗАЩИЩЁННЫЕ МЕТОДЫ <<<<< #
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def _LoadData(self):
@@ -92,15 +92,31 @@ class BaseNote:
 		self._Attachments = Attachments(self, self._Data.get("attachments") or dict())
 		self._Binds = Binds(self, self._Data.get("binds") or dict())
 
+	def _RunPostSaveCallbacksForBinds(self):
+		"""Запускает обработку изменений в записях, привязавших текущую запись."""
+
+		Masters = tuple(CurrentNote for CurrentNote in self._Table.notes if self._ID in CurrentNote.binds.local.notes_id)
+		for MasterNote in Masters: MasterNote.run_local_bind_callback(self)
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
+
+	def _AfterLocalBindSavingCallback(self, note: "BaseNote"):
+		"""
+		Вызывается после выполнения привязанной записью операции сохранения.
+
+		:param note: Привязанная запись.
+		:type note: BaseNote
+		"""
+
+		pass
 
 	def _GetEmptyNote(self) -> dict[str, Any]:
 		"""
 		Возвращает пустую структуру записи.
 
-		Поля _name_, _metainfo_, _attachments_ будут добавлены автоматически, но их можно указать для определения порядка.
+		Поля _name_, _metainfo_, _binds_, _attachments_ будут добавлены автоматически, но их можно указать для определения порядка.
 
 		:return: Пустая структура записи.
 		:rtype: dict[str, Any]
@@ -129,6 +145,16 @@ class BaseNote:
 
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
+	def _PostLocalBindMethod(self, note: "BaseNote"):
+		"""
+		Метод, выполняющийся после привязки локальной записи.
+
+		:param note: Привязанная запись.
+		:type note: BaseNote
+		"""
 
 		pass
 
@@ -192,6 +218,16 @@ class BaseNote:
 		self._Data["name"] = name
 		self.save()
 
+	def run_local_bind_callback(self, note: "BaseNote"):
+		"""
+		Запускает обработчик обновления связанной записи.
+
+		:param note: Связанная запись, выполнившая операцию сохранения.
+		:type note: BaseNote
+		"""
+
+		self._AfterLocalBindSavingCallback(note)
+
 	def set_id(self, id: int):
 		"""
 		Задаёт новый ID и переименовывает файл записи.
@@ -215,6 +251,7 @@ class BaseNote:
 		"""
 
 		WriteJSON(self.get_path(), self.to_dict(use_presaver, copy = False), atomic = True)
+		self._RunPostSaveCallbacksForBinds()
 
 	def to_dict(self, use_presaver: bool = True, copy: bool = True) -> dict:
 		"""
