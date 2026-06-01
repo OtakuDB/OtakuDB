@@ -203,6 +203,12 @@ class Note(BaseNote):
 
 		return NewIndex
 
+	def drop(self):
+		"""Переключает состояние заброшенности тайтла."""
+
+		self._Data["is_dropped"] = not self._Data["is_dropped"]
+		self.save()
+
 	def estimate(self, estimation: int | None):
 		"""
 		Выставляет оценку тайтла.

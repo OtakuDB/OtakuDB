@@ -265,6 +265,7 @@ class NoteCLI(BaseNoteCLI):
 			case "altname": self._altname(command.get_position_value("ALT_NAME"), command.check_flag("-r"))
 			case "base": self.__SetMetainfo("base", Unstar(command.get_position_value("VALUE")))
 			case "delpart": self._delpart(command.get_position_value("INDEX"), command.check_flag("-y"))
+			case "drop": self._Note.drop()
 			case "editpart": self._editpart(command)
 			case "estimate": self._estimate(command.get_position_value("ESTIMATION"))
 			case "mark": self._mark(command.get_position_value("INDEX"), command.get_position_value("MARK"))
@@ -299,6 +300,9 @@ class NoteCLI(BaseNoteCLI):
 		ComPos = Com.create_position("INDEX", "Part index.", important = True)
 		ComPos.set_argument(ParametersTypes.Integer)
 		Com.base.add_flag("-y", description = "Automatically confirms deletion.")
+		CommandsList.append(Com)
+
+		Com = Command("drop", "Switch drop status")
 		CommandsList.append(Com)
 
 		Com = Command("editpart", "Edit part data.")
