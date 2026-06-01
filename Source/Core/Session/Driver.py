@@ -59,9 +59,9 @@ class Driver:
 		:rtype: bool
 		"""
 
-		TotalPath = self.__StorageDirectory / virtual_path / "manifest.json"
+		FullPath = self.__StorageDirectory / virtual_path / "manifest.json"
 
-		return not TotalPath.exists()
+		return not FullPath.exists()
 
 	def mount(self, directory: PathLike):
 		"""
@@ -90,8 +90,8 @@ class Driver:
 
 		if not self.__StorageDirectory: raise Exceptions.Driver.StorageUnmounted()
 
-		TotalPath = self.__StorageDirectory / parent_box.path / name
-		os.makedirs(TotalPath, exist_ok = True)
+		FullPath = self.__StorageDirectory / parent_box.path / name
+		os.makedirs(FullPath, exist_ok = True)
 
 		NewBox = Box(self, parent_box.path, name)
 		parent_box.reload()
@@ -117,14 +117,14 @@ class Driver:
 		if not self.__StorageDirectory: raise Exceptions.Driver.StorageUnmounted()
 
 		TableVirtualPath = parent_box.path / name
-		TableTotalPath = self.__StorageDirectory / TableVirtualPath
+		TableFullPath = self.__StorageDirectory / TableVirtualPath
 
-		if TableTotalPath.exists(): raise Exceptions.Driver.TableAlreadyExists(TableVirtualPath)
+		if TableFullPath.exists(): raise Exceptions.Driver.TableAlreadyExists(TableVirtualPath)
 
-		os.makedirs(TableTotalPath, exist_ok = True)
+		os.makedirs(TableFullPath, exist_ok = True)
 
 		ManifestGeneratorModule = importlib.import_module(f"Source.Tables.{type}.manifest")
-		ManifestGenerator: "ManifestGenerator" = ManifestGeneratorModule.Generator(TableTotalPath, type)
+		ManifestGenerator: "ManifestGenerator" = ManifestGeneratorModule.Generator(TableFullPath, type)
 		Manifest = ManifestGenerator.generate()
 
 		parent_box.reload()
@@ -144,8 +144,8 @@ class Driver:
 
 		virtual_path = virtual_path or Path()
 
-		TotalPath = self.__StorageDirectory / virtual_path
-		if not TotalPath.exists(): raise FileNotFoundError(TotalPath)
+		FullPath = self.__StorageDirectory / virtual_path
+		if not FullPath.exists(): raise FileNotFoundError(FullPath)
 
 		if virtual_path and str(virtual_path) != ".": return Box(self, virtual_path.parent, virtual_path.name)
 		else: return Box(self)

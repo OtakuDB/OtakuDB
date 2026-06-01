@@ -438,15 +438,14 @@ class NoteCLI(BaseNoteCLI):
 			Mark = "👑 " if self._Note.another_names else ""
 			if self._Note.name: AnotherNames = [Mark + self._Note.name] + AnotherNames
 
-		CollectionStatusEmoji = {
+		CollectionStatusEmojiDetermination = {
 			CollectionStatuses.Collected: "📦",
 			CollectionStatuses.Ebook: "🌎",
 			CollectionStatuses.Ordered: "🚚",
 			CollectionStatuses.Wishlist: "🎁",
 			None: ""
-		}[self._Note.collection_status]
-
-		StatusEmoji = {
+		}
+		StatusEmojiDetermination = {
 			Statuses.Announced: "ℹ️",
 			Statuses.Reading: "📖",
 			Statuses.Completed: "✅",
@@ -454,7 +453,10 @@ class NoteCLI(BaseNoteCLI):
 			Statuses.Skipped: "🚫",
 			Statuses.Planned: "📋",
 			None: ""
-		}[self._Note.status]
+		}
+
+		CollectionStatusEmoji = CollectionStatusEmojiDetermination[self._Note.collection_status]
+		StatusEmoji = StatusEmojiDetermination[self._Note.status]
 
 		#---> Вывод данных записи.
 		#==========================================================================================#
@@ -484,12 +486,22 @@ class NoteCLI(BaseNoteCLI):
 		if self._Note.estimation: print(" " * 4 + f"⭐ Estimation: {self._Note.estimation}")
 		if self._Note.comment: print(" " * 4 + f"💭 Comment: {self._Note.comment}")
 
-		# #---> Вывод историй.
-		# #==========================================================================================#
-		# Stories = self._Note.stories
-		# if Stories: print(FastStyler("STORIES:").decorate.bold)
+		#---> Вывод историй.
+		#==========================================================================================#
+		Stories = self._Note.binds.local.notes_id
 
-		# for Story in Stories:
-		# 	Localname = Story.localized_name
-		# 	if Localname: Localname = " / " + Localname
-		# 	print(f"    > {Story.id}. {Story.name}{Localname} {Story.emoji_status}")
+		if Stories:
+			print(BOLD.get_styled_text("STORIES:"))
+
+			for NoteID in Stories:
+				Story: "Note" = self._Note.table.get_note(NoteID)
+
+				StoryNames = list()
+				if Story.localized_name: StoryNames.append(Story.localized_name)
+				if Story.name: StoryNames.append(Story.name)
+				StoryNames = " / ".join(StoryNames)
+
+				StatusEmoji = StatusEmojiDetermination[Story.status]
+				CollectionStatusEmoji = CollectionStatusEmojiDetermination[Story.collection_status]
+
+				print(" " * 4 + f"> {Story.id}. {StoryNames} {StatusEmoji} {CollectionStatusEmoji}")

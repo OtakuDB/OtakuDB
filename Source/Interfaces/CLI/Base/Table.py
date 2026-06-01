@@ -32,7 +32,7 @@ class BaseTableCLI:
 		Com = Command("chid", "Change ID of note.")
 		ComPos = Com.create_position("NOTE_ID", description = "Exists note ID.", important = True)
 		ComPos.set_argument(ParametersTypes.UnsignedInteger)
-		ComPos = Com.create_position("NEW_ID", description = "New note ID", important = True)
+		ComPos = Com.create_position("NEW_ID", description = "New note ID.", important = True)
 		ComPos.set_argument(ParametersTypes.UnsignedInteger)
 		ComPos = Com.create_position("MODE", description = "Mode of ID changing. By default may insert only on free index.")
 		ComPos.add_flag("-o", description = "Overwtite exists note.")

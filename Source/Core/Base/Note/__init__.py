@@ -1,7 +1,9 @@
 from .Attachments import Attachments
 from .Metainfo import Metainfo
+from .Binds import Binds
 
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
+from dublib.Methods.Data import Copy
 
 from typing import Any, TYPE_CHECKING
 from pathlib import Path
@@ -23,6 +25,12 @@ class BaseNote:
 		"""Оператор вложений."""
 
 		return self._Attachments
+
+	@property
+	def binds(self) -> Binds:
+		"""Связи записей."""
+
+		return self._Binds
 
 	@property
 	def id(self) -> int:
@@ -59,16 +67,30 @@ class BaseNote:
 	#==========================================================================================#
 
 	def _LoadData(self):
-		"""Считывает данные записи или создаёт файл при отсутствии такового."""
+		"""Считывает данные записи или создаёт локальный файл при отсутствии такового."""
 
 		NoteFullPath = self.get_path()
+		self._Data = {
+			"name": None,
+			"metainfo": dict(),
+			"binds": dict(),
+			"attachments": dict().fromkeys(self._Table.manifest.attachments.slots.keys(), None)
+		} | self._GetEmptyNote()
 
 		if NoteFullPath.exists():
 			self._Data = self._Data | ReadJSON(NoteFullPath)
-			self._Metainfo = Metainfo(self, self._Data.get("metainfo") or dict())
-			self._Attachments = Attachments(self, self._Data.get("attachments") or dict())
+			self._ParseContainers()
 
-		else: self.save(use_presaver = False)
+		else:
+			self._ParseContainers()
+			self.save(use_presaver = False)
+
+	def _ParseContainers(self):
+		"""Парсит контейнерные типы данных."""
+
+		self._Metainfo = Metainfo(self, self._Data.get("metainfo") or dict())
+		self._Attachments = Attachments(self, self._Data.get("attachments") or dict())
+		self._Binds = Binds(self, self._Data.get("attachments") or dict())
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -134,15 +156,8 @@ class BaseNote:
 		self._Table = table
 		self._ID = note_id
 		
-		self._Data = {
-			"name": None,
-			"metainfo": dict(),
-			"attachments": dict().fromkeys(self._Table.manifest.attachments.slots.keys(), None)
-		} | self._GetEmptyNote()
-		self._Metainfo = Metainfo(self, self._Data["metainfo"])
-		self._Attachments = Attachments(self, self._Data["attachments"])
-		
 		self._LoadData()
+		self._ParseContainers()
 		self._PostInitMethod()
 
 	def delete(self):
@@ -196,10 +211,26 @@ class BaseNote:
 		Сохраняет данные записи в локальный файл JSON.
 
 		:param use_presaver: Указывает, нужно ли вызывать переопределяемый метод, выполняющийся перед сохранением.
-		:type use_presaver: bool, optional
+		:type use_presaver: bool
+		"""
+
+		WriteJSON(self.get_path(), self.to_dict(use_presaver, copy = False), atomic = True)
+
+	def to_dict(self, use_presaver: bool = True, copy: bool = True) -> dict:
+		"""
+		Возвращает словарное представление записи.
+
+		:param use_presaver: Указывает, нужно ли вызывать переопределяемый метод, выполняющийся перед сохранением.
+		:type use_presaver: bool
+		:param copy: Указывает, нужно ли вернуть копию внутреннего словаря или оригинал.
+		:type copy: bool
+		:return: Словарное представление записи.
+		:rtype: dict
 		"""
 
 		if use_presaver: self._PreSaveMethod()
-		self._Data["metainfo"] = self._Metainfo.to_dict()
-		self._Data["attachments"] = self._Attachments.to_dict()
-		WriteJSON(self.get_path(), self._Data, atomic = True)
+		self._Data["metainfo"] = self._Metainfo.to_dict(copy)
+		self._Data["attachments"] = self._Attachments.to_dict(copy)
+		self._Data["binds"] = self._Binds.to_dict(copy)
+
+		return Copy(self._Data) if copy else self._Data

@@ -1,7 +1,9 @@
 from Source.Interfaces.CLI.Templates import PrintTable
 from Source.Interfaces.CLI.Functions import Unstar
+from Source.Core import Exceptions
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData
+from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData
+from dublib.CLI.Templates.Bus import PrintError
 from dublib.CLI.Templates import Confirmation
 from dublib.CLI.TextStyler import FastStyler
 
@@ -26,6 +28,11 @@ class BaseNoteCLI:
 		CommandsList = list()
 
 		Com = Command("close", "Close note.")
+		CommandsList.append(Com)
+
+		Com = Command("bind", "Bint another note to current.")
+		ComPos = Com.create_position("NOTE", description = "ID of current table note.", important = True)
+		ComPos.set_argument(ParametersTypes.UnsignedInteger)
 		CommandsList.append(Com)
 
 		Com = Command("delete", "Delete note.")
@@ -58,6 +65,19 @@ class BaseNoteCLI:
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ ОБРАБОТЧИКИ КОМАНД <<<<< #
 	#==========================================================================================#
+
+	def _bind(self, note_id: int):
+		"""
+		Привязывает другую запись к текущей внутри той же таблицы.
+
+		:param note_id: ID привязываемой записи.
+		:type note_id: int
+		"""
+		
+		try:
+			TargetNote = self._Note.table.get_note(note_id)
+			self._Note.binds.local.bind(TargetNote.id)
+		except Exceptions.Table.NoteNotFound: PrintError(f"Note with ID #{note_id} not found.")
 
 	def _delete(self, confirm: bool = False):
 		"""
@@ -104,6 +124,7 @@ class BaseNoteCLI:
 		"""
 
 		match command.name:
+			case "bind": self._bind(command.get_position_value("NOTE"))
 			case "close": self._Interface.set_current_object(self._Note.table)
 			case "delete": self._delete(command.check_flag("-y"))
 			case "rename": self._Note.rename(Unstar(command.get_position_value("NAME")))

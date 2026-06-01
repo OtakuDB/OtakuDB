@@ -1,5 +1,7 @@
 from Source.Core import Exceptions
 
+from dublib.Methods.Data import Copy
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from pathlib import Path
@@ -131,15 +133,17 @@ class Attachments:
 			NewAttachmentsPath =  self.__Note.table.get_path() / ".attachments" / str(new_id)
 			shutil.move(OldAttachmentsPath, NewAttachmentsPath)
 
-	def to_dict(self) -> dict[str, dict[str | None] | list[str]]:
+	def to_dict(self, copy: bool = True) -> dict[str, dict[str | None] | list[str]]:
 		"""
 		Возвращает словарное представление данных вложений.
 
+		:param copy: Указывает, нужно ли вернуть копию внутреннего словаря или оригинал.
+		:type copy: bool
 		:return: Словарное представление данных вложений.
 		:rtype: dict[str, dict[str | None] | list[str]]
 		"""
 
-		return self.__Data.copy()
+		return Copy(self.__Data) if copy else self.__Data
 
 	def unnatach(self, filename: str):
 		"""

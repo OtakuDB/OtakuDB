@@ -74,10 +74,10 @@ class TableDescriptor:
 		self.__Box = box
 
 		self.__VirtualPath = virtual_path
-		self.__TotalPath = self.__Driver.storage_directory / self.__VirtualPath
-		if not self.__TotalPath.exists(): raise FileNotFoundError(self.__TotalPath)
+		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
+		if not self.__FullPath.exists(): raise FileNotFoundError(self.__FullPath)
 
-		self.__Manifest = manifest or Manifest(self.__TotalPath).load()
+		self.__Manifest = manifest or Manifest(self.__FullPath).load()
 
 		self.__TableObject: "BaseTable | None" = None
 		self.__InintializeTable()
@@ -96,5 +96,5 @@ class TableDescriptor:
 		"""
 
 		self.__VirtualPath = self.__VirtualPath.parent / name
-		self.__TotalPath = self.__Driver.storage_directory / self.__VirtualPath
+		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
 		self.__Box.reload()

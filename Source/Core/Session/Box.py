@@ -66,9 +66,9 @@ class Box:
 
 		self.__VirtualPath = Path()
 		if self.__ParentBox: self.__VirtualPath = self.__ParentBox.path / self.__Name
-		self.__TotalPath = self.__Driver.storage_directory / self.__VirtualPath
+		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
 
-		if not self.__TotalPath.exists(): raise FileNotFoundError(self.__TotalPath)
+		if not self.__FullPath.exists(): raise FileNotFoundError(self.__FullPath)
 
 		self.__Items: "dict[str, Box | TableDescriptor]" = dict()
 		self.reload()
@@ -124,7 +124,7 @@ class Box:
 	def delete(self):
 		"""Удаляет текущее представление."""
 
-		os.rmdir(self.__TotalPath)
+		os.rmdir(self.__FullPath)
 
 	def get_item(self, name: str) -> "Box | TableDescriptor":
 		"""
@@ -147,7 +147,7 @@ class Box:
 		:rtype: tuple[Box | TableDescriptor]
 		"""
 
-		Elements = tuple(Value.name for Value in os.scandir(self.__TotalPath) if Value.is_dir())
+		Elements = tuple(Value.name for Value in os.scandir(self.__FullPath) if Value.is_dir())
 		Items = dict()
 
 		for Element in Elements:

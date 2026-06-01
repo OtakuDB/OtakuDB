@@ -1,5 +1,7 @@
 from Source.Core import Exceptions
 
+from dublib.Methods.Data import Copy
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -83,12 +85,14 @@ class Metainfo:
 		self.__Data[field] = value
 		self.__Note.save()
 
-	def to_dict(self) -> dict[str, int | float | str | None]:
+	def to_dict(self, copy: bool = True) -> dict[str, int | float | str | None]:
 		"""
 		Возвращает словарное представление метаданных.
 
+		:param copy: Указывает, нужно ли вернуть копию внутреннего словаря или оригинал.
+		:type copy: bool
 		:return: Словарное представление метаданных.
 		:rtype: dict[str, int | float | str | None]
 		"""
 
-		return self.__Data.copy()
+		return Copy(self.__Data) if copy else self.__Data
