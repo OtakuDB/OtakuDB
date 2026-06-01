@@ -181,22 +181,27 @@ class BaseTable:
 		:type note_id: int
 		:param new_id: Новый ID.
 		:type new_id: int
-		:param mode: Режим изменения: **i** ― вставка, **o** ― перезапись,**s** ― обмен местами. По умолчанию используется вставка.
+		:param mode: Режим изменения: **i** ― вставка со сдвигом, **o** ― перезапись, **s** ― обмен местами. По умолчанию возможна вставка только на позицию со свободным индексом.
 		:type mode: Literal["i", "o", "s"] | None
 		:raises NoteNotFound: Запись не найдена в таблице.
 		:raises ValueError: Неверный режим изменения.
 		"""
 
 		IsTargetNoteExists = new_id in self._Notes
-		mode = mode or "i"
 
 		if note_id not in self._Notes: raise Exceptions.Table.NoteNotFound(note_id)
-		if mode not in ("i", "o", "s"): raise ValueError("Incorrect changing mode.")
-		# if IsTargetNoteExists and mode == "i": raise Exceptions.Table.OperationError("Unable insert. Target ID already exists.")
+		if mode not in (None, "i", "o", "s"): raise ValueError("Incorrect changing mode.")
 
 		if IsTargetNoteExists:
 
 			match mode:
+
+				case None:
+					if IsTargetNoteExists: raise Exceptions.Table.OperationError("Unable insert. Target ID already exists.")
+					Buffer = self._Notes[note_id]
+					del self._Notes[note_id]
+					Buffer.set_id(new_id)
+					self._Notes[new_id] = Buffer
 
 				case "i":
 					self.change_note_id(note_id, 0)

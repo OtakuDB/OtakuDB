@@ -31,13 +31,13 @@ class BaseTableCLI:
 
 		Com = Command("chid", "Change ID of note.")
 		ComPos = Com.create_position("NOTE_ID", description = "Exists note ID.", important = True)
-		ComPos.set_argument(ParametersTypes.Number)
+		ComPos.set_argument(ParametersTypes.UnsignedInteger)
 		ComPos = Com.create_position("NEW_ID", description = "New note ID", important = True)
-		ComPos.set_argument(ParametersTypes.Number)
-		ComPos = Com.create_position("MODE", description = "Mode of ID changing.")
+		ComPos.set_argument(ParametersTypes.UnsignedInteger)
+		ComPos = Com.create_position("MODE", description = "Mode of ID changing. By default may insert only on free index.")
 		ComPos.add_flag("o", description = "Overwtite exists note.")
 		ComPos.add_flag("s", description = "Swipe with exists note.")
-		ComPos.add_flag("i", description = "Insert to exists note place.")
+		ComPos.add_flag("i", description = "Insert to filled note place with offset. If index is free same as default.")
 		CommandsList.append(Com)
 
 		Com = Command("close", "Close table.")
@@ -53,7 +53,7 @@ class BaseTableCLI:
 
 		Com = Command("open", "Open note CLI.")
 		ComPos = Com.create_position("ID", "Note ID.", important = True)
-		ComPos.set_argument(ParametersTypes.Number)
+		ComPos.set_argument(ParametersTypes.UnsignedInteger)
 		CommandsList.append(Com)
 
 		Com = Command("rename", "Rename table.")
