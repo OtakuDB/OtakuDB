@@ -2,10 +2,7 @@ from .Enums import CollectionStatuses, Statuses, Types
 
 from Source.Core.Base.Note import BaseNote
 
-from typing import Any, TYPE_CHECKING
-
-if TYPE_CHECKING:
-	from .table import Table
+from typing import Any
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -50,6 +47,18 @@ class Note(BaseNote):
 		return Types(self._Data["type"])
 
 	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ОБРАБОТЧИКИ CALLBACK-ВЫЗОВОВ <<<<< #
+	#==========================================================================================#	
+
+	def _Callback_AttachmentsChanged(self):
+		"""Обработчик вызова: вложения изменены."""
+
+		if self.collection_status == CollectionStatuses.Collected: return
+
+		if self._Attachments.is_slot_occupied("ebook"): self.set_collection_status(CollectionStatuses.Ebook)
+		else: self.set_collection_status(None)
+
+	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
@@ -57,7 +66,7 @@ class Note(BaseNote):
 		"""
 		Возвращает пустую структуру записи.
 
-		Поля _name_, _metainfo_, _binds_, _attachments_ будут добавлены автоматически, но их можно указать для определения порядка.
+		Поля _name_, _metainfo_, _attachments_ будут добавлены автоматически, но их можно указать для определения порядка.
 
 		:return: Пустая структура записи.
 		:rtype: dict[str, Any]

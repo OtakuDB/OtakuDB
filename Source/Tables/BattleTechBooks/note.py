@@ -124,32 +124,17 @@ class Note(BaseNote):
 		self.__UpdateEstimationByLocalBinds()
 		self.__UpdateStatusByLocalBinds()
 
+	def _Callback_AttachmentsChanged(self):
+		"""Обработчик вызова: вложения изменены."""
+
+		if self.collection_status == CollectionStatuses.Collected: return
+
+		if self._Attachments.is_slot_occupied("ebook"): self.set_collection_status(CollectionStatuses.Ebook)
+		else: self.set_collection_status(None)
+
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#	
-
-	def _GetEmptyNote(self) -> dict[str, Any]:
-		"""
-		Возвращает пустую структуру записи.
-
-		Поля _name_, _metainfo_, _binds_, _attachments_ будут добавлены автоматически, но их можно указать для определения порядка.
-
-		:return: Пустая структура записи.
-		:rtype: dict[str, Any]
-		"""
-
-		return {
-			"localized_name": None,
-			"another_names": [],
-			"type": "novel",
-			"stories_count": None,
-			"era": None,
-			"estimation": None,
-			"comment": None,
-			"link": None,
-			"status": None,
-			"collection_status": None
-		}
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ТРИГГЕРНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
 
 	def _PostLocalBindMethod(self, note: "Note"):
 		"""
@@ -173,6 +158,33 @@ class Note(BaseNote):
 		#==========================================================================================#
 		self.__UpdateEstimationByLocalBinds()
 		self.__UpdateStatusByLocalBinds()
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#	
+
+	def _GetEmptyNote(self) -> dict[str, Any]:
+		"""
+		Возвращает пустую структуру записи.
+
+		Поля _name_, _metainfo_, _attachments_ будут добавлены автоматически, но их можно указать для определения порядка.
+
+		:return: Пустая структура записи.
+		:rtype: dict[str, Any]
+		"""
+
+		return {
+			"localized_name": None,
+			"another_names": [],
+			"type": "novel",
+			"stories_count": None,
+			"era": None,
+			"estimation": None,
+			"comment": None,
+			"link": None,
+			"status": None,
+			"collection_status": None
+		}
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -288,7 +300,7 @@ class Note(BaseNote):
 		:raises ValueError: Локализованное название уже определено в другой графе.
 		"""
 
-		AllNames = self._Data["another_names"]
+		AllNames = list(self.another_names)
 		if self._Data["name"]: AllNames.append(self._Data["name"])
 		if localized_name in AllNames: raise ValueError("Localized name already used.")
 

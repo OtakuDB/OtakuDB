@@ -13,7 +13,7 @@ class Generator(ManifestGenerator):
 		:rtype: Manifest
 		"""
 
-		manifest.metainfo_rules.set_rule("base", ("game", "manga", "novel", "original", "ranobe"))
+		manifest.metainfo_rules.set_field("base", ("game", "manga", "novel", "original", "ranobe"), "Base for anime.")
 		manifest.custom["max_estimation"] = 10
 
 		return manifest

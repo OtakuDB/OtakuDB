@@ -125,6 +125,8 @@ class LocalBinder:
 		:raises NoteNotFound: Запись не найдена в таблице.
 		"""
 
+		if slave_id not in self.__Cache: return False
+
 		return bool(self.__Cache[slave_id].masters)
 	
 	def has_slaves(self, master_id: int) -> bool:
@@ -137,6 +139,8 @@ class LocalBinder:
 		:rtype: bool
 		:raises NoteNotFound: Запись не найдена в таблице.
 		"""
+
+		if master_id not in self.__Cache: return False
 
 		return bool(self.__Cache[master_id].slaves)
 	

@@ -15,7 +15,7 @@ class Generator(ManifestGenerator):
 		"""
 
 		manifest.attachments.add_slot("ebook", "The e-book file.")
-		manifest.metainfo_rules.set_rule("product_code", None)
+		manifest.metainfo_rules.set_field("product_code", None, "Individual prodaction code.")
 
 		ColumnsNames = ("ID", "Status", "Code", "Name", "Ebook", "Type")
 		OptionsCLI = {

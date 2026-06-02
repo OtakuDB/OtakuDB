@@ -1,4 +1,5 @@
-from .Containers import Attachments, Common, Custom, MetainfoRules, InterfacesOptions
+from .Containers import Attachments, Common, Custom, InterfacesOptions
+from .Metainfo import MetainfoRules
 
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 

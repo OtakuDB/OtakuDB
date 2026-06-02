@@ -67,7 +67,6 @@ class BaseNote:
 		self._Data = {
 			"name": None,
 			"metainfo": dict(),
-			"binds": dict(),
 			"attachments": dict().fromkeys(self._Table.manifest.attachments.slots.keys(), None)
 		} | self._GetEmptyNote()
 
@@ -105,6 +104,35 @@ class BaseNote:
 
 		pass
 
+	def _Callback_AttachmentsChanged(self):
+		"""Обработчик вызова: вложения изменены."""
+
+		pass
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ТРИГГЕРНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#	
+
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
+	def _PostLocalBindMethod(self, note: "BaseNote"):
+		"""
+		Метод, выполняющийся после привязки локальной записи.
+
+		:param note: Привязанная запись.
+		:type note: BaseNote
+		"""
+
+		pass
+
+	def _PreSaveMethod(self):
+		"""Метод, выполняющийся перед сохранением записи."""
+
+		pass
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
@@ -113,7 +141,7 @@ class BaseNote:
 		"""
 		Возвращает пустую структуру записи.
 
-		Поля _name_, _metainfo_, _binds_, _attachments_ будут добавлены автоматически, но их можно указать для определения порядка.
+		Поля _name_, _metainfo_, _attachments_ будут добавлены автоматически, но их можно указать для определения порядка.
 
 		:return: Пустая структура записи.
 		:rtype: dict[str, Any]
@@ -139,26 +167,6 @@ class BaseNote:
 			elif NameObject: Strings.append(NameObject)
 
 		return Strings
-
-	def _PostInitMethod(self):
-		"""Метод, выполняющийся после инициализации объекта."""
-
-		pass
-
-	def _PostLocalBindMethod(self, note: "BaseNote"):
-		"""
-		Метод, выполняющийся после привязки локальной записи.
-
-		:param note: Привязанная запись.
-		:type note: BaseNote
-		"""
-
-		pass
-
-	def _PreSaveMethod(self):
-		"""Метод, выполняющийся перед сохранением записи."""
-
-		pass
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -226,6 +234,7 @@ class BaseNote:
 		"""
 
 		match callback_type:
+			case CallbacksTypes.AttachmentsChanged: self._Callback_AttachmentsChanged(*args, **kwargs)
 			case CallbacksTypes.SlaveNoteSaved: self._Callback_SlaveNoteSaved(*args, **kwargs)
 
 	def set_id(self, id: int):
@@ -268,6 +277,5 @@ class BaseNote:
 		if use_presaver: self._PreSaveMethod()
 		self._Data["metainfo"] = self._Metainfo.to_dict(copy)
 		self._Data["attachments"] = self._Attachments.to_dict(copy)
-		self._Data["binds"] = self._Binds.to_dict(copy)
 
 		return Copy(self._Data) if copy else self._Data

@@ -419,6 +419,18 @@ class NoteCLI(BaseNoteCLI):
 
 		self._Note: "Note"
 
+	def _ViewMetainfo(self):
+		"""Выводит значения полей метаданных."""
+
+		print(FastStyler(f"METAINFO:").decorate.bold)
+		
+		for Field in self._Note.metainfo.fields:
+			Value = self._Note.metainfo[Field]
+			if Value == None: continue
+			if Field not in self._Note.table.manifest.metainfo_rules.fields_names: Field = FastStyler(Field).colorize.blue
+			if type(Value) == str: Value = Value.replace(";", ", ")
+			print(" " * 4 + f"{Field}: {Value}")
+
 	def _ViewNote(self):
 		"""Отображает запись."""
 
@@ -434,8 +446,7 @@ class NoteCLI(BaseNoteCLI):
 		
 		if self._Note.localized_name:
 			UsedName = self._Note.localized_name
-			Mark = "👑 " if self._Note.another_names else ""
-			if self._Note.name: AnotherNames = [Mark + self._Note.name] + AnotherNames
+			if self._Note.name: AnotherNames.insert(0, f"👑 {self._Note.name}" if AnotherNames else self._Note.name)
 
 		CollectionStatusEmojiDetermination = {
 			CollectionStatuses.Collected: "📦",

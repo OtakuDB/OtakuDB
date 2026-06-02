@@ -8,6 +8,7 @@ from dublib.CLI.Templates import Confirmation
 from dublib.CLI.TextStyler import FastStyler
 
 from typing import TYPE_CHECKING
+from pathlib import Path
 
 if TYPE_CHECKING:
 	from Source.Interfaces.CLI import Interface
@@ -29,13 +30,6 @@ class BaseNoteCLI:
 
 		Com = Command("close", "Close note.")
 		CommandsList.append(Com)
-		
-		if self._Note.table.manifest.common.binds:
-			Com = Command("bind", "Bint another note to current.")
-			ComPos = Com.create_position("NOTE", description = "ID of current table note.", important = True)
-			ComPos.set_argument(ParametersTypes.UnsignedInteger)
-			Com.base.add_flag("-r", description = "Remove binding.")
-			CommandsList.append(Com)
 
 		Com = Command("delete", "Delete note.")
 		Com.base.add_flag("-y", description = "Automatically confirms deletion.")
@@ -46,12 +40,50 @@ class BaseNoteCLI:
 		ComPos.set_argument()
 		CommandsList.append(Com)
 
-		if self._Note.table.manifest.attachments.slots:
+		Com = Command("view", "View note.")
+		CommandsList.append(Com)
+
+		#---> Динамические команды: вложения.
+		#==========================================================================================#
+		
+		if self._Note.table.manifest.attachments.rule > 0:
+			Com = Command("attach", "Attach file to note.")
+			ComPos = Com.create_position("FILE", description = "Path to file.", important = True)
+			ComPos.set_argument(ParametersTypes.ValidPath)
+			Com.base.add_key("--slot", description = "Slot name to attaching.")
+			Com.base.add_flag("-c", description = "Attach copy of file.")
+			CommandsList.append(Com)
+
 			Com = Command("slots", "Print slots descriptions.")
 			CommandsList.append(Com)
 
-		Com = Command("view", "View note.")
-		CommandsList.append(Com)
+			Com = Command("unattach", "Attach file to note.")
+			ComPos = Com.create_position("TARGET", description = "Target to unattaching.", important = True)
+			ComPos.add_key("--slot", description = "Slot name to clear.")
+			ComPos.set_argument()
+			CommandsList.append(Com)
+
+		#---> Динамические команды: метаданные.
+		#==========================================================================================#
+		if self._Note.table.manifest.metainfo_rules.is_enabled:
+			Com = Command("metafields", "Prints metainfo fields data.", "Metainfo")
+			CommandsList.append(Com)
+
+			Com = Command("metainfo", "Manage metainfo.", "Metainfo")
+			ComPos = Com.create_position("FIELD", "Metainfo field name.", important = True)
+			ComPos.set_argument()
+			ComPos = Com.create_position("VALUE", "Metainfo value. Strings can be separated by ; and slod may be cleared by * characters.", important = True)
+			ComPos.set_argument()
+			CommandsList.append(Com)
+
+		#---> Динамические команды: связи.
+		#==========================================================================================#
+		if self._Note.table.manifest.common.binds:
+			Com = Command("bind", "Bint another note to current.")
+			ComPos = Com.create_position("NOTE", description = "ID of current table note.", important = True)
+			ComPos.set_argument(ParametersTypes.UnsignedInteger)
+			Com.base.add_flag("-r", description = "Remove binding.")
+			CommandsList.append(Com)
 
 		return CommandsList
 
@@ -68,6 +100,25 @@ class BaseNoteCLI:
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ ОБРАБОТЧИКИ КОМАНД <<<<< #
 	#==========================================================================================#
+
+	def _attach(self, path: str, slot: str | None, copy: bool):
+		"""
+		Прикрепляет вложение.
+
+		:param path: Путь к вложению.
+		:type path: str
+		:param slot: Имя слота для прикрепления.
+		:type slot: str | None
+		:param copy: Указывает, нужно ли скопировать файл или переместить.
+		:type copy: bool
+		"""
+
+		path = Path(path)
+
+		try: self._Note.attachments.attach(path, slot, copy)
+		except Exceptions.Note.AttachmentSlotAlreadyFilled: PrintError(f"Slot \"{slot}\" already filled.")
+		except Exceptions.Note.AttachmentsDenied: PrintError("Attachments denied.")
+		except Exceptions.Note.AttachmentSlotMissing: PrintError(f"Slot \"{slot}\" not described in manifest.")
 
 	def _bind(self, note_id: int, remove: bool):
 		"""
@@ -99,6 +150,25 @@ class BaseNoteCLI:
 		self._Note.delete()
 		self._Interface.set_current_object(self._Note.table)
 
+	def _metafields(self):
+		"""Выводит описание полей метаданных."""
+
+		MetainfoRules = self._Note.table.manifest.metainfo_rules
+
+		FreeFieldsStatus = MetainfoRules.is_free_allowed
+		if FreeFieldsStatus: FreeFieldsStatus = FastStyler("enabled").colorize.green
+		else: FreeFieldsStatus = FastStyler("disabled").colorize.red
+		print("Free fields:", FreeFieldsStatus)
+
+		for Field in MetainfoRules.fields:
+			print()
+			print(FastStyler(Field.name).decorate.bold)
+			print("Description:", FastStyler(Field.description).decorate.italic)
+			
+			Values = Field.values
+			if Values != None:
+				print("Values:", tuple(Values))
+
 	def _slots(self):
 		"""Выводит описания слотов."""
 
@@ -119,6 +189,21 @@ class BaseNoteCLI:
 
 		PrintTable(Columns, sort_by = "Slot")
 
+	def _unattach(self, command: ParsedCommandData):
+		"""
+		Открепляет вложение.
+
+		:param command: Данные команды.
+		:type command: ParsedCommandData
+		"""
+
+		if command.check_key("--slot"):
+			Slot = command.get_key_value("--slot")
+			try: self._Note.attachments.clear_slot(Slot)
+			except Exceptions.Note.AttachmentSlotMissing: PrintError(f"Slot \"{Slot}\" not described in manifest.")
+
+		else: self._Note.attachments.unnatach(command.get_position_value("TARGET"))
+
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -132,12 +217,16 @@ class BaseNoteCLI:
 		"""
 
 		match command.name:
+			case "attach": self._attach(command.get_position_value("FILE"), command.get_key_value("--slot"), command.check_flag("-c"))
 			case "bind": self._bind(command.get_position_value("NOTE"), command.check_flag("-r"))
 			case "close": self._Interface.set_current_object(self._Note.table)
 			case "delete": self._delete(command.check_flag("-y"))
+			case "metafields": self._metafields()
+			case "metainfo": self._SetMetainfo(command.get_position_value("FIELD"), command.get_position_value("VALUE"))
 			case "rename": self._Note.rename(Unstar(command.get_position_value("NAME")))
 			case "view": self.view()
 			case "slots": self._slots()
+			case "unattach": self._unattach(command)
 
 	def _SetMetainfo(self, key: str, value: int | float | str | None):
 		"""
@@ -150,7 +239,7 @@ class BaseNoteCLI:
 		"""
 
 		try: self._Note.metainfo.set_field_value(key, Unstar(value))
-		except Exceptions.Note.MetainfoBlocked: PrintError("Metainfo blocked by manifest rule.")
+		except ZeroDivisionError: PrintError("Metainfo blocked by manifest rule.")
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -198,7 +287,7 @@ class BaseNoteCLI:
 		for Field in self._Note.metainfo.fields:
 			Value = self._Note.metainfo[Field]
 			if Value == None: continue
-			if Field not in self._Note.table.manifest.metainfo_rules.fields: Field = FastStyler(Field).colorize.blue
+			if Field not in self._Note.table.manifest.metainfo_rules.fields_names: Field = FastStyler(Field).colorize.blue
 			print(" " * 4 + f"{Field}: {Value}")
 
 	def _ViewNote(self):

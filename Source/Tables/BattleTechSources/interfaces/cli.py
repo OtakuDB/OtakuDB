@@ -245,8 +245,7 @@ class NoteCLI(BaseNoteCLI):
 		
 		if self._Note.localized_name:
 			UsedName = self._Note.localized_name
-			Mark = "👑 " if self._Note.another_names else ""
-			if self._Note.name: AnotherNames = [Mark + self._Note.name] + AnotherNames
+			if self._Note.name: AnotherNames.insert(0, f"👑 {self._Note.name}" if AnotherNames else self._Note.name)
 
 		CollectionStatusEmojiDetermination = {
 			CollectionStatuses.Collected: "📦",
@@ -255,18 +254,8 @@ class NoteCLI(BaseNoteCLI):
 			CollectionStatuses.Wishlist: "🎁",
 			None: ""
 		}
-		StatusEmojiDetermination = {
-			Statuses.Announced: "ℹ️",
-			Statuses.Reading: "📖",
-			Statuses.Completed: "✅",
-			Statuses.Dropped: "⛔",
-			Statuses.Skipped: "🚫",
-			Statuses.Planned: "📋",
-			None: ""
-		}
 
 		CollectionStatusEmoji = CollectionStatusEmojiDetermination[self._Note.collection_status]
-		StatusEmoji = StatusEmojiDetermination[self._Note.status]
 
 		#---> Вывод данных записи.
 		#==========================================================================================#
@@ -278,11 +267,6 @@ class NoteCLI(BaseNoteCLI):
 
 		if CollectionStatusEmoji:
 			print(f" {CollectionStatusEmoji}", end = "")
-			IsFirstLinePrinted = True
-
-		if StatusEmoji:
-			if IsFirstLinePrinted: print(" ", end = "")
-			print(StatusEmoji, end = "")
 			IsFirstLinePrinted = True
 
 		if IsFirstLinePrinted: print("")
