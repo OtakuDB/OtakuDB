@@ -120,6 +120,19 @@ class Attachments:
 
 		return self.__Data["slots"][slot]
 
+	def is_slot_occupied(self, slot: str) -> bool:
+		"""
+		Проверяет, занят ли слот вложением.
+
+		:param slot: Имя слота.
+		:type slot: str
+		:return: Возвращает `True`, если слот содержит вложение.
+		:rtype: bool
+		"""
+
+		try: return bool(self.get_slot_file(slot))
+		except KeyError: return False
+
 	def move(self, new_id: int):
 		"""
 		Перемещает вложения в каталог соответствующий новому ID записи.

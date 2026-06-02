@@ -118,6 +118,12 @@ class Common:
 	#==========================================================================================#
 
 	@property
+	def binds(self) -> bool:
+		"""Указывает, разрешено ли прикреплять к записи другие записи той же таблицы."""
+
+		return self.__Data["binds"]
+
+	@property
 	def recycle_id(self) -> bool:
 		"""Указывает, необходимо ли занимать освободившиеся ID."""
 
@@ -133,8 +139,20 @@ class Common:
 		self.__Manifest = manifest
 
 		self.__Data = {
-			"recycle_id": True
+			"recycle_id": True,
+			"binds": False
 		}
+
+	def switch_binds(self, status: bool):
+		"""
+		Переключает состояние использования локальных связей.
+
+		:param status: Состояние использования локальных связей.
+		:type status: bool
+		"""
+
+		self.__Data["binds"] = status
+		self.__Manifest.save()
 
 	def switch_recycle_id(self, status: bool):
 		"""
