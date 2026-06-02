@@ -13,15 +13,11 @@ class Generator(ManifestGenerator):
 		:return: Отредактированный манифест.
 		:rtype: Manifest
 		"""
-		
-		manifest.common.switch_binds(True)
-		manifest.attachments.add_slot("ebook", "The e-book file.")
-		manifest.metainfo_rules.set_rule("author", None)
-		manifest.metainfo_rules.set_rule("publisher", None)
-		manifest.metainfo_rules.set_rule("series", tuple())
-		manifest.metainfo_rules.set_rule("publication_date", None)
 
-		ColumnsNames = ("ID", "Status", "Name", "Author", "Publication", "Type", "Series", "Era", "Estimation")
+		manifest.attachments.add_slot("ebook", "The e-book file.")
+		manifest.metainfo_rules.set_rule("product_code", None)
+
+		ColumnsNames = ("ID", "Status", "Code", "Name", "Ebook", "Type")
 		OptionsCLI = {
 			"columns": dict().fromkeys(ColumnsNames, {"enabled": True, "max_width": None})
 		}

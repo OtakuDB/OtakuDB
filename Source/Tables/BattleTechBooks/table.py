@@ -3,7 +3,7 @@ from .Structs import Era
 from Source.Core.Base.Table import BaseTable
 
 class Table(BaseTable):
-	"""Таблица просмотров аниме."""
+	"""Таблица прочтения произведений BattleTech."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
