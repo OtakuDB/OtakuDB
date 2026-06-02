@@ -73,25 +73,6 @@ class NoteCLI(BaseNoteCLI):
 	"""Интерпретатор CLI записи."""
 
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __SetMetainfo(self, key: str, value: int | float | str | None):
-		"""
-		Устанавливает значение поля метаданных.
-
-		:param key: Имя поля.
-		:type key: str
-		:param value: Значение.
-		:type value: int | float | str | None
-		"""
-
-		value = Unstar(value)
-
-		try: self._Note.metainfo.set_field_value(key, value)
-		except Exceptions.Note.MetainfoBlocked: PrintError("Metainfo blocked by manifest rule.")
-
-	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ ОБРАБОТЧИКИ КОМАНД <<<<< #
 	#==========================================================================================#
 
@@ -263,7 +244,7 @@ class NoteCLI(BaseNoteCLI):
 
 		match command.name:
 			case "altname": self._altname(command.get_position_value("ALT_NAME"), command.check_flag("-r"))
-			case "base": self.__SetMetainfo("base", Unstar(command.get_position_value("VALUE")))
+			case "base": self._SetMetainfo("base", command.get_position_value("VALUE"))
 			case "delpart": self._delpart(command.get_position_value("INDEX"), command.check_flag("-y"))
 			case "drop": self._Note.drop()
 			case "editpart": self._editpart(command)

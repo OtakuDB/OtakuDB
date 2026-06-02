@@ -131,6 +131,19 @@ class BaseNoteCLI:
 			case "view": self.view()
 			case "slots": self._slots()
 
+	def _SetMetainfo(self, key: str, value: int | float | str | None):
+		"""
+		Устанавливает значение поля метаданных, обрабатывая ошибки.
+
+		:param key: Имя поля.
+		:type key: str
+		:param value: Значение. Символ `*` приводится к `None`.
+		:type value: int | float | str | None
+		"""
+
+		try: self._Note.metainfo.set_field_value(key, Unstar(value))
+		except Exceptions.Note.MetainfoBlocked: PrintError("Metainfo blocked by manifest rule.")
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#

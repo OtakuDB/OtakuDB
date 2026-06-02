@@ -174,25 +174,6 @@ class NoteCLI(BaseNoteCLI):
 	"""Интерпретатор CLI записи."""
 
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __SetMetainfo(self, key: str, value: int | float | str | None):
-		"""
-		Устанавливает значение поля метаданных.
-
-		:param key: Имя поля.
-		:type key: str
-		:param value: Значение.
-		:type value: int | float | str | None
-		"""
-
-		value = Unstar(value)
-
-		try: self._Note.metainfo.set_field_value(key, value)
-		except Exceptions.Note.MetainfoBlocked: PrintError("Metainfo blocked by manifest rule.")
-
-	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ ОБРАБОТЧИКИ КОМАНД <<<<< #
 	#==========================================================================================#
 
@@ -328,17 +309,17 @@ class NoteCLI(BaseNoteCLI):
 
 		match command.name:
 			case "altname": self._altname()
-			case "author": self.__SetMetainfo("author", command.get_position_value("AUTHOR"))
+			case "author": self._SetMetainfo("author", command.get_position_value("AUTHOR"))
 			case "collection": self._collection(command)
 			case "comment": self._Note.set_comment(Unstar(command.get_position_value("COMMENT")))
 			case "eras": self._eras()
 			case "era": self._era(command)
 			case "estimate": self._estimate(command.get_position_value("ESTIMATION"))
 			case "localname": self._localname(Unstar(command.get_position_value("LOCALNAME")))
-			case "pubdate": self.__SetMetainfo("publication_date", command.get_position_value("DATE"))
-			case "publisher": self.__SetMetainfo("publisher", command.get_position_value("PUBLISHER"))
+			case "pubdate": self._SetMetainfo("publication_date", command.get_position_value("DATE"))
+			case "publisher": self._SetMetainfo("publisher", command.get_position_value("PUBLISHER"))
 			case "scount": self._scount(command.get_position_value("COUNT"))
-			case "series": self.__SetMetainfo("series", command.get_position_value("SERIES"))
+			case "series": self._SetMetainfo("series", command.get_position_value("SERIES"))
 			case "status": self._status(command)
 			case "type": self._type(command)
 
