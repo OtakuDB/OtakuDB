@@ -1,3 +1,11 @@
+class LocalBindsDenied(Exception):
+	"""Исключение: прикрепление записей той же таблицы к текущей записи запрещено."""
+
+	def __init__(self):
+		"""Исключение: прикрепление записей той же таблицы к текущей записи запрещено"""
+
+		super().__init__("Binding same table notes blocked by manifest.")
+
 class MetainfoBlocked(Exception):
 	"""Исключение: невозможно задать метаданные."""
 

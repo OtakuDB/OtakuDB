@@ -30,10 +30,11 @@ class BaseNoteCLI:
 		Com = Command("close", "Close note.")
 		CommandsList.append(Com)
 
-		Com = Command("bind", "Bint another note to current.")
-		ComPos = Com.create_position("NOTE", description = "ID of current table note.", important = True)
-		ComPos.set_argument(ParametersTypes.UnsignedInteger)
-		CommandsList.append(Com)
+		if self._Note.table.manifest.common.binds:
+			Com = Command("bind", "Bint another note to current.")
+			ComPos = Com.create_position("NOTE", description = "ID of current table note.", important = True)
+			ComPos.set_argument(ParametersTypes.UnsignedInteger)
+			CommandsList.append(Com)
 
 		Com = Command("delete", "Delete note.")
 		Com.base.add_flag("-y", description = "Automatically confirms deletion.")
@@ -44,8 +45,9 @@ class BaseNoteCLI:
 		ComPos.set_argument()
 		CommandsList.append(Com)
 
-		Com = Command("slots", "Print slots descriptions.")
-		CommandsList.append(Com)
+		if self._Note.table.manifest.attachments.slots:
+			Com = Command("slots", "Print slots descriptions.")
+			CommandsList.append(Com)
 
 		Com = Command("view", "View note.")
 		CommandsList.append(Com)
@@ -78,6 +80,7 @@ class BaseNoteCLI:
 			TargetNote = self._Note.table.get_note(note_id)
 			self._Note.binds.local.bind(TargetNote.id)
 		except Exceptions.Table.NoteNotFound: PrintError(f"Note with ID #{note_id} not found.")
+		except Exceptions.Note.LocalBindsDenied: PrintError("Same table notes binding denied.")
 
 	def _delete(self, confirm: bool = False):
 		"""

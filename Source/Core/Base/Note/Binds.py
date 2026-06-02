@@ -1,3 +1,5 @@
+from Source.Core import Exceptions
+
 from dublib.Methods.Data import Copy
 
 from typing import TYPE_CHECKING
@@ -65,7 +67,10 @@ class LocalBinds:
 		:param note_id: ID привязываемой записи.
 		:type note_id: int
 		:raises NoteNotFound: Запись не найдена в таблице.
+		:raises LocalBindsDenied: Прикрепление записей той же таблицы к текущей записи запрещено.
 		"""
+
+		if not self.__Note.table.manifest.common.binds: raise Exceptions.Note.LocalBindsDenied()
 
 		TargetNote = self.__Note.table.get_note(note_id)
 
