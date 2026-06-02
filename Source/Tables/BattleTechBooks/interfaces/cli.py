@@ -430,6 +430,7 @@ class NoteCLI(BaseNoteCLI):
 		#==========================================================================================#
 		UsedName = self._Note.name
 		AnotherNames = list(self._Note.another_names)
+		StoriesNotes = self._Note.table.binder.local.get_slaves(self._Note.id)
 		
 		if self._Note.localized_name:
 			UsedName = self._Note.localized_name
@@ -483,24 +484,23 @@ class NoteCLI(BaseNoteCLI):
 		if self._Note.era: print(" " * 4 + f"🏺 Era: {self._Note.era.name}")
 		if self._Note.estimation: print(" " * 4 + f"⭐ Estimation: {self._Note.estimation}")
 		if self._Note.comment: print(" " * 4 + f"💭 Comment: {self._Note.comment}")
-		if all((not self._Note.binds.local, self._Note.stories_count)): print(" " * 4 + f"📜 Stories: {self._Note.stories_count}")
+		if all((not self._Note.table.binder.local.get_slaves(self._Note.id), self._Note.stories_count)): print(" " * 4 + f"📜 Stories: {self._Note.stories_count}")
 
 		#---> Вывод историй.
 		#==========================================================================================#
-		if self._Note.binds.local:
-			StoriesID = self._Note.binds.local.notes_id
+		if StoriesNotes:
 			MaxStoriesCount = self._Note.stories_count
 
 			if MaxStoriesCount:
-				StoriesCount = len(StoriesID)
+				StoriesCount = len(StoriesNotes)
 				MaxStoriesCount = f" ({StoriesCount} / {MaxStoriesCount})"
 
 			else: MaxStoriesCount = ""
 			
 			print(BOLD.get_styled_text(f"STORIES{MaxStoriesCount}:"))
 
-			for NoteID in StoriesID:
-				Story: "Note" = self._Note.table.get_note(NoteID)
+			for Story in StoriesNotes:
+				Story: "Note"
 
 				StoryNames = list()
 				if Story.localized_name: StoryNames.append(Story.localized_name)

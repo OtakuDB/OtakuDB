@@ -1,4 +1,6 @@
-from .Manifest import Manifest
+from ..Manifest import Manifest
+
+from .Binder import Binder
 
 from Source.Core import Exceptions
 
@@ -11,7 +13,7 @@ import shutil
 import os
 
 if TYPE_CHECKING:
-	from .Note import BaseNote
+	from ..Note import BaseNote
 
 	from Source.Core.Session.TableDescriptor import TableDescriptor
 	from Source.Core.Session.Driver import Driver
@@ -22,6 +24,18 @@ class BaseTable:
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def binder(self) -> Binder:
+		"""Оператор связей."""
+
+		return self._Binder
+
+	@property
+	def directory(self) -> Path:
+		"""Полный путь к директории таблицы."""
+
+		return self._Driver.storage_directory / self._Descriptor.path
 
 	@property
 	def manifest(self) -> Manifest:
@@ -140,6 +154,7 @@ class BaseTable:
 
 		self._Notes: "dict[int, BaseNote]" = dict()
 		self._NoteClass = self._GetNoteClass()
+		self._Binder = Binder(self)
 		
 		self._PostInitMethod()
 

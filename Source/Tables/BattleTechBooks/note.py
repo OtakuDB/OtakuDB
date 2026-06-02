@@ -110,19 +110,23 @@ class Note(BaseNote):
 		if IsSkipped and not all((IsDropped, IsAnnounced, IsReading, IsPlanned)): self.set_status(Statuses.Skipped)
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ОБРАБОТЧИКИ CALLBACK-ВЫЗОВОВ <<<<< #
 	#==========================================================================================#	
 
-	def _AfterLocalBindSavingCallback(self, note: "BaseNote"):
+	def _Callback_SlaveNoteSaved(self, slave_note: "BaseNote"):
 		"""
-		Вызывается после выполнения привязанной записью операции сохранения.
+		Обработчик вызова: привязанные запись выполнила сохранение.
 
-		:param note: Привязанная запись.
-		:type note: BaseNote
+		:param slave_note: Привязанная запись, выполнившая операцию сохранения.
+		:type slave_note: BaseNote
 		"""
 
 		self.__UpdateEstimationByLocalBinds()
 		self.__UpdateStatusByLocalBinds()
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#	
 
 	def _GetEmptyNote(self) -> dict[str, Any]:
 		"""

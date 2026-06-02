@@ -1,6 +1,6 @@
 from .Attachments import Attachments
+from .Enums import CallbacksTypes
 from .Metainfo import Metainfo
-from .Binds import Binds
 
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 from dublib.Methods.Data import Copy
@@ -25,12 +25,6 @@ class BaseNote:
 		"""Оператор вложений."""
 
 		return self._Attachments
-
-	@property
-	def binds(self) -> Binds:
-		"""Связи записей."""
-
-		return self._Binds
 
 	@property
 	def id(self) -> int:
@@ -90,7 +84,6 @@ class BaseNote:
 
 		self._Metainfo = Metainfo(self, self._Data.get("metainfo") or dict())
 		self._Attachments = Attachments(self, self._Data.get("attachments") or dict())
-		self._Binds = Binds(self, self._Data.get("binds") or dict())
 
 	def _RunPostSaveCallbacksForBinds(self):
 		"""Запускает обработку изменений в записях, привязавших текущую запись."""
@@ -99,18 +92,22 @@ class BaseNote:
 		for MasterNote in Masters: MasterNote.run_local_bind_callback(self)
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ОБРАБОТЧИКИ CALLBACK-ВЫЗОВОВ <<<<< #
 	#==========================================================================================#	
 
-	def _AfterLocalBindSavingCallback(self, note: "BaseNote"):
+	def _Callback_SlaveNoteSaved(self, slave_note: "BaseNote"):
 		"""
-		Вызывается после выполнения привязанной записью операции сохранения.
+		Обработчик вызова: привязанные запись выполнила сохранение.
 
-		:param note: Привязанная запись.
-		:type note: BaseNote
+		:param slave_note: Привязанная запись, выполнившая операцию сохранения.
+		:type slave_note: BaseNote
 		"""
 
 		pass
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#	
 
 	def _GetEmptyNote(self) -> dict[str, Any]:
 		"""
@@ -218,15 +215,18 @@ class BaseNote:
 		self._Data["name"] = name
 		self.save()
 
-	def run_local_bind_callback(self, note: "BaseNote"):
+	def run_callback(self, callback_type: CallbacksTypes, *args, **kwargs):
 		"""
 		Запускает обработчик обновления связанной записи.
 
 		:param note: Связанная запись, выполнившая операцию сохранения.
 		:type note: BaseNote
+		:param *args: Позиционные аргументы.
+		:param **kwargs: Именованные аргументы.
 		"""
 
-		self._AfterLocalBindSavingCallback(note)
+		match callback_type:
+			case CallbacksTypes.SlaveNoteSaved: self._Callback_SlaveNoteSaved(*args, **kwargs)
 
 	def set_id(self, id: int):
 		"""
@@ -251,7 +251,7 @@ class BaseNote:
 		"""
 
 		WriteJSON(self.get_path(), self.to_dict(use_presaver, copy = False), atomic = True)
-		self._RunPostSaveCallbacksForBinds()
+		if self._Table.binder.local.has_masters(self._ID): self.run_callback(CallbacksTypes.SlaveNoteSaved, self)
 
 	def to_dict(self, use_presaver: bool = True, copy: bool = True) -> dict:
 		"""

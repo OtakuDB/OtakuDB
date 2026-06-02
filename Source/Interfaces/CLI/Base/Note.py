@@ -29,11 +29,12 @@ class BaseNoteCLI:
 
 		Com = Command("close", "Close note.")
 		CommandsList.append(Com)
-
+		
 		if self._Note.table.manifest.common.binds:
 			Com = Command("bind", "Bint another note to current.")
 			ComPos = Com.create_position("NOTE", description = "ID of current table note.", important = True)
 			ComPos.set_argument(ParametersTypes.UnsignedInteger)
+			Com.base.add_flag("-r", description = "Remove binding.")
 			CommandsList.append(Com)
 
 		Com = Command("delete", "Delete note.")
@@ -68,17 +69,21 @@ class BaseNoteCLI:
 	# >>>>> НАСЛЕДУЕМЫЕ ОБРАБОТЧИКИ КОМАНД <<<<< #
 	#==========================================================================================#
 
-	def _bind(self, note_id: int):
+	def _bind(self, note_id: int, remove: bool):
 		"""
 		Привязывает другую запись к текущей внутри той же таблицы.
 
 		:param note_id: ID привязываемой записи.
 		:type note_id: int
+		:param remove: Указывает, нужно ли добавить связь или удалить.
+		:type remove: bool
 		"""
 		
 		try:
 			TargetNote = self._Note.table.get_note(note_id)
-			self._Note.binds.local.bind(TargetNote.id)
+			if remove: self._Note.table.binder.local.unbind(self._Note.id, TargetNote.id)
+			else: self._Note.table.binder.local.bind(self._Note.id, TargetNote.id)
+
 		except Exceptions.Table.NoteNotFound: PrintError(f"Note with ID #{note_id} not found.")
 		except Exceptions.Note.LocalBindsDenied: PrintError("Same table notes binding denied.")
 
@@ -127,7 +132,7 @@ class BaseNoteCLI:
 		"""
 
 		match command.name:
-			case "bind": self._bind(command.get_position_value("NOTE"))
+			case "bind": self._bind(command.get_position_value("NOTE"), command.check_flag("-r"))
 			case "close": self._Interface.set_current_object(self._Note.table)
 			case "delete": self._delete(command.check_flag("-y"))
 			case "rename": self._Note.rename(Unstar(command.get_position_value("NAME")))
