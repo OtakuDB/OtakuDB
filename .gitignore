@@ -2,7 +2,4 @@
 __pycache__
 .venv
 # User's files.
-session.json
-
-# Temporary ignore legacy files.
-Data
+.session.json

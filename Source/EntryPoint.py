@@ -1,13 +1,19 @@
-from dublib.CLI.Terminalyzer import Command, Terminalyzer, ParametersTypes
+from typing import TYPE_CHECKING
+import importlib
 
-COMMANDS: list[Command] = list()
+if TYPE_CHECKING:
+	from Source.Core.Enums import Interfaces
+	from Source.Core.Session import Session
 
-Com = Command("run", "Launch OtakuDB interface.")
-ComPos = Com.create_position("INTERFACE", description = "Interface specification: cli (only one supported now).")
-ComPos.set_argument(ParametersTypes.Alpha)
+def RunInterface(interface: "Interfaces", session: "Session"):
+	"""
+	Запускает интерфейс.
 
-Analyzer = Terminalyzer()
-Analyzer.helper.enable()
-Analyzer.helper.enable_sorting()
+	:param interface: Тип интерфейса.
+	:type interface: Interfaces
+	:param session: Сессия.
+	:type session: Session
+	"""
 
-COMMAND_DATA = Analyzer.check_commands(COMMANDS)
+	InterfaceModule = importlib.import_module(f"Source.Interfaces.{interface.name}")
+	InterfaceModule.Interface(session).run()

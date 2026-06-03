@@ -3,8 +3,8 @@ from .Options.Local import TableInterfaceOptions
 from .Enums import InterractionLevels
 
 from dublib.CLI.Terminalyzer import Command, ParametersTypes,ParsedCommandData, Terminalyzer
-from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates.Bus import PrintCritical, PrintError
+from dublib.CLI.TextStyler import Codes, TextStyler
 from dublib.Methods.System import Clear
 from dublib.CLI import readline
 from dublib import Exceptions
@@ -12,6 +12,7 @@ from dublib import Exceptions
 from typing import TYPE_CHECKING
 from types import ModuleType
 from pathlib import Path
+from os import PathLike
 import importlib
 import shlex
 
@@ -73,14 +74,7 @@ class Interface:
 		match command.name:
 			case "clear": Clear()
 			case "exit": exit()
-
-			case "mount":
-
-				try:
-					self.__Driver.mount(command.arguments[0])
-					print(f"Mounted: \"{self.__Driver.storage_directory}\".")
-
-				except FileNotFoundError: print("Storage directory not found.")
+			case "mount": self.__MountStorage(command.get_position_value("PATH"))
 
 		return command.name in tuple(CurrentCommand.name for CurrentCommand in self.global_commands)
 
@@ -115,6 +109,20 @@ class Interface:
 		except AttributeError: PrintCritical(f"Table \"{table_type}\" doesn't provide all CLI interpretators.")
 
 		return Module
+
+	def __MountStorage(self, path: PathLike):
+		"""
+		Монтирует директорию хранилища.
+
+		:param path: Путь к директории хранилища.
+		:type path: PathLike
+		"""
+
+		try:
+			self.__Session.mount(path)
+			self.set_current_object(self.__Session.navigator.current_box)
+
+		except FileNotFoundError: PrintError("Storage directory not found.")
 
 	def __ParseCommandData(self, parameters: list[str]) -> ParsedCommandData | None:
 		"""
@@ -156,18 +164,17 @@ class Interface:
 		self.__Session = session
 
 		self.__Driver = self.__Session.driver
-		self.__Navigator = self.__Session.navigator
 
 		self.__InterractionLevel = InterractionLevels.Driver
 		self.__Interpreter: BaseBoxCLI | BaseTableCLI | BaseNoteCLI | None = None
 		self.__CurrentObject = None
 
 		Clear()
-		print("OtakuDB v0.2.0-alpha")
+		print("OtakuDB v0.2.0-beta")
 
-		if self.__Driver.storage_directory:
+		if self.__Session.data.last_mounted_storage:
+			self.__MountStorage(self.__Session.data.last_mounted_storage)
 			print(f"Mounted: \"{self.__Driver.storage_directory}\".")
-			self.set_current_object(self.__Navigator.current_box)
 
 	def get_selector_string(self) -> str:
 		"""
@@ -177,12 +184,15 @@ class Interface:
 		:rtype: str
 		"""
 
+		BoldGreen = TextStyler(decorations = Codes.Decorations.Bold, text_color = Codes.Colors.Green)
+		if not self.__Session.navigator: return BoldGreen.get_styled_text("(DRIVER) -> ")
+
 		Storage = ""
 		VirtualPath = Path()
 		Note = ""
 
 		if self.__Driver.storage_directory: Storage = self.__Driver.storage_directory.name
-		if self.__Navigator.current_box: VirtualPath = self.__Navigator.current_box.path
+		if self.__Session.navigator.current_box: VirtualPath = self.__Session.navigator.current_box.path
 
 
 		if self.__InterractionLevel == InterractionLevels.Table:
@@ -195,8 +205,6 @@ class Interface:
 		VirtualPath = VirtualPath.as_posix()
 		if VirtualPath == ".": VirtualPath = ""
 		Selector = "-".join((Storage, VirtualPath, Note)).strip("-")
-
-		BoldGreen = TextStyler(decorations = Codes.Decorations.Bold, text_color = Codes.Colors.Green)
 
 		return BoldGreen.get_styled_text(f"{Selector} -> ")
 

@@ -47,7 +47,7 @@ class Driver:
 	def __init__(self):
 		"""Драйвер хранилища."""
 		
-		self.__StorageDirectory = None
+		self.__StorageDirectory: Path | None = None
 
 	def is_box(self, virtual_path: Path) -> bool:
 		"""
@@ -62,18 +62,6 @@ class Driver:
 		FullPath = self.__StorageDirectory / virtual_path / "manifest.json"
 
 		return not FullPath.exists()
-
-	def mount(self, directory: PathLike):
-		"""
-		Монтирует указанную директорию как хранилище.
-
-		:param directory: Директория хранилища.
-		:type directory: PathLike
-		:raises FileNotFoundError: Выбрасывается при отсутствии монтируемой директории.
-		"""
-
-		if not os.path.exists(directory): raise FileNotFoundError(directory)
-		self.__StorageDirectory = Path(directory)
 
 	def create_box(self, parent_box: Box | None, name: str) -> Box:
 		"""
@@ -140,7 +128,10 @@ class Driver:
 		:return: Контейнер.
 		:rtype: Box
 		:raises FileNotFoundError: Вирутальный путь не найден.
+		:raises StorageUnmounted: Хранилище отмонтировано.
 		"""
+
+		if not self.__StorageDirectory: raise Exceptions.Driver.StorageUnmounted()
 
 		virtual_path = virtual_path or Path()
 
@@ -149,3 +140,15 @@ class Driver:
 
 		if virtual_path and str(virtual_path) != ".": return Box(self, virtual_path.parent, virtual_path.name)
 		else: return Box(self)
+
+	def set_storage(self, directory: Path):
+		"""
+		Задаёт путь к директории хранилища.
+
+		:param directory: Директория хранилища.
+		:type directory: Path
+		:raises FileNotFoundError: Выбрасывается при отсутствии монтируемой директории.
+		"""
+
+		if directory.exists(): self.__StorageDirectory = directory
+		else: raise FileNotFoundError(directory)

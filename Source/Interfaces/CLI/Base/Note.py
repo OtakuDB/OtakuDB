@@ -167,7 +167,8 @@ class BaseNoteCLI:
 			
 			Values = Field.values
 			if Values != None:
-				print("Values:", tuple(Values))
+				print("Values:")
+				for Value in Values: print(" " * 4 + f" > {Value}")
 
 	def _slots(self):
 		"""Выводит описания слотов."""
@@ -239,7 +240,7 @@ class BaseNoteCLI:
 		"""
 
 		try: self._Note.metainfo.set_field_value(key, Unstar(value))
-		except ZeroDivisionError: PrintError("Metainfo blocked by manifest rule.")
+		except Exceptions.Note.MetainfoBlocked: PrintError("Metainfo blocked by manifest rule.")
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
