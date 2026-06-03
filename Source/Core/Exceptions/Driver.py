@@ -1,12 +1,30 @@
 from pathlib import Path
 
-class PathNotFound(Exception):
-	"""Исключение: не найден вирутальный путь в таблице."""
+class BoxItemOverride(Exception):
+	"""Исключение: перезапись элемента контейнера."""
 
-	def __init__(self):
-		"""Исключение: не найден вирутальный путь в таблице."""
+	def __init__(self, virtual_path: Path):
+		"""
+		Исключение: перезапись элемента контейнера.
 
-		super().__init__("Path not found in table.")
+		:param virtual_path: Виртуальный путь к перезаписываемому элементу.
+		:type virtual_path: Path
+		"""
+
+		super().__init__(virtual_path.as_posix())
+
+class BoxNotFound(Exception):
+	"""Исключение: контейнер не найден."""
+
+	def __init__(self, virtual_path: Path):
+		"""
+		Исключение: контейнер не найден.
+
+		:param virtual_path: Виртуальный путь к контейнеру.
+		:type virtual_path: Path
+		"""
+
+		super().__init__(virtual_path.as_posix())
 
 class StorageUnmounted(Exception):
 	"""Исключение: хранилище не примонтировано."""

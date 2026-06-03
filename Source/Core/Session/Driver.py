@@ -1,5 +1,5 @@
 from .TableDescriptor import TableDescriptor
-from .Box import Box
+from .Box import Box, RootBox
 
 from Source.Core import Exceptions
 
@@ -7,7 +7,6 @@ from dublib.Methods.Filesystem import ListDir
 
 from typing import TYPE_CHECKING
 from pathlib import Path
-from os import PathLike
 import importlib
 import os
 
@@ -24,6 +23,12 @@ class Driver:
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def root_box(self) -> RootBox | None:
+		"""Корневой контейнер."""
+
+		return self.__Boxes.get(".")
 
 	@property
 	def storage_directory(self) -> Path | None:
@@ -48,6 +53,86 @@ class Driver:
 		"""Драйвер хранилища."""
 		
 		self.__StorageDirectory: Path | None = None
+		self.__Boxes: dict[str, Box] = dict()
+
+	def mount(self, directory: Path):
+		"""
+		Монтирует директорию как хранилище.
+
+		:param directory: Директория хранилища или `None` для отключения.
+		:type directory: Path | None
+		:raises FileNotFoundError: Директория хранилища не найдена.
+		"""
+		
+		if directory.exists():
+			self.__StorageDirectory = directory
+			self.__Boxes["."] = RootBox(self)
+		else: raise FileNotFoundError(directory)
+
+	def unmount(self):
+		"""Отмонтирует хранилище."""
+
+		self.__StorageDirectory = None
+		self.__RootBox = None
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С КОНТЕЙНЕРАМИ <<<<< #
+	#==========================================================================================#
+
+	def create_box(self, parent_box: Box, name: str) -> Box:
+		"""
+		Создаёт новый контейнер.
+
+		:param parent_box: Путь к родительскому контейнеру.
+		:type parent_box: Box
+		:param name: Название контейнера.
+		:type name: str
+		:return: Новый контейнер.
+		:rtype: Box
+		:raises StorageUnmounted: Хранилище отмонтировано.
+		"""
+
+		if not self.__StorageDirectory: raise Exceptions.Driver.StorageUnmounted()
+
+		NewBoxFullPath = parent_box.full_path / name
+		os.makedirs(NewBoxFullPath, exist_ok = True)
+		NewBox = self.init_box(parent_box, name)
+		parent_box.add_item(NewBox)
+
+		return NewBox
+
+	def get_box(self, virtual_path: Path) -> Box:
+		"""
+		Возвращает инициализированный контейнер.
+
+		:param virtual_path: Вирутальный путь к контейнеру.
+		:type virtual_path: Path
+		:param auto_init: Переключает автоматическую инициализацию контейнера.
+		:type auto_init: bool
+		:return: Контейнер.
+		:rtype: Box
+		:raises BoxNotFound: Контейнер не найден.
+		"""
+
+		try: return self.__Boxes[virtual_path.as_posix()]
+		except KeyError: raise Exceptions.Driver.BoxNotFound(virtual_path)
+
+	def init_box(self, parent_box: Box | RootBox, name: str) -> Box:
+		"""
+		Инициализирует существующий контейнер.
+
+		:param parent_box: Родительский контейнер.
+		:type parent_box: Box | RootBox
+		:param name: Имя контейнера.
+		:type name: str
+		:return: Контейнер.
+		:rtype: Box
+		"""
+
+		VirtualPath = parent_box.virtual_path / name
+		self.__Boxes[VirtualPath.as_posix()] = Box(self, parent_box, name)
+
+		return self.get_box(VirtualPath)
 
 	def is_box(self, virtual_path: Path) -> bool:
 		"""
@@ -59,32 +144,33 @@ class Driver:
 		:rtype: bool
 		"""
 
-		FullPath = self.__StorageDirectory / virtual_path / "manifest.json"
+		FullManifestPath = self.__StorageDirectory / virtual_path / "manifest.json"
 
-		return not FullPath.exists()
-
-	def create_box(self, parent_box: Box | None, name: str) -> Box:
+		return not FullManifestPath.exists()
+	
+	def is_box_initialized(self, virtual_path: Path) -> bool:
 		"""
-		Создаёт новый контейнер.
+		Проверяет, инициализирован ли контейнер.
 
-		:param parent_box: Путь к родительскому контейнеру.
-		:type parent_box: Box | None
-		:param name: Название контейнера.
-		:type name: str
-		:return: Новый контейнер.
-		:rtype: Box
-		:raises StorageUnmounted: Хранилище отмонтировано.
+		:param virtual_path: Виртуальный путь к контейнеру.
+		:type virtual_path: Path
+		:return: Возвращает `True`, если контейнер инициализирован.
+		:rtype: bool
 		"""
 
-		if not self.__StorageDirectory: raise Exceptions.Driver.StorageUnmounted()
+		return virtual_path.as_posix() in self.__Boxes
 
-		FullPath = self.__StorageDirectory / parent_box.path / name
-		os.makedirs(FullPath, exist_ok = True)
 
-		NewBox = Box(self, parent_box.path, name)
-		parent_box.reload()
 
-		return NewBox
+
+
+
+
+
+
+	
+
+	
 
 	def create_table(self, type: str, name: str, parent_box: Box) -> TableDescriptor:
 		"""
@@ -104,7 +190,7 @@ class Driver:
 
 		if not self.__StorageDirectory: raise Exceptions.Driver.StorageUnmounted()
 
-		TableVirtualPath = parent_box.path / name
+		TableVirtualPath = parent_box.virtual_path / name
 		TableFullPath = self.__StorageDirectory / TableVirtualPath
 
 		if TableFullPath.exists(): raise Exceptions.Driver.TableAlreadyExists(TableVirtualPath)
@@ -117,38 +203,4 @@ class Driver:
 
 		parent_box.reload()
 
-		return TableDescriptor(self, parent_box, TableVirtualPath, Manifest)
-	
-	def get_box(self, virtual_path: Path | None = None) -> Box:
-		"""
-		Вовзаращает контейнер по вирутальному пути.
-
-		:param virtual_path: Виртуальный путь к контейнеру. При отсутствии будет возвращён корневой контейнер.
-		:type virtual_path: Path | None
-		:return: Контейнер.
-		:rtype: Box
-		:raises FileNotFoundError: Вирутальный путь не найден.
-		:raises StorageUnmounted: Хранилище отмонтировано.
-		"""
-
-		if not self.__StorageDirectory: raise Exceptions.Driver.StorageUnmounted()
-
-		virtual_path = virtual_path or Path()
-
-		FullPath = self.__StorageDirectory / virtual_path
-		if not FullPath.exists(): raise FileNotFoundError(FullPath)
-
-		if virtual_path and str(virtual_path) != ".": return Box(self, virtual_path.parent, virtual_path.name)
-		else: return Box(self)
-
-	def set_storage(self, directory: Path):
-		"""
-		Задаёт путь к директории хранилища.
-
-		:param directory: Директория хранилища.
-		:type directory: Path
-		:raises FileNotFoundError: Выбрасывается при отсутствии монтируемой директории.
-		"""
-
-		if directory.exists(): self.__StorageDirectory = directory
-		else: raise FileNotFoundError(directory)
+		return TableDescriptor(self, parent_box, name, Manifest)

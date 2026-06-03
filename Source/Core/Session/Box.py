@@ -1,6 +1,6 @@
 from .TableDescriptor import TableDescriptor
 
-from dublib.Methods.Filesystem import ListDir
+from Source.Core import Exceptions
 
 from typing import TYPE_CHECKING
 from pathlib import Path
@@ -9,7 +9,126 @@ import os
 if TYPE_CHECKING:
 	from .Driver import Driver
 
-class Box:
+class RootBox:
+	"""Корневой контейнер."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def full_path(self) -> Path:
+		"""Полный путь к контейнеру."""
+
+		return self._Driver.storage_directory / self.virtual_path
+
+	@property
+	def items(self) -> "tuple[Box | TableDescriptor]":
+		"""Последовательность содержащихся в контейнере элементов."""
+
+		return tuple(self._Items.values())
+	
+	@property
+	def virtual_path(self) -> Path:
+		"""Виртуальный путь к контейнеру."""
+
+		return self._VirtualPath
+	
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def _BaseInit(self, driver: "Driver", virtual_path: Path):
+		"""
+		Базовый метод инициализации контейнера.
+
+		:param driver: Драйвер хранилища.
+		:type driver: Driver
+		:param virtual_path: Виртуальный путь к контейнеру.
+		:type virtual_path: Path
+		"""
+
+		self._Driver = driver
+		self._VirtualPath = virtual_path
+		self._FullPath = self._Driver.storage_directory / self._VirtualPath
+
+		self._Items: dict[str, Box | TableDescriptor] = dict()
+
+		self.reload()
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, driver: "Driver"):
+		"""
+		Корневой контейнер.
+
+		:param driver: Драйвер хранилища.
+		:type driver: Driver
+		"""
+
+		self._BaseInit(driver, Path())
+
+	def add_item(self, item: "Box | TableDescriptor", name: str):
+		"""
+		Добавляет новый элемент в контейнер.
+
+		:param item: Новый элемент.
+		:type item: Box | TableDescriptor
+		:param name: Имя элемента.
+		:type name: str
+		"""
+
+		if name in self._Items: raise Exceptions.Driver.BoxItemOverride(item.virtual_path / name)
+		self._Items[name] = item
+
+	def get_item(self, name: str) -> "Box | TableDescriptor":
+		"""
+		Возвращает элемент по имени.
+
+		:param name: Имя элемента.
+		:type name: str
+		:return: Элемент.
+		:rtype: Box | TableDescriptor
+		:raises KeyError: Элемент не найден.
+		"""
+
+		return self._Items[name]
+
+	def pop_item(self, name: str) -> "Box | TableDescriptor":
+		"""
+		Извлекает элемент из контейнера.
+
+		:param name: Имя элемента.
+		:type name: str
+		:return: Элемент.
+		:rtype: Box | TableDescriptor
+		"""
+
+		Item = self.get_item(name)
+		del self._Items[name]
+
+		return Item
+
+	def reload(self):
+		"""Сканирует и обновляет элементы контейнера."""
+
+		Elements = tuple(Value.name for Value in os.scandir(self.full_path) if Value.is_dir())
+		Items = dict()
+
+		for Element in Elements:
+			ElementVirtualPath = self.virtual_path / Element
+
+			if self._Driver.is_box(ElementVirtualPath):
+				if not self._Driver.is_box_initialized(ElementVirtualPath): self._Driver.init_box(self, Element)
+				Items[Element] = self._Driver.get_box(ElementVirtualPath)
+
+			else: Items[Element] = TableDescriptor(self._Driver, self, Element)
+
+		self._Items = Items
+
+class Box(RootBox):
 	"""Контейнер."""
 
 	#==========================================================================================#
@@ -20,143 +139,31 @@ class Box:
 	def name(self) -> str:
 		"""Имя контейнера."""
 
-		return self.__VirtualPath.name
-	
-	@property
-	def items(self) -> "tuple[Box | TableDescriptor]":
-		"""Копия словаря элементов текущего представления."""
-
-		return tuple(self.__Items.values())
+		return self.__Name
 
 	@property
-	def parent(self) -> "Box | None":
+	def parent(self) -> "Box | RootBox":
 		"""Родительский контейнер."""
 
 		return self.__ParentBox
-
-	@property
-	def path(self) -> Path:
-		"""Виртуальный путь к представлению."""
-
-		return self.__VirtualPath
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, driver: "Driver", parent_box: "Box | None" = None, name: str | None = None):
+	def __init__(self, driver: "Driver", parent_box: "Box | RootBox", name: str):
 		"""
 		Контейнер.
 
 		:param driver: Драйвер хранилища.
 		:type driver: Driver
 		:param parent_box: Родительский контейнер.
-		:type parent_box: Box | None
-		:param name: Имя контейнера. Обязательно при наличии родительского контейнера.
-		:type name: str | None
-		:raises FileNotFoundError: Директория контейнера не найдена.
-		:raises ValueError: Не назначено имя для вложенного контейнера.
+		:type parent_box: Box | RootBox
+		:param name: Имя контейнера.
+		:type name: str
 		"""
 
-		if parent_box and not name: raise ValueError("Box must have name.")
-		
-		self.__Driver = driver
+		self._BaseInit(driver, parent_box.virtual_path / name)
+
 		self.__ParentBox = parent_box
 		self.__Name = name
-
-		self.__VirtualPath = Path()
-		if self.__ParentBox: self.__VirtualPath = self.__ParentBox.path / self.__Name
-		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
-
-		if not self.__FullPath.exists(): raise FileNotFoundError(self.__FullPath)
-
-		self.__Items: "dict[str, Box | TableDescriptor]" = dict()
-		self.reload()
-
-	def __repr__(self) -> str:
-		"""Возвращает техническое представление объекта."""
-
-		# To-Do: рефакторинг алгоритма?
-		Lines = list()
-		IsRoot = str(self.__VirtualPath) == "."
-
-		if IsRoot: Lines.append("<RootBox>")
-		else: Lines.append(f"<Box::{self.name}>")
-		
-		for Item in tuple(sorted(self.items, key = lambda Item: str(Item))):
-			Indentation = len(self.__VirtualPath.parts)
-			Lines.append("    " * Indentation + str(Item))
-
-		if IsRoot:
-			Lines = ["    " + Line for Line in Lines]
-			Lines[0] = Lines[0].lstrip()
-
-		return "\n".join(Lines)
-	
-	def create_box(self, name: str) -> "Box":
-		"""
-		Создаёт контейнер внутри текущего контейнера.
-
-		:param name: Имя нового контейнера.
-		:type name: str
-		:return: Представление созданного контейнера.
-		:rtype: Box
-		"""
-
-		return self.__Driver.create_box(name, self)
-	
-	def create_table(self, type: str, name: str) -> "TableDescriptor":
-		"""
-		Создаёт таблицу внутри текущего контейнера.
-
-		:param type: Тип таблицы.
-		:type type: str
-		:param name: Имя таблицы.
-		:type name: str
-		:return: Дескриптор таблицы.
-		:rtype: TableDescriptor
-		:raises StorageUnmounted: Хранилище отмонтировано.
-		:raises TableAlreadyExists: Таблица уже существует.
-		"""
-
-		return self.__Driver.create_table(type, name, self)
-
-	def delete(self):
-		"""Удаляет текущее представление."""
-
-		os.rmdir(self.__FullPath)
-
-	def get_item(self, name: str) -> "Box | TableDescriptor":
-		"""
-		Возвращает элемент по имени.
-
-		:param name: Имя элемента.
-		:type name: str
-		:return: Элемент.
-		:rtype: Box | TableDescriptor
-		:raises KeyError: Выбрасывается при отсутствии элемента с указанным именем.
-		"""
-
-		return self.__Items[name]
-	
-	def reload(self) -> "dict[str, Box | TableDescriptor]":
-		"""
-		Сканирует директорию контейнера.
-		
-		:return: Список элементов текущего представления.
-		:rtype: tuple[Box | TableDescriptor]
-		"""
-
-		Elements = tuple(Value.name for Value in os.scandir(self.__FullPath) if Value.is_dir())
-		Items = dict()
-
-		for Element in Elements:
-			ElementPath = self.__VirtualPath / Element
-			ManifestPath = self.__Driver.storage_directory / ElementPath / "manifest.json"
-			
-			if ManifestPath.exists(): Items[Element] = TableDescriptor(self.__Driver, self, ElementPath)
-			else: Items[Element] = Box(self.__Driver, self.__VirtualPath, Element)
-
-		self.__Items = Items
-
-		return self.__Items

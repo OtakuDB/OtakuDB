@@ -122,7 +122,7 @@ class Interface:
 			self.__Session.mount(path)
 			self.set_current_object(self.__Session.navigator.current_box)
 
-		except FileNotFoundError: PrintError("Storage directory not found.")
+		except ZeroDivisionError: PrintError("Storage directory not found.")
 
 	def __ParseCommandData(self, parameters: list[str]) -> ParsedCommandData | None:
 		"""
@@ -192,7 +192,7 @@ class Interface:
 		Note = ""
 
 		if self.__Driver.storage_directory: Storage = self.__Driver.storage_directory.name
-		if self.__Session.navigator.current_box: VirtualPath = self.__Session.navigator.current_box.path
+		if self.__Session.navigator.current_box: VirtualPath = self.__Session.navigator.current_box.virtual_path
 
 
 		if self.__InterractionLevel == InterractionLevels.Table:
@@ -224,7 +224,7 @@ class Interface:
 				self.__InterractionLevel = InterractionLevels.Driver
 				self.__Interpreter = None
 
-			case "Box":
+			case "Box" | "RootBox":
 				object: "Box"
 				self.__InterractionLevel = InterractionLevels.Box
 				self.__Interpreter = BaseBoxCLI(self.__Session, self, object)

@@ -1,4 +1,4 @@
-from .Box import Box
+from .Box import Box, RootBox
 
 from Source.Core import Exceptions
 
@@ -16,16 +16,16 @@ class Navigator:
 	#==========================================================================================#
 
 	@property
-	def current_box(self) -> Box | None:
+	def current_box(self) -> Box | RootBox:
 		"""Текущий контейнер."""
 
 		return self.__CurrentBox
 	
 	@property
-	def root_box(self) -> Box:
+	def root_box(self) -> RootBox:
 		"""Корневой контейнер."""
 
-		return self.__RootBox
+		return self.__Driver.root_box
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -41,8 +41,7 @@ class Navigator:
 
 		self.__Driver = driver
 
-		self.__RootBox = self.__Driver.get_box()
-		self.__CurrentBox = self.__RootBox
+		self.__CurrentBox = self.__Driver.root_box
 
 	def inbox(self, box_name: str) -> Box:
 		"""
@@ -75,21 +74,21 @@ class Navigator:
 			self.__CurrentBox = self.__Driver.get_box(target_path)
 			
 		else:
-			CurrentPath = self.__CurrentBox.path
+			CurrentVirtualPath = self.__CurrentBox.virtual_path
 
 			for PathPart in target_path.parts:
-				if PathPart == "..": CurrentPath = CurrentPath.parent
-				else: CurrentPath = CurrentPath / PathPart
+				if PathPart == "..": CurrentVirtualPath = CurrentVirtualPath.parent
+				else: CurrentVirtualPath = CurrentVirtualPath / PathPart
 
-			if self.__Driver.is_box(CurrentPath): self.__CurrentBox = self.__Driver.get_box(CurrentPath)
-			else: raise Exceptions.Navigator.UnableInboxNonBoxObject(CurrentPath)
+			if self.__Driver.is_box(CurrentVirtualPath): self.__CurrentBox = self.__Driver.get_box(CurrentVirtualPath)
+			else: raise Exceptions.Navigator.UnableInboxNonBoxObject(CurrentVirtualPath)
 
 		return self.__CurrentBox
 
 	def to_root(self):
 		"""Переходит в корневое представление древа навигации."""
 
-		self.__CurrentBox = self.__RootBox
+		self.__CurrentBox = self.__Driver.root_box
 
 	def unbox(self):
 		"""

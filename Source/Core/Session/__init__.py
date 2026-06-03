@@ -51,6 +51,6 @@ class Session:
 		"""
 
 		storage = Path(storage)
-		self.__Driver.set_storage(storage)
+		self.__Driver.mount(storage)
 		self.__Navigator = Navigator(self.__Driver)
 		self.__Data.set_last_mounted_storage(storage)

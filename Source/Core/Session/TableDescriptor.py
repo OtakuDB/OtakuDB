@@ -29,7 +29,7 @@ class TableDescriptor:
 		return self.__VirtualPath.name
 
 	@property
-	def path(self) -> Path:
+	def virtual_path(self) -> Path:
 		"""Вирутальный путь к таблице."""
 
 		return self.__VirtualPath
@@ -55,7 +55,7 @@ class TableDescriptor:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, driver: "Driver", box: "Box", virtual_path: Path, manifest: Manifest | None = None):
+	def __init__(self, driver: "Driver", box: "Box", name: str, manifest: Manifest | None = None):
 		"""
 		Дескриптор таблицы.
 
@@ -63,8 +63,8 @@ class TableDescriptor:
 		:type driver: Driver
 		:param box: Контейнер, которому принадлежит таблица.
 		:type box: Box
-		:param virtual_path: Виртуальный путь к таблице.
-		:type virtual_path: Path
+		:param name: Имя таблицы.
+		:type name: str
 		:param manifest: Манифест таблицы. При отсутствии загружается автоматически.
 		:type manifest: Manifest | None
 		:raises FileNotFoundError: Выбрасывается при отсутствии директории таблицы.
@@ -73,7 +73,7 @@ class TableDescriptor:
 		self.__Driver = driver
 		self.__Box = box
 
-		self.__VirtualPath = virtual_path
+		self.__VirtualPath = box.virtual_path / name
 		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
 		if not self.__FullPath.exists(): raise FileNotFoundError(self.__FullPath)
 
@@ -81,11 +81,6 @@ class TableDescriptor:
 
 		self.__TableObject: "BaseTable | None" = None
 		self.__InintializeTable()
-
-	def __repr__(self) -> str:
-		"""Возвращает техническое представление объекта."""
-
-		return f"<Table::{self.name}>"
 	
 	def rename(self, name: str):
 		"""
