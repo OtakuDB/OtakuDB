@@ -152,7 +152,7 @@ class LocalBinder:
 		:rtype: dict[int, list[int]]
 		"""
 
-		DataFilePath = self.__Table.directory / ".binds.json"
+		DataFilePath = self.__Table.full_path / ".binds.json"
 
 		if DataFilePath.exists():
 			Buffer = ReadJSON(DataFilePath)
@@ -163,7 +163,7 @@ class LocalBinder:
 	def save(self):
 		"""Сохраняет данные локальных связей таблицы."""
 
-		WriteJSON(self.__Table.directory / ".binds.json", self.__Data)
+		WriteJSON(self.__Table.full_path / ".binds.json", self.__Data)
 
 	def unbind(self, master_id: int, slave_id: int):
 		"""

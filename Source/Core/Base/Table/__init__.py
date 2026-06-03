@@ -32,10 +32,10 @@ class BaseTable:
 		return self._Binder
 
 	@property
-	def directory(self) -> Path:
+	def full_path(self) -> Path:
 		"""Полный путь к директории таблицы."""
 
-		return self._Driver.storage_directory / self._Descriptor.path
+		return self._Descriptor.full_path
 
 	@property
 	def manifest(self) -> Manifest:
@@ -62,10 +62,10 @@ class BaseTable:
 		return self._GetNotesID()
 
 	@property
-	def path(self) -> Path:
+	def virtual_path(self) -> Path:
 		"""Виртуальный путь к таблице."""
 
-		return self._Descriptor.path
+		return self._Descriptor.virtual_path
 
 	#==========================================================================================#
 	# >>>>> ЗАЩИЩЁННЫЕ МЕТОДЫ <<<<< #
@@ -109,7 +109,7 @@ class BaseTable:
 		"""
 
 		ListID = list()
-		Files = ListDir(self.get_path())
+		Files = ListDir(self.full_path)
 		Files = list(filter(lambda File: File.endswith(".json"), Files))
 
 		for File in Files: 
@@ -161,22 +161,7 @@ class BaseTable:
 	def delete(self):
 		"""Удаляет таблицу."""
 
-		shutil.rmtree(self.get_path())
-
-	def get_path(self, full: bool = True) -> Path:
-		"""
-		Возвращает путь к таблице.
-
-		:param full: Указывает, требуется полный или виртуальный путь.
-		:type full: bool
-		:return: Путь к таблице.
-		:rtype: Path
-		"""
-
-		ResultPath = self._Descriptor.path
-		if full: ResultPath = self._Driver.storage_directory / ResultPath 
-
-		return ResultPath
+		shutil.rmtree(self.full_path)
 
 	def load_data(self):
 		"""Загружает данные таблицы."""
@@ -194,7 +179,7 @@ class BaseTable:
 		"""
 
 		if "/" in name or "\"" in name: raise ValueError("Name can't contains slashes.")
-		TableFullPath = self.get_path()
+		TableFullPath = self.full_path
 		OldPath = TableFullPath
 		NewPath = TableFullPath.parent / name
 		os.rename(OldPath, NewPath)
@@ -295,7 +280,7 @@ class BaseTable:
 
 		if note_id not in self._Notes: raise Exceptions.Table.NoteNotFound(note_id)
 		del self._Notes[note_id]
-		os.remove(self.get_path() / f"{note_id}.json")
+		os.remove(self.full_path / f"{note_id}.json")
 
 	def get_note(self, note_id: int) -> "BaseNote":
 		"""

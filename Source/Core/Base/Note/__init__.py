@@ -27,6 +27,12 @@ class BaseNote:
 		return self._Attachments
 
 	@property
+	def full_path(self) -> Path:
+		"""Полный путь к файлу записи."""
+
+		return self._Table.full_path / f"{self._ID}.json"
+
+	@property
 	def id(self) -> int:
 		"""ID записи."""
 
@@ -63,7 +69,8 @@ class BaseNote:
 	def _LoadData(self):
 		"""Считывает данные записи или создаёт локальный файл при отсутствии такового."""
 
-		NoteFullPath = self.get_path()
+		NoteFullPath = self.full_path
+
 		self._Data = {
 			"name": None,
 			"metainfo": dict(),
@@ -196,21 +203,6 @@ class BaseNote:
 
 		self._Table.delete_note(self._ID)
 
-	def get_path(self, full: bool = True) -> Path:
-		"""
-		Возвращает путь к записи.
-
-		:param full: Указывает, требуется полный или виртуальный путь.
-		:type full: bool
-		:return: Путь к записи.
-		:rtype: Path
-		"""
-
-		ResultPath = self._Table.path / f"{self._ID}.json"
-		if full: ResultPath = self._Driver.storage_directory / ResultPath 
-
-		return ResultPath
-
 	def rename(self, name: str | None):
 		"""
 		Задаёт имя записи.
@@ -245,7 +237,7 @@ class BaseNote:
 		:type id: int
 		"""
 
-		OldPath = self.get_path()
+		OldPath = self.full_path
 		NewPath = OldPath.parent / f"{id}.json"
 		os.rename(OldPath, NewPath)
 		self._Attachments.move(id)
@@ -259,7 +251,7 @@ class BaseNote:
 		:type use_presaver: bool
 		"""
 
-		WriteJSON(self.get_path(), self.to_dict(use_presaver, copy = False), atomic = True)
+		WriteJSON(self.full_path, self.to_dict(use_presaver, copy = False), atomic = True)
 		if self._Table.binder.local.has_masters(self._ID): self.run_callback(CallbacksTypes.SlaveNoteSaved, self)
 
 	def to_dict(self, use_presaver: bool = True, copy: bool = True) -> dict:

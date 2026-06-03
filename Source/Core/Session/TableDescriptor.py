@@ -17,6 +17,12 @@ class TableDescriptor:
 	#==========================================================================================#
 
 	@property
+	def full_path(self) -> Path:
+		"""Полный путь к таблице."""
+
+		return self.__FullPath
+
+	@property
 	def manifest(self) -> Manifest:
 		"""Манифест таблицы."""
 
@@ -26,7 +32,7 @@ class TableDescriptor:
 	def name(self) -> str:
 		"""Имя таблицы."""
 
-		return self.__VirtualPath.name
+		return self.__Name
 
 	@property
 	def virtual_path(self) -> Path:
@@ -67,19 +73,20 @@ class TableDescriptor:
 		:type name: str
 		:param manifest: Манифест таблицы. При отсутствии загружается автоматически.
 		:type manifest: Manifest | None
-		:raises FileNotFoundError: Выбрасывается при отсутствии директории таблицы.
+		:raises FileNotFoundError: Директория таблицы не найдена.
 		"""
 
 		self.__Driver = driver
 		self.__Box = box
+		self.__Name = name
 
-		self.__VirtualPath = box.virtual_path / name
+		self.__VirtualPath = box.virtual_path / self.__Name
 		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
+
 		if not self.__FullPath.exists(): raise FileNotFoundError(self.__FullPath)
 
 		self.__Manifest = manifest or Manifest(self.__FullPath).load()
 
-		self.__TableObject: "BaseTable | None" = None
 		self.__InintializeTable()
 	
 	def rename(self, name: str):
@@ -90,6 +97,7 @@ class TableDescriptor:
 		:type name: str
 		"""
 
+		self.__Box.pop_item(self.__Name)
 		self.__VirtualPath = self.__VirtualPath.parent / name
 		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
-		self.__Box.reload()
+		self.__Box.add_item(self, name)

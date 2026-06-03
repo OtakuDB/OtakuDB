@@ -56,7 +56,7 @@ class Navigator:
 
 		if not self.__Driver.storage_directory: raise Exceptions.Driver.StorageUnmounted()
 		Item = self.__CurrentBox.get_item(box_name)
-		if type(Item) != Box: raise Exceptions.Navigator.UnableInboxNonBoxObject(Item.path)
+		if type(Item) != Box: raise Exceptions.Navigator.UnableInboxNonBoxObject(Item.virtual_path)
 		self.__CurrentBox = Item
 	
 	def navigate(self, target_path: Path) -> Box:

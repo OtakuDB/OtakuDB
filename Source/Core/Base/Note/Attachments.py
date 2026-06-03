@@ -73,7 +73,7 @@ class Attachments:
 			"free": data.get("free") or list()
 		}
 
-		if bool(note.table.manifest.attachments.rule): os.makedirs(self.__Note.table.get_path() / ".attachments", exist_ok = True)
+		if bool(note.table.manifest.attachments.rule): os.makedirs(self.__Note.table.full_path / ".attachments", exist_ok = True)
 
 	def attach(self, file: Path, slot: str | None = None, copy: bool = False):
 		"""
@@ -102,7 +102,7 @@ class Attachments:
 
 		else: self.__Data["free"] = file.name
 
-		AttachmentPath = self.__Note.table.get_path() / ".attachments" / str(self.__Note.id)
+		AttachmentPath = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
 		os.makedirs(AttachmentPath, exist_ok = True)
 		AttachmentPath = AttachmentPath / file
 
@@ -123,7 +123,7 @@ class Attachments:
 
 		if slot not in self.__Data["slots"]: raise Exceptions.Note.AttachmentSlotMissing(slot)
 
-		AttachmentsDirectory = self.__Note.table.get_path() / ".attachments" / str(self.__Note.id)
+		AttachmentsDirectory = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
 
 		try: os.remove(AttachmentsDirectory / self.__Data["slots"][slot])
 		except FileNotFoundError: pass
@@ -172,8 +172,8 @@ class Attachments:
 		"""
 
 		if self.count > 0:
-			OldAttachmentsPath = self.__Note.table.get_path() / ".attachments" / str(self.__Note.id)
-			NewAttachmentsPath =  self.__Note.table.get_path() / ".attachments" / str(new_id)
+			OldAttachmentsPath = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
+			NewAttachmentsPath =  self.__Note.table.full_path / ".attachments" / str(new_id)
 			shutil.move(OldAttachmentsPath, NewAttachmentsPath)
 
 	def to_dict(self, copy: bool = True) -> dict[str, dict[str | None] | list[str]]:
@@ -197,7 +197,7 @@ class Attachments:
 		"""
 
 		try:
-			os.remove(self.__Note.table.get_path() / ".attachments" / filename)
+			os.remove(self.__Note.table.full_path / ".attachments" / filename)
 			self.__Data["free"].remove(filename)
 			self.__Note.save()
 			self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
