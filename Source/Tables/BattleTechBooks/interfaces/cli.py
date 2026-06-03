@@ -132,11 +132,10 @@ class TableCLI(BaseTableCLI):
 
 		#---> Author
 		#==========================================================================================#
-		Author = note.metainfo["author"] or ""
-		if ";" in Author:
-			AuthorsCount = Author.count(";")
-			Author = Author.split(";")[0] + f" (and {AuthorsCount} other)"
-		container["Author"] = Author
+		Author = note.metainfo.get_field_value("author")
+		AuthorsCount = 0
+		if type(Author) == tuple: AuthorsCount = len(Author) - 1
+		container["Author"] = Author if not AuthorsCount else Author[0] + f" (and {AuthorsCount} other)"
 		
 		#---> Publication
 		#==========================================================================================#
@@ -148,7 +147,10 @@ class TableCLI(BaseTableCLI):
 
 		#---> Series
 		#==========================================================================================#
-		container["Series"] = note.metainfo["series"]
+		Series = note.metainfo.get_field_value("series")
+		SeriesCount = 0
+		if type(Series) == tuple: SeriesCount = len(Series) - 1
+		container["Series"] = Series if not SeriesCount else Series[0] + f" (and {SeriesCount} other)"
 
 		#---> Estimation
 		#==========================================================================================#
@@ -418,18 +420,6 @@ class NoteCLI(BaseNoteCLI):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self._Note: "Note"
-
-	def _ViewMetainfo(self):
-		"""Выводит значения полей метаданных."""
-
-		print(FastStyler(f"METAINFO:").decorate.bold)
-		
-		for Field in self._Note.metainfo.fields:
-			Value = self._Note.metainfo[Field]
-			if Value == None: continue
-			if Field not in self._Note.table.manifest.metainfo_rules.fields_names: Field = FastStyler(Field).colorize.blue
-			if type(Value) == str: Value = Value.replace(";", ", ")
-			print(" " * 4 + f"{Field}: {Value}")
 
 	def _ViewNote(self):
 		"""Отображает запись."""
