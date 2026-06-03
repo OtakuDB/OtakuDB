@@ -181,7 +181,6 @@ class Note(BaseNote):
 			"era": None,
 			"estimation": None,
 			"comment": None,
-			"link": None,
 			"status": None,
 			"collection_status": None
 		}
@@ -339,5 +338,5 @@ class Note(BaseNote):
 		:type type: Types
 		"""
 
-		self._Data["type"] = type = type.value
+		self._Data["type"] = type.value
 		self.save()

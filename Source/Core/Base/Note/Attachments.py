@@ -96,7 +96,7 @@ class Attachments:
 				if not slot: raise Exceptions.Note.AttachmentsDenied(True)
 
 		if slot:
-			if slot not in self.__Data["slots"]: raise Exceptions.Note.AttachmentSlotMissing(slot)
+			if slot not in self.__Note.table.manifest.attachments.slots: raise Exceptions.Note.AttachmentSlotMissing(slot)
 			if self.is_slot_occupied(slot): raise Exceptions.Note.AttachmentSlotAlreadyFilled(slot)
 			self.__Data["slots"][slot] = file.name
 
@@ -146,9 +146,9 @@ class Attachments:
 		:raises AttachmentSlotMissing: Слот вложения не описан.
 		"""
 
-		if slot not in self.__Data["slots"]: raise Exceptions.Note.AttachmentSlotMissing(slot)
+		if slot not in self.__Note.table.manifest.attachments.slots: raise Exceptions.Note.AttachmentSlotMissing(slot)
 
-		return self.__Data["slots"][slot]
+		return self.__Data["slots"].get(slot)
 
 	def is_slot_occupied(self, slot: str) -> bool:
 		"""

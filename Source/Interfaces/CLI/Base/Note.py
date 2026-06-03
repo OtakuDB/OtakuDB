@@ -291,6 +291,7 @@ class BaseNoteCLI:
 			if Field not in self._Note.table.manifest.metainfo_rules.fields_names: Field = FastStyler(Field).colorize.blue
 
 			if type(Value) == tuple:
+				print(" " * 4 + f"{Field}:")
 				for Element in Value: print(" " * 9 + f" > {Element}")
 
 			else: print(" " * 4 + f"{Field}: {Value}")
