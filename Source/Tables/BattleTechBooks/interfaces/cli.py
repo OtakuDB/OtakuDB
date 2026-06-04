@@ -2,11 +2,11 @@ from ..Structs import CollectionStatuses, Statuses, Types
 
 from Source.Interfaces.CLI.Base import BaseTableCLI, BaseNoteCLI
 from Source.Interfaces.CLI.Functions import Unstar
-from Source.Core import Exceptions
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates.Bus import PrintError, PrintWarning
+from dublib.Methods.Data import ToIterable
 
 from typing import TYPE_CHECKING
 
@@ -148,9 +148,20 @@ class TableCLI(BaseTableCLI):
 		#---> Series
 		#==========================================================================================#
 		Series = note.metainfo.get_field_value("series")
-		SeriesCount = 0
-		if type(Series) == tuple: SeriesCount = len(Series) - 1
-		container["Series"] = Series if not SeriesCount else Series[0] + f" (and {SeriesCount} other)"
+		Series = ToIterable(Series, iterable_type = list) if Series else list()
+
+		Shrapnel = note.metainfo.get_field_value("shrapnel")
+		if Shrapnel: Series.append(f"Shrapnel #{Shrapnel}")
+
+		if Series:
+			SeriesCount = len(Series)
+			container["Series"] = Series[0]
+
+			if SeriesCount > 1:
+				SeriesCount -= 1
+				container["Series"] += f" (and {SeriesCount} other)"
+
+		else: container["Series"] = ""
 
 		#---> Estimation
 		#==========================================================================================#
@@ -265,6 +276,20 @@ class NoteCLI(BaseNoteCLI):
 		if count and self._Note.type != Types.Compilation: PrintWarning("Stories count expected only for compilations.")
 		self._Note.set_stories_count(count)
 
+	def _shrapnel(self, number: int):
+		"""
+		Задаёт номер журнала Shrapnel.
+
+		:param number: Номер журнала. `0` для очистки.
+		:type number: int
+		"""
+
+		if self._Note.type != Types.Story:
+			PrintWarning("Shrapnel issue number can be setted only for stories.")
+			return
+		
+		self._SetMetainfo("shrapnel", number or None)
+
 	def _status(self, command: ParsedCommandData):
 		"""
 		Задаёт статус прочтения.
@@ -272,6 +297,10 @@ class NoteCLI(BaseNoteCLI):
 		:param command: Данные команды.
 		:type command: ParsedCommandData
 		"""
+
+		if command.get_position_value("STATUS") == "*":
+			self._Note.set_status(None)
+			return
 
 		Flag = command.get_position_parameter("STATUS")
 
@@ -294,8 +323,9 @@ class NoteCLI(BaseNoteCLI):
 		Flag = command.get_position_parameter("TYPE")
 
 		match Flag.name:
-			case "-n": self._Note.set_collection_status(Types.Novel)
-			case "-s": self._Note.set_collection_status(Types.Story)
+			case "-c": self._Note.set_type(Types.Compilation)
+			case "-n": self._Note.set_type(Types.Novel)
+			case "-s": self._Note.set_type(Types.Story)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -321,6 +351,7 @@ class NoteCLI(BaseNoteCLI):
 			case "pubdate": self._SetMetainfo("publication_date", command.get_position_value("DATE"))
 			case "publisher": self._SetMetainfo("publisher", command.get_position_value("PUBLISHER"))
 			case "scount": self._scount(command.get_position_value("COUNT"))
+			case "shrapnel": self._shrapnel(command.get_position_value("NUMBER"))
 			case "series": self._SetMetainfo("series", command.get_position_value("SERIES"))
 			case "status": self._status(command)
 			case "type": self._type(command)
@@ -393,6 +424,11 @@ class NoteCLI(BaseNoteCLI):
 		ComPos.set_argument(ParametersTypes.UnsignedInteger)
 		CommandsList.append(Com)
 
+		Com = Command("shrapnel", "Set Shrapnel issue number. Only for stories.", category = "Metainfo")
+		ComPos = Com.create_position("NUMBER", "Shrapnel issue number. Put 0 to clear.", important = True)
+		ComPos.set_argument(ParametersTypes.UnsignedInteger)
+		CommandsList.append(Com)
+
 		Com = Command("series", "Set series.", category = "Metainfo")
 		ComPos = Com.create_position("SERIES", "Book series. Put * to clear.", important = True)
 		ComPos.set_argument()
@@ -406,10 +442,12 @@ class NoteCLI(BaseNoteCLI):
 		ComPos.add_flag("-d", description = "Dropped.")
 		ComPos.add_flag("-p", description = "Planned.")
 		ComPos.add_flag("-s", description = "Skipped.")
+		ComPos.set_argument(description = "Put * to clear.")
 		CommandsList.append(Com)
 
 		Com = Command("type", "Set type of book.")
 		ComPos = Com.create_position("TYPE", "Type of book.", important = True)
+		ComPos.add_flag("-c", description = "Compilation.")
 		ComPos.add_flag("-n", description = "Novel.")
 		ComPos.add_flag("-s", description = "Story.")
 		CommandsList.append(Com)
