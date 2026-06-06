@@ -30,3 +30,4 @@ class Types(Enum):
 	ScenarioPack = "Scenario Pack"
 	Sourcebook = "Sourcebook"
 	TouringStars = "Touring the Stars"
+	Rulebook = "Rulebook"

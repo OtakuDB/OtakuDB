@@ -137,15 +137,16 @@ class NoteCLI(BaseNoteCLI):
 		Flag = command.get_position_parameter("TYPE")
 
 		match Flag.name:
-			case "-d": self._Note.set_collection_status(Types.Dossier)
-			case "-cm": self._Note.set_collection_status(Types.CombatManual)
-			case "-fom": self._Note.set_collection_status(Types.ForceManual)
-			case "-fim": self._Note.set_collection_status(Types.FieldManual)
-			case "-h": self._Note.set_collection_status(Types.Handbook)
-			case "-so": self._Note.set_collection_status(Types.SpotlightOn)
-			case "-sp": self._Note.set_collection_status(Types.ScenarioPack)
-			case "-s": self._Note.set_collection_status(Types.Sourcebook)
-			case "-ts": self._Note.set_collection_status(Types.TouringStars)
+			case "-d": self._Note.set_type(Types.Dossier)
+			case "-cm": self._Note.set_type(Types.CombatManual)
+			case "-fom": self._Note.set_type(Types.ForceManual)
+			case "-fim": self._Note.set_type(Types.FieldManual)
+			case "-h": self._Note.set_type(Types.Handbook)
+			case "-so": self._Note.set_type(Types.SpotlightOn)
+			case "-sp": self._Note.set_type(Types.ScenarioPack)
+			case "-s": self._Note.set_type(Types.Sourcebook)
+			case "-ts": self._Note.set_type(Types.TouringStars)
+			case "-r": self._Note.set_type(Types.Rulebook)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -161,6 +162,7 @@ class NoteCLI(BaseNoteCLI):
 
 		match command.name:
 			case "altname": self._altname()
+			case "code": self._SetMetainfo("product_code", command.get_position_value("CODE"))
 			case "collection": self._collection(command)
 			case "comment": self._Note.set_comment(Unstar(command.get_position_value("COMMENT")))
 			case "localname": self._localname(Unstar(command.get_position_value("LOCALNAME")))
@@ -189,6 +191,11 @@ class NoteCLI(BaseNoteCLI):
 		ComPos.add_flag("-e", description = "Collected as E-book.")
 		ComPos.add_flag("-w", description = "In wishlist.")
 		ComPos.add_flag("-o", description = "Ordered or payed.")
+		CommandsList.append(Com)
+
+		Com = Command("code", "Set product code.", "Metainfo")
+		ComPos = Com.create_position("CODE", "Product code. Put * to clear.", important = True)
+		ComPos.set_argument()
 		CommandsList.append(Com)
 
 		Com = Command("comment", "Set comment to note.")
@@ -222,6 +229,7 @@ class NoteCLI(BaseNoteCLI):
 		ComPos.add_flag("-sp", description = "Scenario Pack.")
 		ComPos.add_flag("-s", description = "Sourcebook.")
 		ComPos.add_flag("-ts", description = "Touring the Stars.")
+		ComPos.add_flag("-r", description = "Rulebook.")
 		CommandsList.append(Com)
 
 		return CommandsList
