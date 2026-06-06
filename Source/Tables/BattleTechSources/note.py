@@ -160,7 +160,7 @@ class Note(BaseNote):
 		:raises ValueError: Локализованное название уже определено в другой графе.
 		"""
 
-		AllNames = self._Data["another_names"]
+		AllNames = list(self.another_names)
 		if self._Data["name"]: AllNames.append(self._Data["name"])
 		if localized_name in AllNames: raise ValueError("Localized name already used.")
 
@@ -187,5 +187,5 @@ class Note(BaseNote):
 		:type type: Types
 		"""
 
-		self._Data["type"] = type = type.value
+		self._Data["type"] = type.value
 		self.save()
