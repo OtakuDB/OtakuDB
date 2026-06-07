@@ -147,6 +147,7 @@ class NoteCLI(BaseNoteCLI):
 			case "-s": self._Note.set_type(Types.Sourcebook)
 			case "-ts": self._Note.set_type(Types.TouringStars)
 			case "-r": self._Note.set_type(Types.Rulebook)
+			case "-ed": self._Note.set_type(Types.EraDigest)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -230,6 +231,7 @@ class NoteCLI(BaseNoteCLI):
 		ComPos.add_flag("-s", description = "Sourcebook.")
 		ComPos.add_flag("-ts", description = "Touring the Stars.")
 		ComPos.add_flag("-r", description = "Rulebook.")
+		ComPos.add_flag("-ed", description = "Era Digest.")
 		CommandsList.append(Com)
 
 		return CommandsList

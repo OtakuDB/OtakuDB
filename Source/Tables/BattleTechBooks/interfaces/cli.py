@@ -150,8 +150,8 @@ class TableCLI(BaseTableCLI):
 		Series = note.metainfo.get_field_value("series")
 		Series = ToIterable(Series, iterable_type = list) if Series else list()
 
-		Shrapnel = note.metainfo.get_field_value("shrapnel")
-		if Shrapnel: Series.append(f"Shrapnel #{Shrapnel}")
+		StorySource = note.metainfo.get_field_value("story_source")
+		if StorySource: Series.append(StorySource)
 
 		if Series:
 			SeriesCount = len(Series)
@@ -276,6 +276,20 @@ class NoteCLI(BaseNoteCLI):
 		if count and self._Note.type != Types.Compilation: PrintWarning("Stories count expected only for compilations.")
 		self._Note.set_stories_count(count)
 
+	def _source(self, source: str | None):
+		"""
+		Задаёт источник истории.
+
+		:param source: Источник истории.
+		:type source: int | None
+		"""
+
+		if source and self._Note.type != Types.Story:
+			PrintWarning("Source story can be setted only for stories.")
+			return
+		
+		self._SetMetainfo("story_source", source)
+
 	def _shrapnel(self, number: int):
 		"""
 		Задаёт номер журнала Shrapnel.
@@ -284,11 +298,11 @@ class NoteCLI(BaseNoteCLI):
 		:type number: int
 		"""
 
-		if self._Note.type != Types.Story:
+		if number and self._Note.type != Types.Story:
 			PrintWarning("Shrapnel issue number can be setted only for stories.")
 			return
 		
-		self._SetMetainfo("shrapnel", number or None)
+		self._SetMetainfo("story_source", f"Shrapnel Issue #{number}" if number else None)
 
 	def _status(self, command: ParsedCommandData):
 		"""
@@ -351,8 +365,9 @@ class NoteCLI(BaseNoteCLI):
 			case "pubdate": self._SetMetainfo("publication_date", command.get_position_value("DATE"))
 			case "publisher": self._SetMetainfo("publisher", command.get_position_value("PUBLISHER"))
 			case "scount": self._scount(command.get_position_value("COUNT"))
-			case "shrapnel": self._shrapnel(command.get_position_value("NUMBER"))
 			case "series": self._SetMetainfo("series", command.get_position_value("SERIES"))
+			case "shrapnel": self._shrapnel(command.get_position_value("NUMBER"))
+			case "source": self._source(Unstar(command.get_position_value("SOURCE")))
 			case "status": self._status(command)
 			case "type": self._type(command)
 
@@ -431,6 +446,11 @@ class NoteCLI(BaseNoteCLI):
 
 		Com = Command("series", "Set series.", category = "Metainfo")
 		ComPos = Com.create_position("SERIES", "Book series. Put * to clear.", important = True)
+		ComPos.set_argument()
+		CommandsList.append(Com)
+
+		Com = Command("source", "Set story sources.", category = "Metainfo")
+		ComPos = Com.create_position("SOURCE", "Source of stroy. Put * to clear.", important = True)
 		ComPos.set_argument()
 		CommandsList.append(Com)
 
