@@ -31,3 +31,4 @@ class Types(Enum):
 	Sourcebook = "Sourcebook"
 	TouringStars = "Touring the Stars"
 	Rulebook = "Rulebook"
+	EraDigest = "EraDigest"
