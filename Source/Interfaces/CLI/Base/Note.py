@@ -3,7 +3,7 @@ from Source.Interfaces.CLI.Functions import Unstar
 from Source.Core import Exceptions
 
 from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData
-from dublib.CLI.Templates.Bus import PrintError
+from dublib.CLI.Templates.Bus import PrintError, PrintWarning
 from dublib.CLI.Templates import Confirmation
 from dublib.CLI.TextStyler import FastStyler
 
@@ -170,6 +170,21 @@ class BaseNoteCLI:
 				print("Values:")
 				for Value in Values: print(" " * 4 + f" > {Value}")
 
+	def _rename(self, name: str | None):
+		"""
+		Переименовывает запись.
+
+		:param name: Имя записи.
+		:type name: str | None
+		"""
+
+		if name:
+			for CurrentNote in self._Note.table.notes:
+				if CurrentNote.name == name:
+					PrintWarning(f"Note #{CurrentNote.id} has same name.")
+
+		self._Note.rename(name)
+
 	def _slots(self):
 		"""Выводит описания слотов."""
 
@@ -224,7 +239,7 @@ class BaseNoteCLI:
 			case "delete": self._delete(command.check_flag("-y"))
 			case "metafields": self._metafields()
 			case "metainfo": self._SetMetainfo(command.get_position_value("FIELD"), command.get_position_value("VALUE"))
-			case "rename": self._Note.rename(Unstar(command.get_position_value("NAME")))
+			case "rename": self._rename(Unstar(command.get_position_value("NAME")))
 			case "view": self.view()
 			case "slots": self._slots()
 			case "unattach": self._unattach(command)
