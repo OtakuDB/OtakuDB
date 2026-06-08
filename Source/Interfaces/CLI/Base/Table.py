@@ -2,13 +2,14 @@ from Source.Interfaces.CLI.Options.Local import TableInterfaceOptions
 from Source.Core import Exceptions
 
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
-from dublib.CLI.Templates.Bus import PrintError
+from dublib.CLI.Templates.Bus import PrintError, PrintWarning
 from dublib.CLI.Templates import Confirmation
 from dublib.CLI.TextStyler import FastStyler
 
 from typing import TYPE_CHECKING
 
 from prettytable import PLAIN_COLUMNS, PrettyTable
+import questionary
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Table import BaseTable
@@ -41,6 +42,18 @@ class BaseTableCLI:
 		CommandsList.append(Com)
 
 		Com = Command("close", "Close table.")
+		CommandsList.append(Com)
+
+		Com = Command("column", "Manage column viewing options.")
+		ComPos = Com.create_position("COLUMN", "Column name (case insensitive).", important = True)
+		ComPos.set_argument(ParametersTypes.Alpha)
+		ComPos = Com.create_position("OPERATION", "Management operation.", important = True)
+		ComPos.add_flag("-e", "Enable column.")
+		ComPos.add_flag("-d", "Disable column.")
+		ComPos.add_key("--max-width", type = ParametersTypes.UnsignedInteger, description = "Maximal width of column content. Put 0 to clear.")
+		CommandsList.append(Com)
+
+		Com = Command("columns", "Runs columns visibility manager.", "TUI")
 		CommandsList.append(Com)
 
 		Com = Command("delete", "Delete table.")
@@ -112,6 +125,40 @@ class BaseTableCLI:
 		except Exceptions.Table.NoteNotFound: PrintError(f"Note with ID #{NoteID} not found.")
 		except Exceptions.Table.OperationError as ExceptionData: PrintError(ExceptionData)
 
+	def _column(self, command: ParsedCommandData):
+		"""
+		Редактирует параметры отображения колонки.
+
+		:param command: Данные команды.
+		:type command: ParsedCommandData
+		"""
+
+		Column = command.get_position_value("COLUMN")
+		ColumnOptions = None
+		
+		try: ColumnOptions = self._InterfaceOptions.columns.get_column_options(Column)
+		except KeyError:
+			PrintError(f"Options for column \"{Column}\" not found.")
+			return
+		
+		if command.check_flag("-e"): ColumnOptions.set_status(True)
+		elif command.check_flag("-d"): ColumnOptions.set_status(False)
+		elif command.check_key("--max-width"): ColumnOptions.set_max_width(command.get_key_value("--max-width") or None)
+
+	def _columns(self):
+		"""Запускает диалог для переключения видимости колонок."""
+
+		ColumnsOptions = self._InterfaceOptions.columns
+		
+		EnabledColumns = questionary.checkbox(
+			message = "Choose displayed columns:",
+			choices = tuple(questionary.Choice(Option.name, checked = Option.is_enabled) for Option in ColumnsOptions.options),
+			instruction = "Navigate by <Up>, <Down> keys, switch by <Space>, save by <Enter>."
+		).ask()
+
+		if EnabledColumns == None: return
+		for Column in ColumnsOptions.names: ColumnsOptions.get_column_options(Column).set_status(Column in EnabledColumns)
+
 	def _delete(self, confirm: bool = False):
 		"""
 		Удаляет таблицу.
@@ -151,6 +198,35 @@ class BaseTableCLI:
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def _GenerateCellFromMetainfo(self, note: "BaseNote", column: str, field: str) -> str | None:
+		"""
+		Генерирует содержимое ячейки таблицы из поля метаданных. Автоматически обрабатывает наборы значений и максимульную ширину столбика.
+
+		:param note: Запись
+		:type note: BaseNote
+		:param column: Имя колонки.
+		:type column: str
+		:param field: Имя поля метаданных.
+		:type field: str
+		:return: Значение ячейки.
+		:rtype: str | None
+		:raises MetainfoFieldMissing: Поле метаданных отсутствует.
+		"""
+
+		Value = note.metainfo.get_field_value(field)
+		
+		if type(Value) == tuple:
+			ElementsCount = len(Value)
+			Value = Value[0]
+
+			OtherCount = ElementsCount - 1
+			OtherLabel = f" (and {OtherCount} other)"
+			MaxColumnWidth = self._InterfaceOptions.columns.get_column_options(column).max_width
+			if OtherCount:
+				if not MaxColumnWidth or len(Value + OtherLabel) <= MaxColumnWidth: Value += OtherLabel
+
+		return Value
+
 	def _ExecuteBaseCommand(self, command: ParsedCommandData):
 		"""
 		Обрабатывает базовую команду.
@@ -162,12 +238,13 @@ class BaseTableCLI:
 		match command.name:
 			case "chid": self._chid(command)
 			case "close": self._Interface.set_current_object(self._Session.navigator.current_box)
+			case "column": self._column(command)
 			case "columns": self._columns()
 			case "delete": self._delete(command.check_flag("-y"))
 			case "new": self._new(command.check_flag("-o"))
 			case "open": self._open(command.arguments[0])
 			case "rename": self._Table.rename(command.arguments[0])
-			case "view": self.view(command.check_flag("-r"))
+			case "view": self.view(reverse = command.check_flag("-r"))
 			case "search": self.view(command.get_position_value("QUERY"))
 
 	def _PrintTable(self, columns: dict[str, list], sort_by: str | None = None, reverse: bool = False):
@@ -204,7 +281,12 @@ class BaseTableCLI:
 
 		TableObject.align = "l"
 		TableObject.reversesort = reverse
-		if sort_by: TableObject.sortby = FastStyler(sort_by).decorate.bold
+
+		if sort_by:
+			ColumnOptions = self._InterfaceOptions.columns.get_column_options(sort_by)
+			if ColumnOptions.is_enabled: TableObject.sortby = FastStyler(sort_by).decorate.bold
+			else: PrintWarning(f"Column \"{sort_by}\" disabled. Impossible to sort.")
+
 		print(TableObject)
 
 	#==========================================================================================#

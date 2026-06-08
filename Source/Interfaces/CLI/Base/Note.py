@@ -259,9 +259,6 @@ class BaseNoteCLI:
 		try: self._Note.metainfo.set_field_value(key, Unstar(value))
 		except Exceptions.Note.MetainfoBlocked: PrintError("Metainfo blocked by manifest rule.")
 
-	def _ValidateAttachments(self):
-		"""Производит валидацию вложений, выводя предупреждения об отсутствующих файлах."""
-
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#

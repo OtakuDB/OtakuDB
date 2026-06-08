@@ -33,6 +33,24 @@ class ColumnOptions:
 		return self.__Name
 
 	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __SetValue(self, key: str, value: bool | int | None):
+		"""
+		Сохраняет значение с оптимизацией перезаписи.
+
+		:param key: Ключ.
+		:type key: str
+		:param value: Значение.
+		:type value: bool | int | None
+		"""
+
+		if value == self.__Data[key]: return
+		self.__Data[key] = value
+		self.save()
+
+	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
@@ -63,8 +81,7 @@ class ColumnOptions:
 		:type max_width: int | None
 		"""
 
-		self.__Data["max_width"] = max_width
-		self.save()
+		self.__SetValue("max_width", max_width)
 		
 	def set_status(self, status: bool):
 		"""
@@ -74,8 +91,7 @@ class ColumnOptions:
 		:type status: bool
 		"""
 
-		self.__Data["enabled"] = status
-		self.save()
+		self.__SetValue("enabled", status)
 
 	def save(self):
 		"""Сохраняет статус отображения колонки."""
@@ -115,40 +131,45 @@ class ColumnsOptions:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, interface_options: "TableInterfaceOptions", data: dict[str, dict]):
+	def __init__(self, table_interface_options: "TableInterfaceOptions", data: dict[str, dict]):
 		"""
 		Параметры колонок таблицы.
 
-		:param interface_options: Параметры интерфейса таблицы.
-		:type interface_options: TableInterfaceOptions
+		:param table_interface_options: Параметры интерфейса таблицы.
+		:type table_interface_options: TableInterfaceOptions
 		:param data: Словарь, где ключи – названия колонок, а значения – параметры отображения.
 		:type data: dict[str, dict]
 		:raises ValueError: Отсутствует обязательная колонка.
 		"""
 
-		self.__InterfaceOptions = interface_options
+		self.__TableInterfaceOptions = table_interface_options
 		self.__Data = {Name: ColumnOptions(self, Name, Data) for Name, Data in data.items()}
-		
+		self.__LowerCaseCache = {Name.lower(): Name for Name in self.__Data.keys()}
+
 		for ColumnName in ("ID", "Name"):
 			if ColumnName not in self.__Data: raise ValueError(f"Important column \"{ColumnName}\" missing.")
 
-	def get_column_options(self, column_name: str) -> ColumnOptions:
+	def get_column_options(self, column_name: str, ignore_case: bool = True) -> ColumnOptions:
 		"""
 		Возвращает параметры колонки.
 
 		:param column_name: Имя колонки.
 		:type column_name: str
-		:return: ColumnOptions
-		:rtype: ColumnData
+		:param ignore_case: Указывает, нужно ли игнорировать регистр при поиске параметров колонки.
+		:type ignore_case: bool
+		:return: Параметры колонки.
+		:rtype: ColumnOptions
 		:raises KeyError: Параметры для колонки не найдены.
 		"""
+
+		if ignore_case: return self.__Data[self.__LowerCaseCache[column_name.lower()]]
 
 		return self.__Data[column_name]
 	
 	def save(self):
 		"""Сохраняет параметры колонок."""
 
-		self.__InterfaceOptions.save()
+		self.__TableInterfaceOptions.save()
 
 	def to_dict(self) -> dict[str, dict]:
 		"""
