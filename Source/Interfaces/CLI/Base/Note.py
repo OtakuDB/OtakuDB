@@ -115,7 +115,9 @@ class BaseNoteCLI:
 
 		path = Path(path)
 
-		try: self._Note.attachments.attach(path, slot, copy)
+		try:
+			if slot: self._Note.attachments.get_slot(slot).attach(path, copy)
+			else: self._Note.attachments.attach(path, copy)
 		except Exceptions.Note.AttachmentSlotAlreadyFilled: PrintError(f"Slot \"{slot}\" already filled.")
 		except Exceptions.Note.AttachmentsDenied: PrintError("Attachments denied.")
 		except Exceptions.Note.AttachmentSlotMissing: PrintError(f"Slot \"{slot}\" not described in manifest.")
@@ -215,7 +217,7 @@ class BaseNoteCLI:
 
 		if command.check_key("--slot"):
 			Slot = command.get_key_value("--slot")
-			try: self._Note.attachments.clear_slot(Slot)
+			try: self._Note.attachments.get_slot(Slot).clear()
 			except Exceptions.Note.AttachmentSlotMissing: PrintError(f"Slot \"{Slot}\" not described in manifest.")
 
 		else: self._Note.attachments.unnatach(command.get_position_value("TARGET"))
@@ -257,6 +259,9 @@ class BaseNoteCLI:
 		try: self._Note.metainfo.set_field_value(key, Unstar(value))
 		except Exceptions.Note.MetainfoBlocked: PrintError("Metainfo blocked by manifest rule.")
 
+	def _ValidateAttachments(self):
+		"""Производит валидацию вложений, выводя предупреждения об отсутствующих файлах."""
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -285,6 +290,10 @@ class BaseNoteCLI:
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		pass
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ ПРОСМОТРА СОДЕРЖИМОГО <<<<< #
+	#==========================================================================================#
 
 	def _ViewAttachments(self):
 		"""Выводит данные вложений."""
@@ -353,6 +362,13 @@ class BaseNoteCLI:
 
 		return command.name in tuple(CurrentCommand.name for CurrentCommand in self.commands)
 	
+	def validate(self):
+		"""Производит валидацию записи и выводит результат в терминал."""
+
+		for Error in self._Note.attachments.validate():
+			Slot = f" on slot \"{Error.slot}\"" if Error.slot else ""
+			PrintWarning(f"Attachment file \"{Error.file}\"{Slot} missing.")
+
 	def view(self):
 		"""Отображает запись."""
 

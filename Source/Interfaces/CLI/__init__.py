@@ -244,6 +244,7 @@ class Interface:
 				if Module:
 					self.__Interpreter = Module.NoteCLI(self.__Session, self, object)
 					self.__InterractionLevel = InterractionLevels.Note
+					self.__Interpreter.validate()
 
 	def run(self):
 		"""Запускает CLI."""

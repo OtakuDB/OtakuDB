@@ -2,8 +2,6 @@ from ..Note.Enums import CallbacksTypes
 
 from Source.Core import Exceptions
 
-from dublib.Methods.Data import Copy
-
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from pathlib import Path
@@ -17,12 +15,119 @@ if TYPE_CHECKING:
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
 
-@dataclass(frozen = True)
-class SlotInfo:
-	"""Информация о слоте."""
+class Slot:
+	"""Слот."""
 
-	name: str
-	file: str | None
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def file(self) -> str | None:
+		"""Имя файла."""
+
+		return self.__File
+	
+	@property
+	def full_path(self) -> Path | None:
+		"""Полный путь к файлу."""
+
+		if self.__File: return self.__Attachments.directory / self.__File
+
+	@property
+	def name(self) -> str:
+		"""Имя слота."""
+
+		return self.__Name
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, attachments: "Attachments", name: str, file: str | None):
+		"""
+		Слот.
+
+		:param attachments: Вложения.
+		:type attachments: Attachments
+		:param name: Имя слота.
+		:type name: str
+		:param file: Имя файла в слоте.
+		:type file: str | None
+		"""
+
+		self.__Attachments = attachments
+		self.__Name = name
+		self.__File = file
+
+		self.__Note = self.__Attachments.note
+
+	def attach(self, file: Path, copy: bool = False):
+		"""
+		Помещает файл в слот вложения записи.
+
+		:param file: Путь к файлу.
+		:type file: Path
+		:param copy: Указывает, нужно ли скопировать файл или переместить. 
+		:type copy: bool
+		:raises AttachmentSlotAlreadyFilled: Слот уже содержит файл.
+		:raises AttachmentsDenied: Вложение запрещено.
+		:raises AttachmentSlotMissing: Слот вложения не описан.
+		"""
+		
+		match self.__Note.table.manifest.attachments.rule:
+			case 0: raise Exceptions.Note.AttachmentsDenied(False)
+
+		
+		if self.__File: raise Exceptions.Note.AttachmentSlotAlreadyFilled(self.__Name)
+		self.__File = file.name
+
+
+		AttachmentDirectory = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
+		os.makedirs(AttachmentDirectory, exist_ok = True)
+		AttachmentPath = AttachmentPath / file
+
+		if copy: shutil.copy(file, AttachmentPath)
+		else: os.replace(file, AttachmentPath)
+		
+		self.__Note.save()
+		self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
+
+	def clear(self):
+		"""Очищает слот."""
+
+		if not self.__File: return
+
+		try: os.remove(self.full_path)
+		except FileNotFoundError: pass
+
+		try: 
+			AttachmentsDirectory = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
+			AttachmentsDirectory.rmdir()
+		except (FileNotFoundError, OSError): pass
+
+		self.__Note.save()
+		self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
+
+	def is_exists(self) -> bool:
+		"""
+		Проверяет, существует ли файл вложения.
+
+		:return: Возвращает `True`, если указан файл и он существует.
+		:rtype: bool
+		"""
+
+		FullPath = self.full_path
+		if not FullPath: return False
+
+		return FullPath.exists()
+
+@dataclass(frozen = True)
+class ValidationError:
+	"""Описание ошибки валидации."""
+
+	slot: str | None
+	file: str
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -36,22 +141,51 @@ class Attachments:
 	#==========================================================================================#
 
 	@property
+	def directory(self) -> Path:
+		"""Путь к директории вложений записи."""
+
+		return self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
+
+	@property
 	def count(self) -> int:
 		"""Количество вложений."""
 
 		return len(self.__Data["free"]) + sum(1 for slot in self.slots if slot.file)
 
 	@property
-	def free(self) -> tuple[Path]:
-		"""Последовательность свободных вложений."""
+	def free(self) -> tuple[str]:
+		"""Последовательность имён файлов свободных вложений."""
 
-		return tuple(Path(Value) for Value in self.__Data["free"])
+		return tuple(Value for Value in self.__Data["free"])
 
 	@property
-	def slots(self) -> tuple[SlotInfo]:
+	def note(self) -> "BaseNote":
+		"""Запись, к которой относятся вложения."""
+
+		return self.__Note
+
+	@property
+	def slots(self) -> tuple[Slot]:
 		"""Последовательность данных слотов."""
 
-		return tuple(SlotInfo(Name, File) for Name, File in self.__Data["slots"].items())
+		return tuple(self.__Slots.values())
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __ParseSlots(self) -> dict[str, Slot]:
+		"""
+		Парсит данные слотов в объекты.
+
+		:return: Словарь данных слотов.
+		:rtype: dict[str, SlotInfo]
+		"""
+
+		Slots = dict()
+		for Name, File in self.__Data["slots"].items(): Slots[Name] = Slot(self, Name, File)
+		
+		return Slots
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -75,36 +209,27 @@ class Attachments:
 
 		if bool(note.table.manifest.attachments.rule): os.makedirs(self.__Note.table.full_path / ".attachments", exist_ok = True)
 
-	def attach(self, file: Path, slot: str | None = None, copy: bool = False):
+		self.__Slots: dict[str, Slot] = self.__ParseSlots()
+
+	def attach(self, file: Path, copy: bool = False):
 		"""
-		Прикрепляет файл к записи.
+		Прикрепляет свободный файл к записи.
 
 		:param file: Путь к файлу.
 		:type file: Path
-		:param slot: Имя слота. 
-		:type slot: str | None
 		:param copy: Указывает, нужно ли скопировать файл или переместить. 
 		:type copy: bool
-		:raises AttachmentSlotAlreadyFilled: Слот уже содержит файл.
 		:raises AttachmentsDenied: Вложение запрещено.
-		:raises AttachmentSlotMissing: Слот вложения не описан.
 		"""
 		
-		match self.__Note.table.manifest.attachments.rule:
-			case 0: raise Exceptions.Note.AttachmentsDenied(False)
-			case 1:
-				if not slot: raise Exceptions.Note.AttachmentsDenied(True)
+		Rule = self.__Note.table.manifest.attachments.rule
+		if Rule < 2: raise Exceptions.Note.AttachmentsDenied(bool(Rule))
 
-		if slot:
-			if slot not in self.__Note.table.manifest.attachments.slots: raise Exceptions.Note.AttachmentSlotMissing(slot)
-			if self.is_slot_occupied(slot): raise Exceptions.Note.AttachmentSlotAlreadyFilled(slot)
-			self.__Data["slots"][slot] = file.name
+		self.__Data["free"] = file.name
 
-		else: self.__Data["free"] = file.name
-
-		AttachmentPath = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
-		os.makedirs(AttachmentPath, exist_ok = True)
-		AttachmentPath = AttachmentPath / file
+		AttachmentsDirectoryPath = self.directory
+		os.makedirs(AttachmentsDirectoryPath, exist_ok = True)
+		AttachmentPath = AttachmentsDirectoryPath / file
 
 		if copy: shutil.copy(file, AttachmentPath)
 		else: os.replace(file, AttachmentPath)
@@ -112,60 +237,24 @@ class Attachments:
 		self.__Note.save()
 		self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
 
-	def clear_slot(self, slot: str):
+	def get_slot(self, slot: str) -> Slot:
 		"""
-		Очищает слот.
+		Возвращает данные слота.
 
 		:param slot: Имя слота.
 		:type slot: str
+		:return: Данные о слоте.
+		:rtype: SlotInfo
 		:raises AttachmentSlotMissing: Слот вложения не описан.
 		"""
 
-		if slot not in self.__Data["slots"]: raise Exceptions.Note.AttachmentSlotMissing(slot)
+		if slot not in self.__Slots: raise Exceptions.Note.AttachmentSlotMissing(slot)
 
-		AttachmentsDirectory = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
-
-		try: os.remove(AttachmentsDirectory / self.__Data["slots"][slot])
-		except FileNotFoundError: pass
-
-		try: AttachmentsDirectory.rmdir()
-		except (FileNotFoundError, OSError): pass
-
-		self.__Data["slots"][slot] = None
-		self.__Note.save()
-		self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
-
-	def get_slot_file(self, slot: str) -> str | None:
-		"""
-		Возвращает имя вложения, находящегося в слоте.
-
-		:param slot: Имя слота.
-		:type slot: str
-		:return: Имя вложения в слоте.
-		:rtype: str | None
-		:raises AttachmentSlotMissing: Слот вложения не описан.
-		"""
-
-		if slot not in self.__Note.table.manifest.attachments.slots: raise Exceptions.Note.AttachmentSlotMissing(slot)
-
-		return self.__Data["slots"].get(slot)
-
-	def is_slot_occupied(self, slot: str) -> bool:
-		"""
-		Проверяет, занят ли слот вложением.
-
-		:param slot: Имя слота.
-		:type slot: str
-		:return: Возвращает `True`, если слот содержит вложение.
-		:rtype: bool
-		"""
-
-		try: return bool(self.get_slot_file(slot))
-		except KeyError: return False
+		return self.__Slots[slot]
 
 	def move(self, new_id: int):
 		"""
-		Перемещает вложения в каталог соответствующий новому ID записи.
+		Перемещает вложения в каталог, соответствующий новому ID записи.
 
 		:param new_id: Новый ID записи.
 		:type new_id: int
@@ -176,17 +265,18 @@ class Attachments:
 			NewAttachmentsPath =  self.__Note.table.full_path / ".attachments" / str(new_id)
 			shutil.move(OldAttachmentsPath, NewAttachmentsPath)
 
-	def to_dict(self, copy: bool = True) -> dict[str, dict[str | None] | list[str]]:
+	def to_dict(self) -> dict[str, dict[str | None] | list[str]]:
 		"""
 		Возвращает словарное представление данных вложений.
 
-		:param copy: Указывает, нужно ли вернуть копию внутреннего словаря или оригинал.
-		:type copy: bool
 		:return: Словарное представление данных вложений.
 		:rtype: dict[str, dict[str | None] | list[str]]
 		"""
 
-		return Copy(self.__Data) if copy else self.__Data
+		return {
+			"slots": {Name: SlotData.file for Name, SlotData in self.__Slots.items()},
+			"free": self.__Data["free"]
+		}
 
 	def unnatach(self, filename: str):
 		"""
@@ -203,3 +293,23 @@ class Attachments:
 			self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
 
 		except (FileNotFoundError, ValueError): pass
+
+	def validate(self) -> tuple[ValidationError]:
+		"""
+		Проверяет существование заданных файлов вложений.
+
+		:return: Последовательность структур, описывающих отсутствующие вложения.
+		:rtype: tuple[ValidationError]
+		"""
+
+		Errors = list()
+		AttachmentsDirectory = self.directory
+
+		for FreeFile in self.__Data["free"]:
+			FilePath = AttachmentsDirectory / FreeFile
+			if not FilePath.exists(): Errors.append(ValidationError(None, FreeFile))
+
+		for CurrentSlot in self.__Slots.values():
+			if CurrentSlot.file and not CurrentSlot.is_exists(): Errors.append(ValidationError(CurrentSlot.name, CurrentSlot.file))
+
+		return tuple(Errors)
