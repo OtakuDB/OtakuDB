@@ -85,7 +85,7 @@ class Slot:
 
 		AttachmentDirectory = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
 		os.makedirs(AttachmentDirectory, exist_ok = True)
-		AttachmentPath = AttachmentPath / file
+		AttachmentPath = AttachmentDirectory / file
 
 		if copy: shutil.copy(file, AttachmentPath)
 		else: os.replace(file, AttachmentPath)
@@ -203,7 +203,7 @@ class Attachments:
 
 		self.__Note = note
 		self.__Data: dict[str, dict[str | None] | list[str]] = {
-			"slots": data.get("slots") or dict(),
+			"slots": data.get("slots") or dict().fromkeys(self.__Note.table.manifest.attachments.slots.keys()),
 			"free": data.get("free") or list()
 		}
 

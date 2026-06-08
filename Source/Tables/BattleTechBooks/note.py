@@ -129,7 +129,7 @@ class Note(BaseNote):
 
 		if self.collection_status == CollectionStatuses.Collected: return
 
-		if self._Attachments.is_slot_occupied("ebook"): self.set_collection_status(CollectionStatuses.Ebook)
+		if self._Attachments.get_slot("ebook").file: self.set_collection_status(CollectionStatuses.Ebook)
 		else: self.set_collection_status(None)
 
 	#==========================================================================================#

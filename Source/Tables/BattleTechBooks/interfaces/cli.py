@@ -314,6 +314,7 @@ class NoteCLI(BaseNoteCLI):
 		Flag = command.get_position_parameter("TYPE")
 
 		match Flag.name:
+			case "-a": self._Note.set_type(Types.Anthology)
 			case "-c": self._Note.set_type(Types.Compilation)
 			case "-n": self._Note.set_type(Types.Novel)
 			case "-s": self._Note.set_type(Types.Story)
@@ -444,7 +445,8 @@ class NoteCLI(BaseNoteCLI):
 
 		Com = Command("type", "Set type of book.")
 		ComPos = Com.create_position("TYPE", "Type of book.", important = True)
-		ComPos.add_flag("-c", description = "Compilation.")
+		ComPos.add_flag("-a", description = "Anthology (short stories of different plots).")
+		ComPos.add_flag("-c", description = "Compilation (one storyline).")
 		ComPos.add_flag("-n", description = "Novel.")
 		ComPos.add_flag("-s", description = "Story.")
 		CommandsList.append(Com)
@@ -525,6 +527,14 @@ class NoteCLI(BaseNoteCLI):
 		if self._Note.estimation: print(" " * 4 + f"⭐ Estimation: {self._Note.estimation}")
 		if self._Note.comment: print(" " * 4 + f"💭 Comment: {self._Note.comment}")
 		if all((not self._Note.table.binder.local.get_slaves(self._Note.id), self._Note.stories_count)): print(" " * 4 + f"📜 Stories: {self._Note.stories_count}")
+
+		NoteMasters = self._Note.table.binder.local.get_masters(self._Note.id)
+		if NoteMasters:
+			FirstNoteMaster: "Note" = NoteMasters[0]
+			MasterType = FirstNoteMaster.type.value.title() or "Books collection"
+			Title = FirstNoteMaster.name or FirstNoteMaster.localized_name
+			Title = f"{Title} (#{FirstNoteMaster.id})".lstrip()
+			print(" " * 4 + f"📚 {MasterType}: {Title}")
 
 		#---> Вывод историй.
 		#==========================================================================================#
