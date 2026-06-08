@@ -253,6 +253,7 @@ class BaseNote:
 		NewPath = OldPath.parent / f"{id}.json"
 		os.rename(OldPath, NewPath)
 		self._Attachments.move(id)
+		self._Table.binder.local.update(self._ID, id)
 		self._ID = id
 
 	def sort(self):

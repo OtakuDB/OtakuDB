@@ -1,4 +1,5 @@
 from ..Structs import CollectionStatuses, Statuses, Types
+from ..Utils import Chronolog
 
 from Source.Interfaces.CLI.Base import BaseTableCLI, BaseNoteCLI
 from Source.Interfaces.CLI.Functions import Unstar
@@ -6,9 +7,10 @@ from Source.Interfaces.CLI.Functions import Unstar
 from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates.Bus import PrintError, PrintWarning
-from dublib.Methods.Data import ToIterable
+from dublib.CLI.Templates import Confirmation
 
 from typing import TYPE_CHECKING
+from datetime import datetime
 
 if TYPE_CHECKING:
 	from ..table import Table
@@ -20,6 +22,23 @@ class TableCLI(BaseTableCLI):
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ ОБРАБОТЧИКИ КОМАНД <<<<< #
 	#==========================================================================================#
+
+	def _chronolog(self):
+		"""Сортирует книги по дате публикации."""
+
+		Util = Chronolog(self._Table)
+		Data = Util.calculate_timestamps()
+		Index = 0
+
+		for ID, Timestamp in Data.items():
+			Index += 1
+			Datetime = "unknown"
+			if Timestamp: Datetime = datetime.fromtimestamp(Timestamp).strftime("%d %B %Y")
+			print(f"{ID} > {Index} ({Datetime})")
+
+		if not Confirmation("Temporary, notes will receive negative ID and then it will be inversed to new ID."): return
+
+		Util.apply(Data, sort = False)
 
 	def _statistics(self):
 		"""Выводит статистику чтения произведений."""
@@ -74,6 +93,7 @@ class TableCLI(BaseTableCLI):
 		"""
 
 		match command.name:
+			case "chronolog": self._chronolog()
 			case "statistics": self._statistics()
 
 	def _GenerateCustomCommands(self) -> list[Command]:
@@ -85,6 +105,9 @@ class TableCLI(BaseTableCLI):
 		"""
 
 		CommandsList = list()
+
+		Com = Command("chronolog", "Sort books by publication date.")
+		CommandsList.append(Com)
 
 		Com = Command("statistics", "Show statistics of BattleTech books reading.")
 		CommandsList.append(Com)
