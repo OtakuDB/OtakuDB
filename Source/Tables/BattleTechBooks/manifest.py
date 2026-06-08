@@ -24,6 +24,7 @@ class Generator(ManifestGenerator):
 			"Series to which the book belongs."
 		)
 		manifest.metainfo_rules.set_field("publication_date", None, "Date of book publication in original.")
+		manifest.metainfo_rules.set_field("story_source", None, "Source of story.")
 
 		ColumnsNames = ("ID", "Status", "Name", "Author", "Publication", "Type", "Series", "Era", "Estimation")
 		OptionsCLI = {

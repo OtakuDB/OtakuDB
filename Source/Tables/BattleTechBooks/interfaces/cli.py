@@ -130,38 +130,9 @@ class TableCLI(BaseTableCLI):
 		#==========================================================================================#
 		container["Name"] = note.localized_name or note.name
 
-		#---> Author
-		#==========================================================================================#
-		Author = note.metainfo.get_field_value("author")
-		AuthorsCount = 0
-		if type(Author) == tuple: AuthorsCount = len(Author) - 1
-		container["Author"] = Author if not AuthorsCount else Author[0] + f" (and {AuthorsCount} other)"
-		
-		#---> Publication
-		#==========================================================================================#
-		container["Publication"] = note.metainfo["publication_date"]
-
 		#---> Type
 		#==========================================================================================#
 		container["Type"] = note.type.value
-
-		#---> Series
-		#==========================================================================================#
-		Series = note.metainfo.get_field_value("series")
-		Series = ToIterable(Series, iterable_type = list) if Series else list()
-
-		StorySource = note.metainfo.get_field_value("story_source")
-		if StorySource: Series.append(StorySource)
-
-		if Series:
-			SeriesCount = len(Series)
-			container["Series"] = Series[0]
-
-			if SeriesCount > 1:
-				SeriesCount -= 1
-				container["Series"] += f" (and {SeriesCount} other)"
-
-		else: container["Series"] = ""
 
 		#---> Estimation
 		#==========================================================================================#
@@ -180,6 +151,12 @@ class TableCLI(BaseTableCLI):
 		if NoteEra: NoteEra = NoteEra.name
 		else: NoteEra = ""
 		container["Era"] = NoteEra
+
+		#---> Метаданные.
+		#==========================================================================================#
+		container["Author"] = self._GenerateCellFromMetainfo(note, "Author", "author")
+		container["Publication"] = self._GenerateCellFromMetainfo(note, "Publication", "publication_date")
+		container["Series"] = self._GenerateCellFromMetainfo(note, "Series", "series")
 
 		return container
 
@@ -478,6 +455,10 @@ class NoteCLI(BaseNoteCLI):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self._Note: "Note"
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ ПРОСМОТРА СОДЕРЖИМОГО <<<<< #
+	#==========================================================================================#
 
 	def _ViewNote(self):
 		"""Отображает запись."""

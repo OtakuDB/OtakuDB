@@ -162,6 +162,7 @@ class BaseTableCLI:
 		match command.name:
 			case "chid": self._chid(command)
 			case "close": self._Interface.set_current_object(self._Session.navigator.current_box)
+			case "columns": self._columns()
 			case "delete": self._delete(command.check_flag("-y"))
 			case "new": self._new(command.check_flag("-o"))
 			case "open": self._open(command.arguments[0])
@@ -192,6 +193,9 @@ class BaseTableCLI:
 
 			if Options.max_width:
 				for Index in range(len(columns[ColumnName])):
+					if columns[ColumnName][Index] == None: columns[ColumnName][Index] = ""
+					elif type(columns[ColumnName][Index]) != str: columns[ColumnName][Index] = str(columns[ColumnName][Index])
+
 					if len(columns[ColumnName][Index]) > Options.max_width:
 						columns[ColumnName][Index] = columns[ColumnName][Index][:Options.max_width] + "…"
 

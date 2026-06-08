@@ -64,7 +64,7 @@ class TableCLI(BaseTableCLI):
 		container["Status"] = NoteStatus
 
 		container["Name"] = note.name
-		container["Base"] = note.metainfo["base"]
+		container["Base"] = self._GenerateCellFromMetainfo(note, "Base", "base")
 		container["Estimation"] = note.estimation
 
 		return container
@@ -344,6 +344,10 @@ class NoteCLI(BaseNoteCLI):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self._Note: "Note"
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ ПРОСМОТРА СОДЕРЖИМОГО <<<<< #
+	#==========================================================================================#
 
 	def _ViewNote(self):
 		"""Отображает запись."""
