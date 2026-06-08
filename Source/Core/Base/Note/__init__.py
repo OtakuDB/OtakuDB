@@ -5,7 +5,7 @@ from .Metainfo import Metainfo
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 from dublib.Methods.Data import Copy
 
-from typing import Any, TYPE_CHECKING
+from typing import Any, Literal, TYPE_CHECKING
 from pathlib import Path
 import os
 
@@ -195,6 +195,7 @@ class BaseNote:
 		self._ID = note_id
 		
 		self._LoadData()
+		self.sort()
 		self._ParseContainers()
 		self._PostInitMethod()
 
@@ -229,6 +230,17 @@ class BaseNote:
 			case CallbacksTypes.AttachmentsChanged: self._Callback_AttachmentsChanged(*args, **kwargs)
 			case CallbacksTypes.SlaveNoteSaved: self._Callback_SlaveNoteSaved(*args, **kwargs)
 
+	def save(self, use_presaver: bool = True):
+		"""
+		Сохраняет данные записи в локальный файл JSON.
+
+		:param use_presaver: Указывает, нужно ли вызывать переопределяемый метод, выполняющийся перед сохранением.
+		:type use_presaver: bool
+		"""
+
+		WriteJSON(self.full_path, self.to_dict(use_presaver, copy = False), atomic = True)
+		if self._Table.binder.local.has_masters(self._ID): self.run_callback(CallbacksTypes.SlaveNoteSaved, self)
+
 	def set_id(self, id: int):
 		"""
 		Задаёт новый ID и переименовывает файл записи.
@@ -243,18 +255,33 @@ class BaseNote:
 		self._Attachments.move(id)
 		self._ID = id
 
-	def save(self, use_presaver: bool = True):
+	def sort(self):
 		"""
-		Сохраняет данные записи в локальный файл JSON.
-
-		:param use_presaver: Указывает, нужно ли вызывать переопределяемый метод, выполняющийся перед сохранением.
-		:type use_presaver: bool
+		Сортирует ключи записи в алфавитном порядке.
+		
+		Важные ключи _name_, _matainfo_, _attachments_ помещаются в начало.
 		"""
 
-		WriteJSON(self.full_path, self.to_dict(use_presaver, copy = False), atomic = True)
-		if self._Table.binder.local.has_masters(self._ID): self.run_callback(CallbacksTypes.SlaveNoteSaved, self)
+		ImportantKeys = ("name", "matainfo", "attachments")
+			
+		def NoteKeysSorter(item: tuple[str, Any]) -> tuple[Literal[0, 1], int, str]:
+			"""
+			Генератор кортежей сортировки словарного ключей записи.
 
-	def to_dict(self, use_presaver: bool = True, copy: bool = True) -> dict:
+			:param item: Элемент словаря.
+			:type item: tuple[str, Any]
+			:return: Кортеж из трёх значений: `1` или `0` для важных и неважных ключей; индекс важного ключа или `0`; ключ.
+			:rtype: tuple[Literal[0, 1], int, str]
+			"""
+
+			Key = item[0]
+			if Key in ImportantKeys: return (0, ImportantKeys.index(Key), "")
+
+			return (1, 0, Key.lower())
+
+		self._Data = dict(sorted(self._Data.items(), key = NoteKeysSorter))
+
+	def to_dict(self, use_presaver: bool = True, copy: bool = True, sort: bool = False) -> dict:
 		"""
 		Возвращает словарное представление записи.
 
@@ -262,12 +289,15 @@ class BaseNote:
 		:type use_presaver: bool
 		:param copy: Указывает, нужно ли вернуть копию внутреннего словаря или оригинал.
 		:type copy: bool
+		:param sort: Указывает, нужно ли произвести сортировку ключей.
+		:type sort: bool
 		:return: Словарное представление записи.
 		:rtype: dict
 		"""
 
 		if use_presaver: self._PreSaveMethod()
 		self._Data["metainfo"] = self._Metainfo.to_dict(copy)
-		self._Data["attachments"] = self._Attachments.to_dict(copy)
+		self._Data["attachments"] = self._Attachments.to_dict()
+		if sort: self.sort()
 
 		return Copy(self._Data) if copy else self._Data
