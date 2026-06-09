@@ -75,7 +75,9 @@ class LocalBinder:
 		self.__Table.get_note(slave_id)
 
 		if master_id not in self.__Data: self.__Data[master_id] = [slave_id]
-		elif slave_id not in self.__Data[master_id]: self.__Data[master_id].append(slave_id)
+		elif slave_id not in self.__Data[master_id]:
+			self.__Data[master_id].append((slave_id))
+			self.__Data[master_id] = list(set(self.__Data[master_id]))
 
 		self.save()
 		self.__UpdateBindingsCache()
@@ -91,11 +93,11 @@ class LocalBinder:
 		:raises NoteNotFound: Запись не найдена в таблице.
 		"""
 
-		BindedNotes = list()
+		BindedNotes: list["BaseNote"] = list()
 		if slave_id in self.__Cache:
 			for MasterID in self.__Cache[slave_id].masters: BindedNotes.append(self.__Table.get_note(MasterID))
 
-		return tuple(BindedNotes)
+		return tuple(sorted(BindedNotes, key = lambda CurrentNote: CurrentNote.id))
 
 	def get_slaves(self, master_id: int) -> "tuple[BaseNote]":
 		"""
@@ -108,11 +110,11 @@ class LocalBinder:
 		:raises NoteNotFound: Запись не найдена в таблице.
 		"""
 
-		BindedNotes = list()
+		BindedNotes: list["BaseNote"] = list()
 		if master_id in self.__Cache:
 			for SlaveID in self.__Cache[master_id].slaves: BindedNotes.append(self.__Table.get_note(SlaveID))
 
-		return tuple(BindedNotes)
+		return tuple(sorted(BindedNotes, key = lambda CurrentNote: CurrentNote.id))
 
 	def has_masters(self, slave_id: int) -> bool:
 		"""
