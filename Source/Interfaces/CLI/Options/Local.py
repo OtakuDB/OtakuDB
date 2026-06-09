@@ -1,5 +1,5 @@
 from Source.Core.Base.Manifest.Containers import InterfacesOptions
-from Source.Core.Enums import Interfaces
+from Source.Interfaces.Enums import Interfaces
 
 from typing import Any
 
@@ -193,6 +193,12 @@ class TableInterfaceOptions:
 	#==========================================================================================#
 
 	@property
+	def autoclear(self) -> bool:
+		"""Состояние: требуется ли очищать терминал при выполнении команды `view`."""
+
+		return bool(self.__Options.get("autoclear"))
+
+	@property
 	def columns(self) -> ColumnsOptions:
 		"""Параметры колонок таблицы."""
 
@@ -202,12 +208,12 @@ class TableInterfaceOptions:
 	def custom(self) -> dict[str, Any]:
 		"""Кастомные опции интерфейса таблицы."""
 
-		return self.__Options.get("custom") or dict()
+		return self.__Options["custom"]
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-
+	
 	def __init__(self, data: InterfacesOptions):
 		"""
 		Параметры интерфейса таблицы.
@@ -218,7 +224,12 @@ class TableInterfaceOptions:
 
 		self.__Data = data
 		
-		self.__Options = data.get_options(Interfaces.CLI)
+		self.__Options = {
+			"autoclear": True,
+			"columns": {Column: {"enabled": True, "max_width": None} for Column in ("ID", "Name")},
+			"custom": dict()
+		} | data.get_options(Interfaces.CLI)
+
 		self.__Columns = ColumnsOptions(self, self.__Options.get("columns") or dict())
 
 	def save(self):

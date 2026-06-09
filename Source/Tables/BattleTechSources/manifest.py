@@ -1,5 +1,5 @@
 from Source.Core.Base.Manifest.Generator import Manifest, ManifestGenerator
-from Source.Core.Enums import Interfaces
+from Source.Interfaces.Enums import Interfaces
 
 class Generator(ManifestGenerator):
 	"""Генератор манифеста."""

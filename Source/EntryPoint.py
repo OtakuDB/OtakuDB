@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 import importlib
 
 if TYPE_CHECKING:
-	from Source.Core.Enums import Interfaces
+	from Source.Interfaces.Enums import Interfaces
 	from Source.Core.Session import Session
 
 def RunInterface(interface: "Interfaces", session: "Session"):

@@ -1,5 +1,4 @@
 from .Base import BaseBoxCLI, BaseTableCLI, BaseNoteCLI
-from .Options.Local import TableInterfaceOptions
 from .Enums import InterractionLevels
 
 from dublib.CLI.Terminalyzer import Command, ParametersTypes,ParsedCommandData, Terminalyzer

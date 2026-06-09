@@ -1,4 +1,4 @@
-from Source.Core.Enums import Interfaces
+from Source.Interfaces.Enums import Interfaces
 from Source.Core.Session import Session
 from Source import EntryPoint
 

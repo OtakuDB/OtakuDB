@@ -1,3 +1,5 @@
+from ..Options.Local import TableInterfaceOptions
+
 from Source.Core import Exceptions
 
 from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData
@@ -97,8 +99,12 @@ class BaseBoxCLI:
 		"""
 
 		Name = name or table_type
+		
+		try:
+			Descriptor = self._Session.navigator.current_box.create_table(Name, table_type)
+			TIO = TableInterfaceOptions(Descriptor.manifest.interfaces_options)
+			TIO.save()
 
-		try: self._Session.navigator.current_box.create_table(Name, table_type)
 		except Exceptions.Driver.ItemAlreadyExists: PrintError("Item already exists.")
 		except Exceptions.Driver.IncorrectTableType: PrintError(f"Missing \"{table_type}\" table type.")
 

@@ -1,4 +1,4 @@
-from Source.Core.Enums import Interfaces
+from Source.Interfaces.Enums import Interfaces
 
 from typing import Any, Literal, TYPE_CHECKING
 
