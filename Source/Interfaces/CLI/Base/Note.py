@@ -72,8 +72,11 @@ class BaseNoteCLI:
 			Com = Command("metainfo", "Manage metainfo.", "Metainfo")
 			ComPos = Com.create_position("FIELD", "Metainfo field name.", important = True)
 			ComPos.set_argument()
-			ComPos = Com.create_position("VALUE", "Metainfo value. Strings can be separated by ; and slod may be cleared by * characters.", important = True)
-			ComPos.set_argument()
+			ComPos = Com.create_position("OPERATION", "Operation for metafield processing.", important = True)
+			ComPos.add_flag("-c", description = "Clear field.")
+			ComPos.add_key("--set", description = "Set field value.")
+			ComPos.add_key("--append", description = "Append string or separated by ; string to same type field.")
+			ComPos.add_key("--remove", description = "Remove string or separated by ; string from same type field.")
 			CommandsList.append(Com)
 
 		#---> Динамические команды: связи.
@@ -151,6 +154,24 @@ class BaseNoteCLI:
 		if not confirm and not Confirmation("This note will be deleted."): return
 		self._Note.delete()
 		self._Interface.set_current_object(self._Note.table)
+
+	def _metainfo(self, command: ParsedCommandData):
+		"""
+		Обрабатывает операцию с метаданными.
+		
+		:param command: Данные команды.
+		:type command: ParsedCommandData
+		"""
+
+		Field = command.get_position_value("FIELD")
+
+		try:
+			if command.check_flag("-c"): self._Note.metainfo.clear_field(Field)
+			elif command.check_key("--set"): self._Note.metainfo.set_field_value(Field, command.get_key_value("--set"))
+			elif command.check_key("--append"): self._Note.metainfo.append_to_field(Field, command.get_key_value("--append"))
+			elif command.check_key("--remove"): self._Note.metainfo.remove_from_field(Field, command.get_key_value("--remove"))
+
+		except Exception as ExceptionData: PrintError(ExceptionData)
 
 	def _metafields(self):
 		"""Выводит описание полей метаданных."""
@@ -240,7 +261,7 @@ class BaseNoteCLI:
 			case "close": self._Interface.set_current_object(self._Note.table)
 			case "delete": self._delete(command.check_flag("-y"))
 			case "metafields": self._metafields()
-			case "metainfo": self._SetMetainfo(command.get_position_value("FIELD"), command.get_position_value("VALUE"))
+			case "metainfo": self._metainfo(command)
 			case "rename": self._rename(Unstar(command.get_position_value("NAME")))
 			case "view": self.view()
 			case "slots": self._slots()
@@ -252,12 +273,13 @@ class BaseNoteCLI:
 
 		:param key: Имя поля.
 		:type key: str
-		:param value: Значение. Символ `*` приводится к `None`.
+		:param value: Значение. Символ `*` или `0` приводится к `None`.
 		:type value: int | float | str | None
 		"""
 
-		try: self._Note.metainfo.set_field_value(key, Unstar(value))
-		except Exceptions.Note.MetainfoBlocked: PrintError("Metainfo blocked by manifest rule.")
+		if value in (0, "*"): value = None
+		try: self._Note.metainfo.set_field_value(key, value)
+		except Exceptions.Note.MetainfoBlocked as ExceptionData: PrintError(ExceptionData)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
