@@ -110,7 +110,7 @@ class BaseTable:
 
 		ListID = list()
 		Files = ListDir(self.full_path)
-		Files = list(filter(lambda File: File.endswith(".json"), Files))
+		Files = list(filter(lambda File: File.endswith(".json") and File[:-5].isdigit(), Files))
 
 		for File in Files: 
 			if not File.replace(".json", "").isdigit(): Files.remove(File)

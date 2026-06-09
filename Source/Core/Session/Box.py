@@ -46,12 +46,13 @@ class RootBox:
 		:type driver: Driver
 		:param virtual_path: Виртуальный путь к контейнеру.
 		:type virtual_path: Path
+		:raises FileNotFoundError: Директория контейнера не найдена.
 		"""
 
 		self._Driver = driver
 		self._VirtualPath = virtual_path
 		self._FullPath = self._Driver.storage_directory / self._VirtualPath
-
+		
 		self._Items: dict[str, Box | TableDescriptor] = dict()
 
 		self.reload()
@@ -66,6 +67,7 @@ class RootBox:
 
 		:param driver: Драйвер хранилища.
 		:type driver: Driver
+		:raises FileNotFoundError: Директория контейнера не найдена.
 		"""
 
 		self._BaseInit(driver, Path())
@@ -152,7 +154,11 @@ class RootBox:
 		return Item
 
 	def reload(self):
-		"""Сканирует и обновляет элементы контейнера."""
+		"""
+		Сканирует и обновляет элементы контейнера.
+		
+		:raises FileNotFoundError: Директория контейнера не найдена.
+		"""
 
 		Elements = tuple(Value.name for Value in os.scandir(self.full_path) if Value.is_dir())
 		Items = dict()

@@ -144,11 +144,25 @@ class Driver:
 		TargetBoxVirtualPath = parent_box.virtual_path / name
 		TargetBox = self.get_box(TargetBoxVirtualPath)
 		parent_box.pop_item(name)
+		self.free_box(TargetBoxVirtualPath)
 
 		if purge: shutil.rmtree(TargetBox.full_path)
 		else: 
 			if TargetBox.items: raise Exceptions.Driver.BoxNotEmpty(TargetBox.virtual_path)
 			else: TargetBox.full_path.rmdir()
+
+	@require_storage
+	def free_box(self, virtual_path: Path):
+		"""
+		Выгружает контейнер.
+
+		:param virtual_path: Виртуальный путь к контейнеру.
+		:type virtual_path: Path
+		:raises Exceptions.Driver.ItemNotFound: Контейнер не найден.
+		"""
+
+		try: del self.__Boxes[virtual_path.as_posix()]
+		except KeyError: raise Exceptions.Driver.ItemNotFound(virtual_path)
 
 	@require_storage
 	def get_box(self, virtual_path: Path) -> Box:
@@ -159,7 +173,7 @@ class Driver:
 		:type virtual_path: Path
 		:return: Контейнер.
 		:rtype: Box
-		:raises ItemNotFound: Элемент не найден.
+		:raises ItemNotFound: Контейнер не найден.
 		"""
 
 		try: return self.__Boxes[virtual_path.as_posix()]
@@ -176,6 +190,7 @@ class Driver:
 		:type name: str
 		:return: Контейнер.
 		:rtype: Box
+		:raises FileNotFoundError: Директория контейнера не найдена.
 		"""
 
 		VirtualPath = parent_box.virtual_path / name
