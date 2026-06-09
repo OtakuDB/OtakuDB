@@ -1,6 +1,6 @@
-from .Session import Session
+from . import Session
 
-from Source.Interfaces.CLI.Interpreter import Interpreter
+from Legacy.CLI.Interpreter import Interpreter
 
 from typing import Literal
 

@@ -1,0 +1,44 @@
+from dataclasses import dataclass
+
+from enum import Enum
+
+#==========================================================================================#
+# >>>>> СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+@dataclass
+class Era:
+	index: int | float
+	name: str
+	start_year: int | None
+	end_year: int | None
+
+#==========================================================================================#
+# >>>>> ПЕРЕЧИСЛЕНИЯ <<<<< #
+#==========================================================================================#
+
+class CollectionStatuses(Enum):
+	"""Статусы коллекционирования."""
+
+	Collected = "collected"
+	Ebook = "ebook"
+	Wishlist = "wishlist"
+	Ordered = "ordered"
+
+class Statuses(Enum):
+	"""Статусы прочтения."""
+
+	Announced = "announced"
+	Completed = "completed"
+	Dropped = "dropped"
+	Planned = "planned"
+	Reading = "reading"
+	Skipped = "skipped"
+
+class Types(Enum):
+	"""Типы произведений."""
+
+	Anthology = "anthology"
+	Compilation = "compilation"
+	Novel = "novel"
+	Story = "story"

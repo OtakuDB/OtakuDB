@@ -2,5 +2,4 @@
 __pycache__
 .venv
 # User's files.
-session.json
-Data
+.session.json
