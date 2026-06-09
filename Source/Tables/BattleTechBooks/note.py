@@ -85,29 +85,27 @@ class Note(BaseNote):
 	def __UpdateEstimationByLocalBinds(self):
 		"""Вычисляет оценку сборника на основе оценок привязанных записей."""
 
-		EstimatedBindedNotes: "tuple[Note]" = tuple(CurrentNote for CurrentNote in self._Table.binder.local.get_slaves(self._ID) if CurrentNote.estimation)
-		Estimation = round(sum(CurrentNote.estimation for CurrentNote in EstimatedBindedNotes) / len(EstimatedBindedNotes))
-		if self.estimation != Estimation: self.estimate(Estimation)
+		Slaves: "tuple[Note]" = self._Table.binder.local.get_slaves(self._ID)
+		Estimations = tuple(CurrentNote.estimation for CurrentNote in Slaves if CurrentNote.estimation)
+		Estimation = None
+
+		# Прибавление 0.5 исправляет округление отсечением.
+		if Estimations: Estimation = round(0.5 + sum(Estimations) / len(Estimations))
+		if Estimation and self.estimation != Estimation: self.estimate(Estimation)
 
 	def __UpdateStatusByLocalBinds(self):
 		"""Определяет статус сборника на основе статусов привязанных записей."""
 
 		BindedNotes: "tuple[Note]" = self._Table.binder.local.get_slaves(self._ID)
-		BindedNotesStatuses = tuple(CurrentNote.status for CurrentNote in BindedNotes)
+		BindedNotesStatuses = list(CurrentNote.status for CurrentNote in BindedNotes if CurrentNote.status)
 
-		IsAnnounced = Statuses.Announced in BindedNotesStatuses
-		IsCompleted = Statuses.Completed in BindedNotesStatuses
-		IsDropped = Statuses.Dropped in BindedNotesStatuses
-		IsPlanned = Statuses.Planned in BindedNotesStatuses
-		IsReading = Statuses.Reading in BindedNotesStatuses
-		IsSkipped = Statuses.Skipped in BindedNotesStatuses
-
-		if IsReading: self.set_status(Statuses.Reading)
-		if IsAnnounced and not all((IsDropped, IsPlanned, IsReading, IsSkipped)): self.set_status(Statuses.Announced)
-		if IsCompleted and not all((IsAnnounced, IsDropped, IsPlanned, IsReading, IsSkipped)): self.set_status(Statuses.Completed)
-		if IsDropped: self.set_status(Statuses.Dropped)
-		if IsPlanned and not all((IsDropped, IsAnnounced, IsReading, IsSkipped)): self.set_status(Statuses.Planned)
-		if IsSkipped and not all((IsDropped, IsAnnounced, IsReading, IsPlanned)): self.set_status(Statuses.Skipped)
+		if BindedNotesStatuses.count(Statuses.Completed) == len(BindedNotes):
+			self.set_status(Statuses.Completed)
+			return
+		
+		if Statuses.Reading in BindedNotesStatuses:
+			self.set_status(Statuses.Reading)
+			return
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ОБРАБОТЧИКИ CALLBACK-ВЫЗОВОВ <<<<< #
@@ -120,6 +118,8 @@ class Note(BaseNote):
 		:param slave_note: Привязанная запись, выполнившая операцию сохранения.
 		:type slave_note: BaseNote
 		"""
+
+		if self.type not in (Types.Anthology, Types.Compilation): return
 
 		self.__UpdateEstimationByLocalBinds()
 		self.__UpdateStatusByLocalBinds()
@@ -315,8 +315,10 @@ class Note(BaseNote):
 		"""
 
 		if status: status = status.value
-		self._Data["status"] = status
-		self.save()
+
+		if status != self._Data["status"]:
+			self._Data["status"] = status
+			self.save()
 
 	def set_stories_count(self, count: int | None):
 		"""

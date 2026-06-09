@@ -5,6 +5,8 @@ from .Driver import Driver
 from pathlib import Path
 from os import PathLike
 
+from dulwich import porcelain
+
 class Session:
 	"""Сессия взаимодействия."""
 
@@ -17,7 +19,14 @@ class Session:
 		"""Данные сессии."""
 
 		return self.__Data
+	
+	@property
+	def database_version(self) -> str | None:
+		"""Версия OtakuDB."""
 
+		try: return porcelain.describe("")
+		except: pass
+	
 	@property
 	def driver(self) -> Driver:
 		"""Драйвер хранилища."""

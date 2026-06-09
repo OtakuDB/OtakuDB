@@ -239,7 +239,7 @@ class BaseNote:
 		"""
 
 		WriteJSON(self.full_path, self.to_dict(use_presaver, copy = False), atomic = True)
-		if self._Table.binder.local.has_masters(self._ID): self.run_callback(CallbacksTypes.SlaveNoteSaved, self)
+		for Master in self._Table.binder.local.get_masters(self._ID): Master.run_callback(CallbacksTypes.SlaveNoteSaved, self)
 
 	def set_id(self, id: int):
 		"""

@@ -1,10 +1,8 @@
-from .Containers import Attachments, Common, Custom, InterfacesOptions
-from .Metainfo import MetainfoRules
+from .Containers import Attachments, Binder, Common, Custom, MetainfoRules, InterfacesOptions
 
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 
 from pathlib import Path
-from typing import Any
 
 class Manifest:
 	"""Манифест таблицы."""
@@ -14,7 +12,7 @@ class Manifest:
 	#==========================================================================================#
 
 	@property
-	def directory(self) -> Path:
+	def directory(self) -> Path | None:
 		"""Путь к директории таблицы."""
 
 		return self.__Directory
@@ -36,6 +34,12 @@ class Manifest:
 		return self.__Attachments
 
 	@property
+	def binder(self) -> Binder:
+		"""Параметры соединений."""
+
+		return self.__Binder
+
+	@property
 	def common(self) -> Common:
 		"""Общие опции таблиц."""
 
@@ -49,7 +53,7 @@ class Manifest:
 
 	@property
 	def metainfo_rules(self) -> MetainfoRules:
-		"""Опции метаданных."""
+		"""Правила метаданных."""
 
 		return self.__MetainfoRules
 
@@ -71,20 +75,21 @@ class Manifest:
 		:type directory: PathLike
 		"""
 
-		self.__Directory = directory
+		self.set_directory(directory)
 
 		self.__ManifestPath = self.__Directory / "manifest.json"
-
 		self.__Type = None
-		self.__Common = Common(self)
-		self.__MetainfoRules = MetainfoRules(self)
+
 		self.__Attachments = Attachments(self)
+		self.__Binder = Binder(self)
+		self.__Common = Common(self)
 		self.__Custom = Custom(self)
+		self.__MetainfoRules = MetainfoRules(self)
 		self.__InterfacesOptions = InterfacesOptions(self) 
 
 	def load(self) -> "Manifest":
 		"""
-		Загружает данные манифеста.
+		Читает и парсит манифест.
 
 		:return: Манифест.
 		:rtype: Manifest
@@ -93,10 +98,12 @@ class Manifest:
 
 		Data = ReadJSON(self.__ManifestPath)
 		self.__Type = Data["type"]
-		self.__Common.parse(Data.get("common") or dict())
-		self.__MetainfoRules.parse(Data.get("metainfo_rules") or dict())
+
 		self.__Attachments.parse(Data.get("attachments") or dict())
+		self.__Binder.parse(Data.get("binder") or dict())
+		self.__Common.parse(Data.get("common") or dict())
 		self.__Custom.parse(Data.get("custom") or dict())
+		self.__MetainfoRules.parse(Data.get("metainfo_rules") or dict())
 		self.__InterfacesOptions.parse(Data.get("interfaces_options") or dict())
 
 		return self
@@ -106,30 +113,45 @@ class Manifest:
 
 		WriteJSON(self.__ManifestPath, self.to_dict(), atomic = True)
 
-	def set_type(self, type: str):
+	def set_directory(self, directory: Path):
+		"""
+		Задаёт полный путь к директории таблицы.
+
+		:param directory: _description_
+		:type directory: Path
+		:raises FileNotFoundError: Директория таблицы не найдена.
+		"""
+
+		if not directory.exists(): raise FileNotFoundError(directory)
+		self.__Directory = directory
+
+	def set_type(self, type: str, save: bool = True):
 		"""
 		Задаёт тип таблицы.
 
 		:param type: Тип таблицы.
 		:type type: str
+		:param save: Указывает, нужно ли выполнить сохранение манифеста после процедуры.
+		:type save: bool
 		"""
 
 		self.__Type = type
-		self.save()
+		if save: self.save()
 
-	def to_dict(self) -> dict[str, Any]:
+	def to_dict(self) -> dict:
 		"""
-		Возвращает словарное представление манифеста.
+		Возвращает словарное представление объекта.
 
-		:return: Словарное представление манифеста.
-		:rtype: dict[str, Any]
+		:return: Словарное представление объекта.
+		:rtype: dict
 		"""
 
 		return {
 			"type": self.__Type,
-			"common": self.__Common.to_dict(),
-			"metainfo_rules": self.__MetainfoRules.to_dict(),
 			"attachments": self.__Attachments.to_dict(),
+			"binder": self.__Binder.to_dict(),
+			"common": self.__Common.to_dict(),
 			"custom": self.__Custom.to_dict(),
+			"metainfo_rules": self.__MetainfoRules.to_dict(),
 			"interfaces_options": self.__InterfacesOptions.to_dict()
 		}

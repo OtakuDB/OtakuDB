@@ -23,7 +23,7 @@ class MetainfoBlocked(Exception):
 
 		super().__init__(message or "Metainfo filtered by manifest or denied.")
 
-class MetainfoFieldMissing(Exception):
+class MetainfoFieldNotDescribed(Exception):
 	"""Исключение: поле метаданных не описано."""
 
 	def __init__(self, field: str):
@@ -43,7 +43,7 @@ class MetainfoFieldMissing(Exception):
 class AttachmentsDenied(Exception):
 	"""Исключение: прикрепление вложений к записи запрещено."""
 
-	def __init__(self, allow_slots: bool):
+	def __init__(self, is_slots_allowed: bool):
 		"""
 		Исключение: прикрепление вложений к записи запрещено.
 
@@ -52,8 +52,21 @@ class AttachmentsDenied(Exception):
 		"""
 
 		Message = "Attachments denied by table manifest."
-		if allow_slots: Message = "Allowed only slots attachments."
+		if is_slots_allowed: Message = "Allowed only slots attachments."
 		super().__init__(Message)
+
+class AttachmentSlotAlreadyDescribed(Exception):
+	"""Исключение: слот уже описан."""
+
+	def __init__(self, slot: str):
+		"""
+		Исключение: слот уже описан.
+
+		:param slot: Имя слота.
+		:type slot: str
+		"""
+
+		super().__init__(slot)
 
 class AttachmentSlotAlreadyFilled(Exception):
 	"""Исключение: слот уже содержит файл."""
@@ -66,9 +79,9 @@ class AttachmentSlotAlreadyFilled(Exception):
 		:type slot: str
 		"""
 
-		super().__init__(f"Slot \"{slot}\" already contains file.")
+		super().__init__(slot)
 
-class AttachmentSlotMissing(Exception):
+class AttachmentSlotNotDescribed(Exception):
 	"""Исключение: слот не описан."""
 
 	def __init__(self, slot: str):
@@ -79,4 +92,34 @@ class AttachmentSlotMissing(Exception):
 		:type slot: str
 		"""
 
-		super().__init__(f"Slot \"{slot}\" not described in manifest.")
+		super().__init__(slot)
+
+#==========================================================================================#
+# >>>>> СВЯЗИ <<<<< #
+#==========================================================================================#
+
+class LocalBindAlreadyDescribed(Exception):
+	"""Исключение: локальное соединение уже описано."""
+
+	def __init__(self, connection: str):
+		"""
+		Исключение: локальное соединение уже описано.
+
+		:param connection: Имя соединения.
+		:type connection: str
+		"""
+
+		super().__init__(connection)
+
+class LocalBindNotDescribed(Exception):
+	"""Исключение: локальное соединение не описано."""
+
+	def __init__(self, connection: str):
+		"""
+		Исключение: локальное соединение не описано.
+
+		:param connection: Имя соединения.
+		:type connection: str
+		"""
+
+		super().__init__(connection)

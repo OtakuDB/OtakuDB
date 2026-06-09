@@ -169,7 +169,6 @@ class Interface:
 		self.__CurrentObject = None
 
 		Clear()
-		print("OtakuDB v0.2.0-beta")
 
 		if self.__Session.data.last_mounted_storage:
 			self.__MountStorage(self.__Session.data.last_mounted_storage)
