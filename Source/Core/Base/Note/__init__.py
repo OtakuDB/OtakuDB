@@ -121,6 +121,11 @@ class BaseNote:
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ТРИГГЕРНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
+	def _PreDictFormatter(self):
+		"""Метод, выполняющийся перед конвертированием записи в словарь (фактически, перед её сохранением)."""
+
+		pass
+
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
@@ -133,11 +138,6 @@ class BaseNote:
 		:param note: Привязанная запись.
 		:type note: BaseNote
 		"""
-
-		pass
-
-	def _PreSaveMethod(self):
-		"""Метод, выполняющийся перед сохранением записи."""
 
 		pass
 
@@ -286,8 +286,6 @@ class BaseNote:
 		"""
 		Возвращает словарное представление записи.
 
-		:param use_presaver: Указывает, нужно ли вызывать переопределяемый метод, выполняющийся перед сохранением.
-		:type use_presaver: bool
 		:param copy: Указывает, нужно ли вернуть копию внутреннего словаря или оригинал.
 		:type copy: bool
 		:param sort: Указывает, нужно ли произвести сортировку ключей.
@@ -296,7 +294,7 @@ class BaseNote:
 		:rtype: dict
 		"""
 
-		self._PreSaveMethod()
+		self._PreDictFormatter()
 		self._Data["metainfo"] = self._Metainfo.to_dict(copy)
 		self._Data["attachments"] = self._Attachments.to_dict()
 		if sort: self.sort()

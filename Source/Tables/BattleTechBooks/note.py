@@ -82,7 +82,7 @@ class Note(BaseNote):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __UpdateEstimationByLocalBinds(self):
+	def __UpdateEstimationByLocalBonds(self):
 		"""Вычисляет оценку сборника на основе оценок привязанных записей."""
 
 		Slaves: "tuple[Note, ...]" = self.bonds.slaves
@@ -93,7 +93,7 @@ class Note(BaseNote):
 		if Estimations: Estimation = round(0.5 + sum(Estimations) / len(Estimations))
 		if Estimation and self.estimation != Estimation: self.estimate(Estimation)
 
-	def __UpdateStatusByLocalBinds(self):
+	def __UpdateStatusByLocalBonds(self):
 		"""Определяет статус сборника на основе статусов привязанных записей."""
 
 		BindedNotes: "tuple[Note, ...]" = self.bonds.slaves
@@ -121,8 +121,8 @@ class Note(BaseNote):
 
 		if self.type not in (Types.Anthology, Types.Compilation): return
 
-		self.__UpdateEstimationByLocalBinds()
-		self.__UpdateStatusByLocalBinds()
+		self.__UpdateEstimationByLocalBonds()
+		self.__UpdateStatusByLocalBonds()
 
 	def _Callback_AttachmentsChanged(self):
 		"""Обработчик вызова: вложения изменены."""
@@ -151,13 +151,13 @@ class Note(BaseNote):
 		#---> Автоматический подсчёт количества историй, если не указано большее значение.
 		#==========================================================================================#
 		StoriesCount = self.stories_count or 0
-		BindsCount = len(self.bonds.slaves)
-		if BindsCount - StoriesCount == 1: self.set_stories_count(BindsCount)
+		BondsCount = len(self.bonds.slaves)
+		if BondsCount - StoriesCount == 1: self.set_stories_count(BondsCount)
 
 		#---> Автоматический подсчёт оценки и определение статуса.
 		#==========================================================================================#
-		self.__UpdateEstimationByLocalBinds()
-		self.__UpdateStatusByLocalBinds()
+		self.__UpdateEstimationByLocalBonds()
+		self.__UpdateStatusByLocalBonds()
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #

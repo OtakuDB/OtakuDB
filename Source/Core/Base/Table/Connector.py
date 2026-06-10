@@ -209,7 +209,7 @@ class BondsOperator:
 
 		self.__Bonds: dict[int, NoteBonds] = dict()
 
-		DataFilePath = self.__Table.full_path / ".binds.json"
+		DataFilePath = self.__Table.full_path / ".bonds.json"
 
 		if DataFilePath.exists():
 			Buffer = ReadJSON(DataFilePath)
