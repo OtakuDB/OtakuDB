@@ -50,13 +50,13 @@ class BaseTable:
 		return self._Descriptor.name
 
 	@property
-	def notes(self) -> "tuple[BaseNote]":
+	def notes(self) -> "tuple[BaseNote, ...]":
 		"""Список записей."""
 
 		return tuple(self._Notes.values())
 	
 	@property
-	def notes_id(self) -> tuple[int]:
+	def notes_id(self) -> tuple[int, ...]:
 		"""Список ID записей."""
 
 		return self._GetNotesID()
@@ -100,7 +100,7 @@ class BaseTable:
 
 		return NoteModule.Note
 
-	def _GetNotesID(self) -> tuple[int]:
+	def _GetNotesID(self) -> tuple[int, ...]:
 		"""
 		Возвращает список ID записей в таблице, полученный путём сканирования файлов JSON.
 

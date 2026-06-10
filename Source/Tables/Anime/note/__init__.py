@@ -17,7 +17,7 @@ class Note(BaseNote):
 	#==========================================================================================#
 
 	@property
-	def another_names(self) -> tuple[str]:
+	def another_names(self) -> tuple[str, ...]:
 		"""Последовательность альтернативных названий."""
 
 		return tuple(self._Data["another_names"])
@@ -39,7 +39,7 @@ class Note(BaseNote):
 		return False
 
 	@property
-	def parts(self) -> tuple[Part]:
+	def parts(self) -> tuple[Part, ...]:
 		"""Последовательность частей."""
 
 		return tuple(self.__Parts)
@@ -56,7 +56,7 @@ class Note(BaseNote):
 		return round(Viewed / Total, 2)
 
 	@property
-	def status(self) -> Statuses:
+	def status(self) -> Statuses | None:
 		"""Статус просмотра."""
 
 		if self.is_dropped: return Statuses.Dropped
@@ -74,7 +74,7 @@ class Note(BaseNote):
 		if IsUnwatched: return Statuses.Planned
 
 	@property
-	def tags(self) -> tuple[str]:
+	def tags(self) -> tuple[str, ...]:
 		"""Последовательность тегов."""
 
 		return tuple(self._Data["tags"])

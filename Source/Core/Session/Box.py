@@ -23,7 +23,7 @@ class RootBox:
 		return self._Driver.storage_directory / self.virtual_path
 
 	@property
-	def items(self) -> "tuple[Box | TableDescriptor]":
+	def items(self) -> "tuple[Box | TableDescriptor, ...]":
 		"""Последовательность содержащихся в контейнере элементов."""
 
 		return tuple(self._Items.values())

@@ -152,7 +152,7 @@ class Attachments:
 		return len(self.__Data["free"]) + sum(1 for slot in self.slots if slot.file)
 
 	@property
-	def free(self) -> tuple[str]:
+	def free(self) -> tuple[str, ...]:
 		"""Последовательность имён файлов свободных вложений."""
 
 		return tuple(Value for Value in self.__Data["free"])
@@ -164,7 +164,7 @@ class Attachments:
 		return self.__Note
 
 	@property
-	def slots(self) -> tuple[Slot]:
+	def slots(self) -> tuple[Slot, ...]:
 		"""Последовательность данных слотов."""
 
 		return tuple(self.__Slots.values())
@@ -201,7 +201,7 @@ class Attachments:
 		"""
 
 		self.__Note = note
-		self.__Data: dict[str, dict[str | None] | list[str]] = {
+		self.__Data: dict[str, dict | list[str]] = {
 			"slots": data.get("slots") or dict().fromkeys(self.__Note.table.manifest.attachments.slots_names),
 			"free": data.get("free") or list()
 		}
@@ -224,7 +224,7 @@ class Attachments:
 		Rule = self.__Note.table.manifest.attachments.rule
 		if Rule < 2: raise Exceptions.Note.AttachmentsDenied(bool(Rule))
 
-		self.__Data["free"] = file.name
+		self.__Data["free"].append(file.name)
 
 		AttachmentsDirectoryPath = self.directory
 		os.makedirs(AttachmentsDirectoryPath, exist_ok = True)
@@ -264,12 +264,12 @@ class Attachments:
 			NewAttachmentsPath =  self.__Note.table.full_path / ".attachments" / str(new_id)
 			shutil.move(OldAttachmentsPath, NewAttachmentsPath)
 
-	def to_dict(self) -> dict[str, dict[str | None] | list[str]]:
+	def to_dict(self) -> dict:
 		"""
-		Возвращает словарное представление данных вложений.
+		Возвращает словарное представление объекта.
 
-		:return: Словарное представление данных вложений.
-		:rtype: dict[str, dict[str | None] | list[str]]
+		:return: Словарное представление объекта.
+		:rtype: dict
 		"""
 
 		return {
@@ -293,18 +293,19 @@ class Attachments:
 
 		except (FileNotFoundError, ValueError): pass
 
-	def validate(self) -> tuple[ValidationError]:
+	def validate(self) -> tuple[ValidationError, ...]:
 		"""
 		Проверяет существование заданных файлов вложений.
 
 		:return: Последовательность структур, описывающих отсутствующие вложения.
-		:rtype: tuple[ValidationError]
+		:rtype: tuple[ValidationError, ...]
 		"""
 
 		Errors = list()
 		AttachmentsDirectory = self.directory
 
 		for FreeFile in self.__Data["free"]:
+
 			FilePath = AttachmentsDirectory / FreeFile
 			if not FilePath.exists(): Errors.append(ValidationError(None, FreeFile))
 

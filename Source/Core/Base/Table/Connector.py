@@ -34,13 +34,13 @@ class NoteBonds:
 	#==========================================================================================#
 
 	@property
-	def bonds(self) -> tuple[Bond]:
+	def bonds(self) -> tuple[Bond, ...]:
 		"""Последовательность связей."""
 
 		return tuple(self.__Bonds.values())
 	
 	@property
-	def bonds_names(self) -> tuple[str]:
+	def bonds_names(self) -> tuple[str, ...]:
 		"""Последовательность имён связей."""
 
 		return tuple(self.__Bonds.keys())
@@ -58,13 +58,13 @@ class NoteBonds:
 		return self.__Operator.is_note_has_slaves(self.__NoteID)
 
 	@property
-	def masters(self) -> "tuple[BaseNote]":
+	def masters(self) -> "tuple[BaseNote, ...]":
 		"""Привязавшие записи."""
 
 		return self.__Operator.get_note_masters(self.__NoteID)
 
 	@property
-	def slaves(self) -> "tuple[BaseNote]":
+	def slaves(self) -> "tuple[BaseNote, ...]":
 		"""Привязанные записи."""
 
 		return self.__Operator.get_note_slaves(self.__NoteID)
@@ -267,7 +267,7 @@ class BondsOperator:
 		BondParameters = self.__Table.manifest.connections.bonds.get_bond_parameters(bond_name)
 		MasterBond = self.get_note_bonds(master_id).get_bond(bond_name)
 
-		if len(MasterBond.slaves_id) >= BondParameters.count: raise Exceptions.Note.MaxBindedNotesCountReached(bond_name, BondParameters.count)
+		if BondParameters.count and len(MasterBond.slaves_id) >= BondParameters.count: raise Exceptions.Note.MaxBindedNotesCountReached(bond_name, BondParameters.count)
 
 		MasterBond.slaves_id.append(slave_id)
 
@@ -290,14 +290,14 @@ class BondsOperator:
 
 		return self.__Bonds.get(note_id)
 
-	def get_note_masters(self, slave_id: int) -> "tuple[BaseNote]":
+	def get_note_masters(self, slave_id: int) -> "tuple[BaseNote, ...]":
 		"""
 		Возвращает привязавшие записи.
 
 		:param slave_id: ID записи, для которой нужно вернуть привязавшие записи.
 		:type slave_id: int
 		:return: Последовательность привязавших записей.
-		:rtype: tuple[BaseNote]
+		:rtype: tuple[BaseNote, ...]
 		"""
 
 		BindedNotes: list["BaseNote"] = list()
@@ -306,14 +306,14 @@ class BondsOperator:
 
 		return tuple(sorted(BindedNotes, key = lambda CurrentNote: CurrentNote.id))
 
-	def get_note_slaves(self, master_id: int) -> "tuple[BaseNote]":
+	def get_note_slaves(self, master_id: int) -> "tuple[BaseNote, ...]":
 		"""
 		Возвращает привязанные записи.
 
 		:param master_id: ID записи, для которой нужно вернуть привязанные записи.
 		:type master_id: int
 		:return: Последовательность привязанных записей.
-		:rtype: tuple[BaseNote]
+		:rtype: tuple[BaseNote, ...]
 		:raises NoteNotFound: Запись не найдена в таблице.
 		"""
 

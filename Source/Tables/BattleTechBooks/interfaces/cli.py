@@ -43,7 +43,7 @@ class TableCLI(BaseTableCLI):
 	def _statistics(self):
 		"""Выводит статистику чтения произведений."""
 
-		Notes: "tuple[Note]" = self._Table.notes
+		Notes: "tuple[Note, ...]" = self._Table.notes
 		Total = len(Notes)
 		Novels = 0
 		Stories = 0

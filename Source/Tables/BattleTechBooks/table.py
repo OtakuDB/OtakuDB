@@ -10,7 +10,7 @@ class Table(BaseTable):
 	#==========================================================================================#	
 
 	@property
-	def eras(self) -> tuple[Era]:
+	def eras(self) -> tuple[Era, ...]:
 		"""Последовательность эпох BattleTech."""
 
 		return self.__Eras
@@ -22,7 +22,7 @@ class Table(BaseTable):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта таблицы."""
 
-		self.__Eras: tuple[Era] = (
+		self.__Eras: tuple[Era, ...] = (
 			Era(-1, "Clan Homeworlds", None, None),
 			Era(0, "Pre–Star League", None, 2570),
 			Era(1, "Star League", 2571, 2780),

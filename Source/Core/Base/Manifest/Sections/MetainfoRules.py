@@ -16,7 +16,7 @@ class MetainfoFieldParameters:
 	"""Параметры поля метаданных."""
 
 	name: str
-	values: tuple[int | float | str] | None
+	values: tuple[int | float | str, ...] | None
 	description: str | None
 
 	def to_dict(self) -> dict:
@@ -53,19 +53,19 @@ class MetainfoRules(BaseSection):
 		return self.__IsFreeAllowed
 	
 	@property
-	def fields(self) -> tuple[MetainfoFieldParameters]:
+	def fields(self) -> tuple[MetainfoFieldParameters, ...]:
 		"""Последовательность параметров полей метаданных."""
 
 		return tuple(self.__Fields.values())
 
 	@property
-	def fields_names(self) -> tuple[str]:
+	def fields_names(self) -> tuple[str, ...]:
 		"""Последовательность имён описанных полей метаданных."""
 
 		return tuple(self.__Fields.keys())
 	
 	@property
-	def rule(self) -> bool:
+	def rule(self) -> int:
 		"""
 		Правило использования метаданных.
 		

@@ -37,13 +37,13 @@ class BondsParameters(BaseSection):
 	#==========================================================================================#
 
 	@property
-	def names(self) -> tuple[str]:
+	def names(self) -> tuple[str, ...]:
 		"""Последовательность имён связей."""
 
 		return tuple(self.__Bonds.keys())
 
 	@property
-	def parameters(self) -> tuple[BondParameters]:
+	def parameters(self) -> tuple[BondParameters, ...]:
 		"""Последовательность параметров связей."""
 
 		return tuple(self.__Bonds.values())
@@ -95,7 +95,7 @@ class BondsParameters(BaseSection):
 
 		return self.__Bonds[bond_name]
 
-	def parse(self, data: dict[str, dict]):
+	def parse(self, data: dict):
 		"""
 		Парсит данные из переданного словаря.
 

@@ -261,7 +261,7 @@ class BaseNoteCLI:
 
 		match command.name:
 			case "attach": self._attach(command.get_position_value("FILE"), command.get_key_value("--slot"), command.check_flag("-c"))
-			case "bind": self._bind(command.get_position_value("NOTE"), command.check_flag("-r"))
+			case "bind": self._bind(command.get_position_value("BOND_NAME"), command.get_position_value("NOTE"), command.check_flag("-r"))
 			case "close": self._Interface.set_current_object(self._Note.table)
 			case "delete": self._delete(command.check_flag("-y"))
 			case "metafields": self._metafields()

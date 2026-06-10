@@ -39,7 +39,7 @@ class Driver:
 		return self.__StorageDirectory
 
 	@property
-	def tables_types(self) -> tuple[str]:
+	def tables_types(self) -> tuple[str, ...]:
 		"""Последовательность названий доступных типов таблиц."""
 
 		Types = ListDir("Source/Tables")
@@ -51,6 +51,7 @@ class Driver:
 	# >>>>> ДЕКОРАТОРЫ <<<<< #
 	#==========================================================================================#
 
+	@staticmethod
 	def require_storage(function):
 		"""
 		Декоратор. Проверяет, примонтировано ли хранилище, перед выполнением метода.

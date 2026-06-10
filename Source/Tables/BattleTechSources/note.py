@@ -16,7 +16,7 @@ class Note(BaseNote):
 	#==========================================================================================#
 
 	@property
-	def another_names(self) -> tuple[str]:
+	def another_names(self) -> tuple[str, ...]:
 		"""Последовательность альтернативных названий."""
 
 		return tuple(self._Data["another_names"])

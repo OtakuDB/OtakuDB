@@ -116,13 +116,13 @@ class ColumnsOptions:
 	#==========================================================================================#
 
 	@property
-	def names(self) -> tuple[str]:
+	def names(self) -> tuple[str, ...]:
 		"""Названия колонок."""
 
 		return tuple(self.__Data.keys())
 	
 	@property
-	def options(self) -> tuple[ColumnOptions]:
+	def options(self) -> tuple[ColumnOptions, ...]:
 		"""Последовательность параметров колонок."""
 
 		return tuple(self.__Data.values())

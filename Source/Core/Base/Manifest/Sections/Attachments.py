@@ -28,7 +28,7 @@ class AttachmentsParameters(BaseSection):
 	#==========================================================================================#
 
 	@property
-	def rule(self) -> bool:
+	def rule(self) -> int:
 		"""
 		Правило использования вложений.
 		
@@ -40,13 +40,13 @@ class AttachmentsParameters(BaseSection):
 		return self.__Rule
 
 	@property
-	def slots(self) -> tuple[SlotParameters]:
+	def slots(self) -> tuple[SlotParameters, ...]:
 		"""Последовательность определений слотов."""
 
 		return tuple(self.__Slots.values())
 	
 	@property
-	def slots_names(self) -> tuple[str]:
+	def slots_names(self) -> tuple[str, ...]:
 		"""Последовательность имён слотов."""
 
 		return tuple(self.__Slots.keys())

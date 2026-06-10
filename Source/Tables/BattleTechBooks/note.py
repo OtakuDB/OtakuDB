@@ -19,7 +19,7 @@ class Note(BaseNote):
 	#==========================================================================================#
 
 	@property
-	def another_names(self) -> tuple[str]:
+	def another_names(self) -> tuple[str, ...]:
 		"""Последовательность альтернативных названий."""
 
 		return tuple(self._Data["another_names"])
@@ -85,7 +85,7 @@ class Note(BaseNote):
 	def __UpdateEstimationByLocalBinds(self):
 		"""Вычисляет оценку сборника на основе оценок привязанных записей."""
 
-		Slaves: "tuple[Note]" = self.bonds.slaves
+		Slaves: "tuple[Note, ...]" = self.bonds.slaves
 		Estimations = tuple(CurrentNote.estimation for CurrentNote in Slaves if CurrentNote.estimation)
 		Estimation = None
 
@@ -96,7 +96,7 @@ class Note(BaseNote):
 	def __UpdateStatusByLocalBinds(self):
 		"""Определяет статус сборника на основе статусов привязанных записей."""
 
-		BindedNotes: "tuple[Note]" = self.bonds.slaves
+		BindedNotes: "tuple[Note, ...]" = self.bonds.slaves
 		BindedNotesStatuses = list(CurrentNote.status for CurrentNote in BindedNotes if CurrentNote.status)
 
 		if BindedNotesStatuses.count(Statuses.Completed) == len(BindedNotes):

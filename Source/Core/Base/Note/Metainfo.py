@@ -15,7 +15,7 @@ class Metainfo:
 	#==========================================================================================#
 
 	@property
-	def fields(self) -> tuple[str]:
+	def fields(self) -> tuple[str, ...]:
 		"""Последовательность имён доступных полей метаданных."""
 
 		return tuple(self.__Data.keys())
@@ -46,11 +46,11 @@ class Metainfo:
 		if not self.__Note.table.manifest.metainfo_rules.is_free_allowed and field not in self.__Note.table.manifest.metainfo_rules.fields_names:
 			raise Exceptions.Note.MetainfoBlocked()
 		
-		FieldData = self.__Note.table.manifest.metainfo_rules.get_field(field)
-		if not FieldData.values: return
-		if value not in FieldData.values: raise Exceptions.Note.MetainfoBlocked()
+		FieldParameters = self.__Note.table.manifest.metainfo_rules.get_field_parameters(field)
+		if not FieldParameters.values: return
+		if value not in FieldParameters.values: raise Exceptions.Note.MetainfoBlocked()
 
-	def __NormalizeString(self, value: str, separator: str | None = ";") -> str | tuple[str]:
+	def __NormalizeString(self, value: str, separator: str | None = ";") -> str | tuple[str, ...]:
 		"""
 		Удаляет из строки повторяющиеся пробелы и разбивает её по вхождению символа `;`.
 
@@ -59,7 +59,7 @@ class Metainfo:
 		:param separator: Разделитель подстрок, используемый для формирования из строки набора значений по вхождению символа.
 		:type separator: str | None
 		:return: Результат обработки.
-		:rtype: str | tuple[str]
+		:rtype: str | tuple[str, ...]
 		"""
 
 		value = RemoveRecurringSubstrings(value, " ")
@@ -84,14 +84,14 @@ class Metainfo:
 
 		return value
 
-	def __ValidateData(self, data: dict[str, int | float | str | list[str] | None]) -> dict[str, int | float | str | tuple[str] | None]:
+	def __ValidateData(self, data: dict[str, int | float | str | list[str] | None]) -> dict[str, int | float | str | tuple[str, ...] | None]:
 		"""
 		Производит валидацию метаданных, преобразуя списки в кортежи.
 
 		:param data: Валидируемые данные.
 		:type data: dict[str, int | float | str | list[str] | None]
 		:return: Данные после валидации.
-		:rtype: dict[str, int | float | str | tuple[str] | None]
+		:rtype: dict[str, int | float | str | tuple[str, ...] | None]
 		"""
 
 		for Field, Value in data.items():
@@ -114,31 +114,31 @@ class Metainfo:
 		"""
 
 		self.__Note = note
-		self.__Data: dict[str, int | float | str | tuple[str] | None] = self.__ValidateData(data)
+		self.__Data: dict[str, int | float | str | tuple[str, ...] | None] = self.__ValidateData(data)
 
 		self.__MetainfoRules = self.__Note.table.manifest.metainfo_rules
 
-	def __getitem__(self, field: str) -> int | float | str | tuple[str] | None:
+	def __getitem__(self, field: str) -> int | float | str | tuple[str, ...] | None:
 		"""
 		Возвращает значение поля метаданных.
 
 		:param field: Имя поля.
 		:type field: str
 		:return: Значение поля метаданых.
-		:rtype: int | float | str | tuple[str] | None
+		:rtype: int | float | str | tuple[str, ...] | None
 		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
 		"""
 
 		return self.get_field_value(field, exception = False)
 
-	def append_to_field(self, field: str, value: str | tuple[str], separator: str | None = ";"):
+	def append_to_field(self, field: str, value: str | tuple[str, ...], separator: str | None = ";"):
 		"""
 		Добавляет строку или набор строк в поле, содержащее строку или набор строк.
 
 		:param field: Имя поля.
 		:type field: str
 		:param value: Одна строка или набор.
-		:type value: str | tuple[str]
+		:type value: str | tuple[str, ...]
 		:param separator: Разделитель подстрок, используемый для формирования из строки набора значений по вхождению символа.
 		:type separator: str | None
 		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
@@ -178,7 +178,7 @@ class Metainfo:
 
 		except KeyError: pass
 
-	def get_field_value(self, field: str, exception: bool = True) -> int | float | str | tuple[str] | None:
+	def get_field_value(self, field: str, exception: bool = True) -> int | float | str | tuple[str, ...] | None:
 		"""
 		Возвращает значение поля метаданных.
 
@@ -187,7 +187,7 @@ class Metainfo:
 		:param exception: Указывает, выбрасывать ли исключения при отсутствии поля.
 		:type exception: bool
 		:return: Значение поля метаданых.
-		:rtype: int | float | str | tuple[str] | None
+		:rtype: int | float | str | tuple[str, ...] | None
 		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
 		"""
 		
@@ -195,14 +195,14 @@ class Metainfo:
 
 		return self.__Data.get(field)
 
-	def remove_from_field(self, field: str, value: str | tuple[str], separator: str | None = ";"):
+	def remove_from_field(self, field: str, value: str | tuple[str, ...], separator: str | None = ";"):
 		"""
 		Удаляет строку или набор строк из поля, содержащего строку или набор строк.
 
 		:param field: Имя поля.
 		:type field: str
 		:param value: Одна строка или набор.
-		:type value: str | tuple[str]
+		:type value: str | tuple[str, ...]
 		:param separator: Разделитель подстрок, используемый для формирования из строки набора значений по вхождению символа.
 		:type separator: str | None
 		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
@@ -222,14 +222,14 @@ class Metainfo:
 		for Element in set(value): FieldValue.remove(Element)
 		self.set_field_value(field, tuple(FieldValue))
 
-	def set_field_value(self, field: str, value: int | float | str | tuple[str] | None, separator: str | None = ";"):
+	def set_field_value(self, field: str, value: int | float | str | tuple[str, ...] | None, separator: str | None = ";"):
 		"""
 		Задаёт значение поля метаданных.
 
 		:param field: Имя поля.
 		:type field: str
 		:param value: Значение. При передаче `None` поле удаляется.
-		:type value: int | float | str | tuple[str] | None
+		:type value: int | float | str | tuple[str, ...] | None
 		:param separator: Разделитель подстрок, используемый для формирования из строки набора значений по вхождению символа.
 		:type separator: str | None
 		:raises MetainfoBlocked: Прикрепление метаданных заброкировано фильтром манифеста.
@@ -261,14 +261,14 @@ class Metainfo:
 		self.__Data[field] = value
 		self.__Note.save()
 
-	def to_dict(self, copy: bool = True) -> dict[str, int | float | str | tuple[str] | None]:
+	def to_dict(self, copy: bool = True) -> dict[str, int | float | str | tuple[str, ...] | None]:
 		"""
 		Возвращает словарное представление метаданных.
 
 		:param copy: Указывает, нужно ли вернуть копию внутреннего словаря или оригинал.
 		:type copy: bool
 		:return: Словарное представление метаданных.
-		:rtype: dict[str, int | float | str | tuple[str] | None]
+		:rtype: dict[str, int | float | str | tuple[str, ...] | None]
 		"""
 
 		return Copy(self.__Data) if copy else self.__Data

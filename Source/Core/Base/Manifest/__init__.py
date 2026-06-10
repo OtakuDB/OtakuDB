@@ -18,7 +18,7 @@ class Manifest:
 		return self.__Directory
 
 	@property
-	def type(self) -> str:
+	def type(self) -> str | None:
 		"""Тип таблицы."""
 
 		return self.__Type
@@ -78,7 +78,7 @@ class Manifest:
 		self.set_directory(directory)
 
 		self.__ManifestPath = self.__Directory / "manifest.json"
-		self.__Type = None
+		self.__Type: str | None = None
 
 		self.__Attachments = AttachmentsParameters(self)
 		self.__Common = CommonParameters(self)
