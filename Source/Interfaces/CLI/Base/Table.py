@@ -210,7 +210,7 @@ class BaseTableCLI:
 		:type field: str
 		:return: Значение ячейки.
 		:rtype: str | None
-		:raises MetainfoFieldMissing: Поле метаданных отсутствует.
+		:raises MetainfoFieldNotDescribed: Поле метаданных отсутствует.
 		"""
 
 		Value = note.metainfo.get_field_value(field)

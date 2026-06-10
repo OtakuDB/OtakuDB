@@ -72,12 +72,11 @@ class Slot:
 		:type copy: bool
 		:raises AttachmentSlotAlreadyFilled: Слот уже содержит файл.
 		:raises AttachmentsDenied: Вложение запрещено.
-		:raises AttachmentSlotMissing: Слот вложения не описан.
+		:raises AttachmentSlotNotDescribed: Слот вложения не описан.
 		"""
 		
 		match self.__Note.table.manifest.attachments.rule:
 			case 0: raise Exceptions.Note.AttachmentsDenied(False)
-
 		
 		if self.__File: raise Exceptions.Note.AttachmentSlotAlreadyFilled(self.__Name)
 		self.__File = file.name
@@ -203,7 +202,7 @@ class Attachments:
 
 		self.__Note = note
 		self.__Data: dict[str, dict[str | None] | list[str]] = {
-			"slots": data.get("slots") or dict().fromkeys(self.__Note.table.manifest.attachments.slots.keys()),
+			"slots": data.get("slots") or dict().fromkeys(self.__Note.table.manifest.attachments.slots_names),
 			"free": data.get("free") or list()
 		}
 
@@ -245,10 +244,10 @@ class Attachments:
 		:type slot: str
 		:return: Данные о слоте.
 		:rtype: SlotInfo
-		:raises AttachmentSlotMissing: Слот вложения не описан.
+		:raises AttachmentSlotNotDescribed: Слот вложения не описан.
 		"""
 
-		if slot not in self.__Slots: raise Exceptions.Note.AttachmentSlotMissing(slot)
+		if slot not in self.__Slots: raise Exceptions.Note.AttachmentSlotNotDescribed(slot)
 
 		return self.__Slots[slot]
 

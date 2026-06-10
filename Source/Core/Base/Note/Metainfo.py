@@ -126,7 +126,7 @@ class Metainfo:
 		:type field: str
 		:return: Значение поля метаданых.
 		:rtype: int | float | str | tuple[str] | None
-		:raises MetainfoFieldMissing: Поле метаданных отсутствует.
+		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
 		"""
 
 		return self.get_field_value(field, exception = False)
@@ -141,7 +141,7 @@ class Metainfo:
 		:type value: str | tuple[str]
 		:param separator: Разделитель подстрок, используемый для формирования из строки набора значений по вхождению символа.
 		:type separator: str | None
-		:raises MetainfoFieldMissing: Поле метаданных не описано.
+		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
 		:raises ValueError: Неверный тип значения.
 		"""
 
@@ -167,10 +167,10 @@ class Metainfo:
 		:type field: str
 		:param exception: Указывает, выбрасывать ли исключения при отсутствии поля.
 		:type exception: bool
-		:raises MetainfoFieldMissing: Поле метаданных не описано.
+		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
 		"""
 
-		if exception and field not in self.__MetainfoRules.fields_names: raise Exceptions.Note.MetainfoFieldMissing(field)
+		if exception and field not in self.__MetainfoRules.fields_names: raise Exceptions.Note.MetainfoFieldNotDescribed(field)
 
 		try:
 			del self.__Data[field]
@@ -188,10 +188,10 @@ class Metainfo:
 		:type exception: bool
 		:return: Значение поля метаданых.
 		:rtype: int | float | str | tuple[str] | None
-		:raises MetainfoFieldMissing: Поле метаданных не описано.
+		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
 		"""
-
-		if exception and field not in self.__MetainfoRules.fields_names: raise Exceptions.Note.MetainfoFieldMissing(field)
+		
+		if exception and field not in self.__MetainfoRules.fields_names: raise Exceptions.Note.MetainfoFieldNotDescribed(field)
 
 		return self.__Data.get(field)
 
@@ -205,7 +205,7 @@ class Metainfo:
 		:type value: str | tuple[str]
 		:param separator: Разделитель подстрок, используемый для формирования из строки набора значений по вхождению символа.
 		:type separator: str | None
-		:raises MetainfoFieldMissing: Поле метаданных не описано.
+		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
 		:raises ValueError: Неверный тип значения.
 		"""
 

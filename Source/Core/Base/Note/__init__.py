@@ -10,6 +10,7 @@ from pathlib import Path
 import os
 
 if TYPE_CHECKING:
+	from Source.Core.Base.Table.Connector import NoteBonds
 	from Source.Core.Session.Driver import Driver
 	from Source.Core.Base.Table import BaseTable
 
@@ -25,6 +26,12 @@ class BaseNote:
 		"""Оператор вложений."""
 
 		return self._Attachments
+	
+	@property
+	def bonds(self) -> "NoteBonds":
+		"""Связи записи."""
+
+		return self._Table.connector.bonds.get_note_bonds(self._ID)
 
 	@property
 	def full_path(self) -> Path:
@@ -74,7 +81,7 @@ class BaseNote:
 		self._Data = {
 			"name": None,
 			"metainfo": dict(),
-			"attachments": dict().fromkeys(self._Table.manifest.attachments.slots.keys(), None)
+			"attachments": dict().fromkeys(self._Table.manifest.attachments.slots_names, None)
 		} | self._GetEmptyNote()
 
 		if NoteFullPath.exists():
@@ -90,12 +97,6 @@ class BaseNote:
 
 		self._Metainfo = Metainfo(self, self._Data.get("metainfo") or dict())
 		self._Attachments = Attachments(self, self._Data.get("attachments") or dict())
-
-	def _RunPostSaveCallbacksForBinds(self):
-		"""Запускает обработку изменений в записях, привязавших текущую запись."""
-
-		Masters = tuple(CurrentNote for CurrentNote in self._Table.notes if self._ID in CurrentNote.binds.local.notes_id)
-		for MasterNote in Masters: MasterNote.run_local_bind_callback(self)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ОБРАБОТЧИКИ CALLBACK-ВЫЗОВОВ <<<<< #
@@ -239,7 +240,7 @@ class BaseNote:
 		"""
 
 		WriteJSON(self.full_path, self.to_dict(use_presaver, copy = False), atomic = True)
-		for Master in self._Table.binder.local.get_masters(self._ID): Master.run_callback(CallbacksTypes.SlaveNoteSaved, self)
+		for Master in self.bonds.masters: Master.run_callback(CallbacksTypes.SlaveNoteSaved, self)
 
 	def set_id(self, id: int):
 		"""
@@ -253,7 +254,7 @@ class BaseNote:
 		NewPath = OldPath.parent / f"{id}.json"
 		os.rename(OldPath, NewPath)
 		self._Attachments.move(id)
-		self._Table.binder.local.update(self._ID, id)
+		self._Table.connector.bonds.update_note_id(self._ID, id)
 		self._ID = id
 
 	def sort(self):

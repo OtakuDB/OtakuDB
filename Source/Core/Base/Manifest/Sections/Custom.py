@@ -1,11 +1,9 @@
-from typing import Any, TYPE_CHECKING
-from abc import ABC, abstractmethod
+from ._BaseSection import BaseSection
 
-if TYPE_CHECKING:
-	from .. import Manifest
+from typing import Any
 
-class BaseContainer(ABC):
-	"""Базовый контейнер секции манифеста."""
+class CustomParameters(BaseSection):
+	"""Дополнительные опции."""
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -14,47 +12,54 @@ class BaseContainer(ABC):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		pass
+		self.__Data = dict()
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, manifest: "Manifest"):
+	def __getitem__(self, key: str) -> Any:
 		"""
-		Базовый контейнер секции манифеста.
+		Возвращает значение опции.
 
-		:param manifest: Манифест.
-		:type manifest: Manifest
+		:param key: Ключ опции.
+		:type key: str
+		:return: Значение.
+		:rtype: Any
+		:raises KeyError: Опция не найдена.
 		"""
 
-		self._Manifest = manifest
+		return self.__Data[key]
+	
+	def __setitem__(self, key: str, value: Any):
+		"""
+		Задаёт значение опции.
 
-		self._PostInitMethod()
+		:param key: Ключ опции.
+		:type key: str
+		:param value: Значение опции.
+		:type value: str
+		"""
 
-	@abstractmethod
-	def parse(self, data: dict[str, Any]):
+		self.__Data[key] = value
+		self.save()
+
+	def parse(self, data: dict):
 		"""
 		Парсит данные из переданного словаря.
 
 		:param data: Словарь данных.
-		:type data: dict[str, Any]
+		:type data: dict
 		"""
 
-		pass
+		self.__Data = data
 
-	def save(self):
-		"""Сохраняет манифест в локальный файл JSON."""
-
-		self._Manifest.save()
-
-	@abstractmethod
-	def to_dict(self) -> dict[str, Any]:
+	def to_dict(self) -> dict:
 		"""
 		Возвращает словарное представление объекта.
 
 		:return: Словарное представление объекта.
-		:rtype: dict[str, Any]
+		:rtype: dict
 		"""
 
-		pass
+		return self.__Data.copy()

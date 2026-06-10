@@ -1,4 +1,4 @@
-from Source.Core.Base.Manifest.Containers import InterfacesOptions
+from Source.Core.Base.Manifest.Sections import InterfacesOptions
 from Source.Interfaces.Enums import Interfaces
 
 from typing import Any

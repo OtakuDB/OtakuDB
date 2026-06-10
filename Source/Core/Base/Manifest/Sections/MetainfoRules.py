@@ -1,4 +1,4 @@
-from ._Base import BaseContainer
+from ._BaseSection import BaseSection
 
 from Source.Core import Exceptions
 
@@ -39,7 +39,7 @@ class MetainfoFieldParameters:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class MetainfoRules(BaseContainer):
+class MetainfoRules(BaseSection):
 	"""Правила метаданных."""
 
 	#==========================================================================================#
@@ -60,7 +60,7 @@ class MetainfoRules(BaseContainer):
 
 	@property
 	def fields_names(self) -> tuple[str]:
-		"""Последовательность имён явно указанных полей метаданных."""
+		"""Последовательность имён описанных полей метаданных."""
 
 		return tuple(self.__Fields.keys())
 	
@@ -82,22 +82,22 @@ class MetainfoRules(BaseContainer):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __ParseFields(self) -> dict[str, MetainfoFieldParameters]:
+	def __ParseFields(self, data: dict[str, dict]) -> dict[str, MetainfoFieldParameters]:
 		"""
 		Парсит словарь данных полей в объектные представления.
 
-		:return: Список представлений данных полей.
+		:param data: Словарь данных.
+		:type data: dict
+		:return: Словарь параметров полей метаданных.
 		:rtype: dict[str, MetainfoFieldParameters]
 		"""
-
+		
 		FieldsData = dict()
 
-		for Field in self.fields_names:
-			Rule: dict = self.__Data["fields"][Field]
-
-			Values = Rule.get("values")
+		for Field, Parameters in data.items():
+			Values = Parameters.get("values")
 			if Values != None: Values = ToIterable(Values)
-			Description = Rule.get("description")
+			Description = Parameters.get("description")
 			
 			FieldsData[Field] = MetainfoFieldParameters(Field, Values, Description)
 
@@ -111,13 +111,13 @@ class MetainfoRules(BaseContainer):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self.__IsFreeAllowed = False
-		self.__Fields: dict[str, MetainfoFieldParameters] = self.__ParseFields()
+		self.__Fields: dict[str, MetainfoFieldParameters] = dict()
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def add_field(self, field: str, values: Iterable[int | float | str] | None, description: str | None = None, save: bool = True):
+	def create_field_parameters(self, field: str, values: Iterable[int | float | str] | None, description: str | None = None, save: bool = True):
 		"""
 		Создаёт параметры поля метаданных.
 
@@ -158,9 +158,9 @@ class MetainfoRules(BaseContainer):
 		"""
 
 		self.__IsFreeAllowed = bool(data.get("free_allowed"))
-		self.__Fields: dict[str, MetainfoFieldParameters] = self.__ParseFields()
+		self.__Fields: dict[str, MetainfoFieldParameters] = self.__ParseFields(data.get("fields") or dict())
 
-	def remove_field(self, field: str, save: bool = True):
+	def remove_field_parameters(self, field: str, save: bool = True):
 		"""
 		Удаляет параметры поля метаданных.
 

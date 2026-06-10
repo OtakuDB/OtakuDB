@@ -1,17 +1,21 @@
 from . import Manifest
 
+from abc import ABC, abstractmethod
 from pathlib import Path
 
-class ManifestGenerator:
+class ManifestGenerator(ABC):
 	"""Генератор манифеста."""
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@abstractmethod
 	def _EditManifest(self, manifest: Manifest) -> Manifest:
 		"""
 		Переопределите данный метод для редактирования стандартного манифеста.
+
+		После завершения редактирования будет выполнено обязательное сохранение манифеста, поэтому для методов редактирования рекомендуется отключать сохранение.
 
 		:param manifest: Редактируемый манифест.
 		:type manifest: Manifest
@@ -48,5 +52,7 @@ class ManifestGenerator:
 		
 		ManifestObject = Manifest(self.__Directory)
 		ManifestObject.set_type(self.__Type)
+		ManifestObject = self._EditManifest(ManifestObject)
+		ManifestObject.save()
 
-		return self._EditManifest(ManifestObject)
+		return ManifestObject

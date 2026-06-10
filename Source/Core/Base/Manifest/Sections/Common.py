@@ -1,6 +1,6 @@
-from ._Base import BaseContainer
+from ._BaseSection import BaseSection
 
-class Common(BaseContainer):
+class CommonParameters(BaseSection):
 	"""Общие опции таблицы."""
 
 	#==========================================================================================#

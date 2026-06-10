@@ -8,28 +8,33 @@ class Generator(ManifestGenerator):
 		"""
 		Переопределите данный метод для редактирования стандартного манифеста.
 
+		После завершения редактирования будет выполнено обязательное сохранение манифеста, поэтому для методов редактирования рекомендуется отключать сохранение.
+
 		:param manifest: Редактируемый манифест.
 		:type manifest: Manifest
 		:return: Отредактированный манифест.
 		:rtype: Manifest
 		"""
 		
-		manifest.common.switch_binds(True)
-		manifest.attachments.add_slot("ebook", "The e-book file.")
-		manifest.metainfo_rules.set_field("author", None, "One or more authors.")
-		manifest.metainfo_rules.set_field("publisher", None, "Publisher of paper book.")
-		manifest.metainfo_rules.set_field(
-			"series",
-			("The Proliferation Cycle", "Blitzkrieg", "MechWarrior"),
-			"Series to which the book belongs."
+		manifest.attachments.create_slot_parameters("ebook", "The e-book file.", save = False)
+
+		manifest.connections.bonds.create_bond_parameters("stories", "Stories that make up the book.", save = False)
+
+		manifest.metainfo_rules.create_field_parameters("author", None, "One or more authors.", save = False)
+		manifest.metainfo_rules.create_field_parameters("publisher", None, "Publisher of paper book.", save = False)
+		manifest.metainfo_rules.create_field_parameters(
+			field = "series",
+			values = ("Blitzkrieg", "MechWarrior"),
+			description = "Series to which the book belongs.",
+			save = False
 		)
-		manifest.metainfo_rules.set_field("publication_date", None, "Date of book publication in original.")
-		manifest.metainfo_rules.set_field("story_source", None, "Source of story.")
+		manifest.metainfo_rules.create_field_parameters("publication_date", None, "Date of book publication in original.", save = False)
+		manifest.metainfo_rules.create_field_parameters("story_source", None, "Source of story.", save = False)
 
 		ColumnsNames = ("ID", "Status", "Name", "Author", "Publication", "Type", "Series", "Era", "Estimation")
 		OptionsCLI = {
 			"columns": dict().fromkeys(ColumnsNames, {"enabled": True, "max_width": None})
 		}
-		manifest.interfaces_options.set_options(Interfaces.CLI, OptionsCLI)
+		manifest.interfaces_options.set_options(Interfaces.CLI, OptionsCLI, save = False)
 
 		return manifest

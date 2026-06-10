@@ -65,7 +65,7 @@ class BaseNoteCLI:
 
 		#---> Динамические команды: метаданные.
 		#==========================================================================================#
-		if self._Note.table.manifest.metainfo_rules.is_enabled:
+		if self._Note.table.manifest.metainfo_rules.rule:
 			Com = Command("metafields", "Prints metainfo fields data.", "Metainfo")
 			CommandsList.append(Com)
 
@@ -81,8 +81,10 @@ class BaseNoteCLI:
 
 		#---> Динамические команды: связи.
 		#==========================================================================================#
-		if self._Note.table.manifest.common.binds:
+		if self._Note.table.manifest.connections.bonds.names:
 			Com = Command("bind", "Bint another note to current.")
+			ComPos = Com.create_position("BOND_NAME", description = "Name of bond.", important = True)
+			ComPos.set_argument()
 			ComPos = Com.create_position("NOTE", description = "ID of current table note.", important = True)
 			ComPos.set_argument(ParametersTypes.UnsignedInteger)
 			Com.base.add_flag("-r", description = "Remove binding.")
@@ -122,13 +124,15 @@ class BaseNoteCLI:
 			if slot: self._Note.attachments.get_slot(slot).attach(path, copy)
 			else: self._Note.attachments.attach(path, copy)
 		except Exceptions.Note.AttachmentSlotAlreadyFilled: PrintError(f"Slot \"{slot}\" already filled.")
-		except Exceptions.Note.AttachmentsDenied: PrintError("Attachments denied.")
-		except Exceptions.Note.AttachmentSlotMissing: PrintError(f"Slot \"{slot}\" not described in manifest.")
+		except Exceptions.Note.AttachmentsDenied as ExceptionData: PrintError(ExceptionData)
+		except Exceptions.Note.AttachmentSlotNotDescribed: PrintError(f"Slot \"{slot}\" not described in manifest.")
 
-	def _bind(self, note_id: int, remove: bool):
+	def _bind(self, bond_name: str, note_id: int, remove: bool):
 		"""
 		Привязывает другую запись к текущей внутри той же таблицы.
 
+		:param bond_name: Имя связи.
+		:type bond_name: str
 		:param note_id: ID привязываемой записи.
 		:type note_id: int
 		:param remove: Указывает, нужно ли добавить связь или удалить.
@@ -136,12 +140,12 @@ class BaseNoteCLI:
 		"""
 		
 		try:
-			TargetNote = self._Note.table.get_note(note_id)
-			if remove: self._Note.table.binder.local.unbind(self._Note.id, TargetNote.id)
-			else: self._Note.table.binder.local.bind(self._Note.id, TargetNote.id)
+			if remove: self._Note.bonds.unbind(bond_name, note_id)
+			else: self._Note.bonds.bind(bond_name, note_id)
 
 		except Exceptions.Table.NoteNotFound: PrintError(f"Note with ID #{note_id} not found.")
-		except Exceptions.Note.LocalBindsDenied: PrintError("Same table notes binding denied.")
+		except Exceptions.Note.BondNotDescribed: PrintError(f"Bind connection \"{bond_name}\" not described in manifest.")
+		except Exceptions.Note.MaxBindedNotesCountReached as ExceptionData: PrintError(ExceptionData)
 
 	def _delete(self, confirm: bool = False):
 		"""
@@ -222,9 +226,9 @@ class BaseNoteCLI:
 			"Description": list()
 		}
 
-		for Name, Description in SlotsInfo.items():
-			Columns["Slot"].append(Name)
-			Columns["Description"].append(Description or "")
+		for CurrentSlotInfo in SlotsInfo:
+			Columns["Slot"].append(CurrentSlotInfo.name)
+			Columns["Description"].append(CurrentSlotInfo.description or "")
 
 		PrintTable(Columns, sort_by = "Slot")
 
@@ -239,7 +243,7 @@ class BaseNoteCLI:
 		if command.check_key("--slot"):
 			Slot = command.get_key_value("--slot")
 			try: self._Note.attachments.get_slot(Slot).clear()
-			except Exceptions.Note.AttachmentSlotMissing: PrintError(f"Slot \"{Slot}\" not described in manifest.")
+			except Exceptions.Note.AttachmentSlotNotDescribed: PrintError(f"Slot \"{Slot}\" not described in manifest.")
 
 		else: self._Note.attachments.unnatach(command.get_position_value("TARGET"))
 

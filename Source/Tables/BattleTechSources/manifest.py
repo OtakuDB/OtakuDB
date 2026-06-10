@@ -8,19 +8,22 @@ class Generator(ManifestGenerator):
 		"""
 		Переопределите данный метод для редактирования стандартного манифеста.
 
+		После завершения редактирования будет выполнено обязательное сохранение манифеста, поэтому для методов редактирования рекомендуется отключать сохранение.
+
 		:param manifest: Редактируемый манифест.
 		:type manifest: Manifest
 		:return: Отредактированный манифест.
 		:rtype: Manifest
 		"""
 
-		manifest.attachments.add_slot("ebook", "The e-book file.")
-		manifest.metainfo_rules.set_field("product_code", None, "Individual prodaction code.")
+		manifest.attachments.create_slot_parameters("ebook", "The e-book file.", save = False)
+
+		manifest.metainfo_rules.create_field_parameters("product_code", None, "Individual prodaction code.", save = False)
 
 		ColumnsNames = ("ID", "Status", "Code", "Name", "Ebook", "Type")
 		OptionsCLI = {
 			"columns": dict().fromkeys(ColumnsNames, {"enabled": True, "max_width": None})
 		}
-		manifest.interfaces_options.set_options(Interfaces.CLI, OptionsCLI)
+		manifest.interfaces_options.set_options(Interfaces.CLI, OptionsCLI, save = False)
 
 		return manifest

@@ -1,4 +1,4 @@
-from ._Base import BaseContainer
+from ._BaseSection import BaseSection
 
 from Source.Interfaces.Enums import Interfaces
 
@@ -6,7 +6,7 @@ from dublib.Methods.Data import Copy
 
 from typing import Any
 
-class InterfacesOptions(BaseContainer):
+class InterfacesOptions(BaseSection):
 	"""Опции интерфейсов."""
 
 	#==========================================================================================#

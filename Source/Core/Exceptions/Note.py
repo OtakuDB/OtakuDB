@@ -1,11 +1,3 @@
-class LocalBindsDenied(Exception):
-	"""Исключение: прикрепление записей той же таблицы к текущей записи запрещено."""
-
-	def __init__(self):
-		"""Исключение: прикрепление записей той же таблицы к текущей записи запрещено"""
-
-		super().__init__("Binding same table notes blocked by manifest.")
-
 #==========================================================================================#
 # >>>>> МЕТАДАННЫЕ <<<<< #
 #==========================================================================================#
@@ -98,28 +90,43 @@ class AttachmentSlotNotDescribed(Exception):
 # >>>>> СВЯЗИ <<<<< #
 #==========================================================================================#
 
-class LocalBindAlreadyDescribed(Exception):
-	"""Исключение: локальное соединение уже описано."""
+class BondAlreadyDescribed(Exception):
+	"""Исключение: связь уже описана."""
 
-	def __init__(self, connection: str):
+	def __init__(self, bond_name: str):
 		"""
-		Исключение: локальное соединение уже описано.
+		Исключение: связь уже описана.
 
-		:param connection: Имя соединения.
-		:type connection: str
-		"""
-
-		super().__init__(connection)
-
-class LocalBindNotDescribed(Exception):
-	"""Исключение: локальное соединение не описано."""
-
-	def __init__(self, connection: str):
-		"""
-		Исключение: локальное соединение не описано.
-
-		:param connection: Имя соединения.
-		:type connection: str
+		:param bond_name: Имя связи.
+		:type bond_name: str
 		"""
 
-		super().__init__(connection)
+		super().__init__(bond_name)
+
+class MaxBindedNotesCountReached(Exception):
+	"""Исключение: достигнуто максимальное количество прикрепляемых записей."""
+
+	def __init__(self, bond_name: str, count: int):
+		"""
+		Исключение: достигнуто максимальное количество прикрепляемых записей.
+
+		:param bond_name: Имя связи.
+		:type bond_name: str
+		:param count: Максимальное количество записей.
+		:type count: int
+		"""
+
+		super().__init__(f"For \"{bond_name}\" bond allowed only {count} notes.")
+
+class BondNotDescribed(Exception):
+	"""Исключение: связь не описана."""
+
+	def __init__(self, bond_name: str):
+		"""
+		Исключение: связь не описана.
+
+		:param bond_name: Имя связи.
+		:type bond_name: str
+		"""
+
+		super().__init__(bond_name)

@@ -1,6 +1,6 @@
 from ..Manifest import Manifest
 
-from .Binder import Binder
+from .Connector import Connector
 
 from Source.Core import Exceptions
 
@@ -26,10 +26,10 @@ class BaseTable:
 	#==========================================================================================#
 
 	@property
-	def binder(self) -> Binder:
+	def connector(self) -> Connector:
 		"""Оператор связей."""
 
-		return self._Binder
+		return self._Connector
 
 	@property
 	def full_path(self) -> Path:
@@ -154,7 +154,7 @@ class BaseTable:
 
 		self._Notes: "dict[int, BaseNote]" = dict()
 		self._NoteClass = self._GetNoteClass()
-		self._Binder = Binder(self)
+		self._Connector = Connector(self)
 		
 		self._PostInitMethod()
 

@@ -7,13 +7,16 @@ class Generator(ManifestGenerator):
 		"""
 		Переопределите данный метод для редактирования стандартного манифеста.
 
+		После завершения редактирования будет выполнено обязательное сохранение манифеста, поэтому для методов редактирования рекомендуется отключать сохранение.
+
 		:param manifest: Редактируемый манифест.
 		:type manifest: Manifest
 		:return: Отредактированный манифест.
 		:rtype: Manifest
 		"""
 
-		manifest.metainfo_rules.set_field("base", ("game", "manga", "novel", "original", "ranobe"), "Base for anime.")
 		manifest.custom["max_estimation"] = 10
+
+		manifest.metainfo_rules.create_field_parameters("base", ("game", "manga", "novel", "original", "ranobe"), "Base for anime.", save = False)
 
 		return manifest

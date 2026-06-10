@@ -1,9 +1,11 @@
-from ._Base import BaseContainer
+from typing import Any, TYPE_CHECKING
+from abc import ABC, abstractmethod
 
-from typing import Any
+if TYPE_CHECKING:
+	from .. import Manifest
 
-class Custom(BaseContainer):
-	"""Дополнительные опции."""
+class BaseSection(ABC):
+	"""Базовая секция манифеста."""
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -12,54 +14,47 @@ class Custom(BaseContainer):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		self.__Data = dict()
+		pass
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __getitem__(self, key: str) -> Any:
+	def __init__(self, manifest: "Manifest"):
 		"""
-		Возвращает значение опции.
+		Базовая секция манифеста.
 
-		:param key: Ключ опции.
-		:type key: str
-		:return: Значение.
-		:rtype: Any
-		:raises KeyError: Опция не найдена.
+		:param manifest: Манифест.
+		:type manifest: Manifest
 		"""
 
-		return self.__Data[key]
-	
-	def __setitem__(self, key: str, value: Any):
-		"""
-		Задаёт значение опции.
+		self._Manifest = manifest
 
-		:param key: Ключ опции.
-		:type key: str
-		:param value: Значение опции.
-		:type value: str
-		"""
+		self._PostInitMethod()
 
-		self.__Data[key] = value
-		self.save()
-
-	def parse(self, data: dict):
+	@abstractmethod
+	def parse(self, data: dict[str, Any]):
 		"""
 		Парсит данные из переданного словаря.
 
 		:param data: Словарь данных.
-		:type data: dict
+		:type data: dict[str, Any]
 		"""
 
-		self.__Data = data
+		pass
 
-	def to_dict(self) -> dict:
+	def save(self):
+		"""Сохраняет манифест в локальный файл JSON."""
+
+		self._Manifest.save()
+
+	@abstractmethod
+	def to_dict(self) -> dict[str, Any]:
 		"""
 		Возвращает словарное представление объекта.
 
 		:return: Словарное представление объекта.
-		:rtype: dict
+		:rtype: dict[str, Any]
 		"""
 
-		return self.__Data.copy()
+		pass

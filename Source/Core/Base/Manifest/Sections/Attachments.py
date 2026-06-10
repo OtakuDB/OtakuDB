@@ -1,4 +1,4 @@
-from ._Base import BaseContainer
+from ._BaseSection import BaseSection
 
 from Source.Core import Exceptions
 
@@ -20,7 +20,7 @@ class SlotParameters:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class Attachments(BaseContainer):
+class AttachmentsParameters(BaseSection):
 	"""Параметры вложений."""
 
 	#==========================================================================================#
@@ -44,6 +44,12 @@ class Attachments(BaseContainer):
 		"""Последовательность определений слотов."""
 
 		return tuple(self.__Slots.values())
+	
+	@property
+	def slots_names(self) -> tuple[str]:
+		"""Последовательность имён слотов."""
+
+		return tuple(self.__Slots.keys())
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -59,7 +65,7 @@ class Attachments(BaseContainer):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def add_slot(self, slot: str, description: str | None, save: bool = True):
+	def create_slot_parameters(self, slot: str, description: str | None, save: bool = True):
 		"""
 		Резервирует слот вложений для особого взаимодействия.
 
@@ -102,9 +108,9 @@ class Attachments(BaseContainer):
 		self.set_attachments_rule(data["rule"], save = False)
 		self.__Slots = dict()
 		SlotsData = data.get("slots") or dict()
-		for Slot, Description in SlotsData.items(): self.add_slot(Slot, Description, save = False)
+		for Slot, Description in SlotsData.items(): self.create_slot_parameters(Slot, Description, save = False)
 
-	def remove_slot(self, slot: str, save: bool = True):
+	def remove_slot_parameters(self, slot: str, save: bool = True):
 		"""
 		Удаляет слот вложений.
 

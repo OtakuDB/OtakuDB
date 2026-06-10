@@ -99,7 +99,7 @@ class Chronolog:
 			PublicationDate = None
 			
 			try: PublicationDate = CurrentNote.metainfo.get_field_value("publication_date")
-			except Exceptions.Note.MetainfoFieldMissing: pass
+			except Exceptions.Note.MetainfoFieldNotDescribed: pass
 			
 			Timestamps[CurrentNote.id] = self.__GetTimestamp(PublicationDate)
 		

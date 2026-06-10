@@ -1,4 +1,4 @@
-from .Containers import Attachments, Binder, Common, Custom, MetainfoRules, InterfacesOptions
+from .Sections import AttachmentsParameters, CommonParameters, ConnectionsParameters, CustomParameters, MetainfoRules, InterfacesOptions
 
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 
@@ -28,25 +28,25 @@ class Manifest:
 	#==========================================================================================#
 
 	@property
-	def attachments(self) -> Attachments:
+	def attachments(self) -> AttachmentsParameters:
 		"""Параметры вложений"""
 
 		return self.__Attachments
 
 	@property
-	def binder(self) -> Binder:
-		"""Параметры соединений."""
-
-		return self.__Binder
-
-	@property
-	def common(self) -> Common:
+	def common(self) -> CommonParameters:
 		"""Общие опции таблиц."""
 
 		return self.__Common
 
 	@property
-	def custom(self) -> Custom:
+	def connections(self) -> ConnectionsParameters:
+		"""Параметры соединений."""
+
+		return self.__Connections
+
+	@property
+	def custom(self) -> CustomParameters:
 		"""Дополнительные опции."""
 
 		return self.__Custom
@@ -80,10 +80,10 @@ class Manifest:
 		self.__ManifestPath = self.__Directory / "manifest.json"
 		self.__Type = None
 
-		self.__Attachments = Attachments(self)
-		self.__Binder = Binder(self)
-		self.__Common = Common(self)
-		self.__Custom = Custom(self)
+		self.__Attachments = AttachmentsParameters(self)
+		self.__Common = CommonParameters(self)
+		self.__Custom = CustomParameters(self)
+		self.__Connections = ConnectionsParameters(self)
 		self.__MetainfoRules = MetainfoRules(self)
 		self.__InterfacesOptions = InterfacesOptions(self) 
 
@@ -100,8 +100,8 @@ class Manifest:
 		self.__Type = Data["type"]
 
 		self.__Attachments.parse(Data.get("attachments") or dict())
-		self.__Binder.parse(Data.get("binder") or dict())
 		self.__Common.parse(Data.get("common") or dict())
+		self.__Connections.parse(Data.get("connections") or dict())
 		self.__Custom.parse(Data.get("custom") or dict())
 		self.__MetainfoRules.parse(Data.get("metainfo_rules") or dict())
 		self.__InterfacesOptions.parse(Data.get("interfaces_options") or dict())
@@ -149,8 +149,8 @@ class Manifest:
 		return {
 			"type": self.__Type,
 			"attachments": self.__Attachments.to_dict(),
-			"binder": self.__Binder.to_dict(),
 			"common": self.__Common.to_dict(),
+			"connections": self.__Connections.to_dict(),
 			"custom": self.__Custom.to_dict(),
 			"metainfo_rules": self.__MetainfoRules.to_dict(),
 			"interfaces_options": self.__InterfacesOptions.to_dict()

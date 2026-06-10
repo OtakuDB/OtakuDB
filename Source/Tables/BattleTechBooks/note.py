@@ -85,7 +85,7 @@ class Note(BaseNote):
 	def __UpdateEstimationByLocalBinds(self):
 		"""Вычисляет оценку сборника на основе оценок привязанных записей."""
 
-		Slaves: "tuple[Note]" = self._Table.binder.local.get_slaves(self._ID)
+		Slaves: "tuple[Note]" = self.bonds.slaves
 		Estimations = tuple(CurrentNote.estimation for CurrentNote in Slaves if CurrentNote.estimation)
 		Estimation = None
 
@@ -96,7 +96,7 @@ class Note(BaseNote):
 	def __UpdateStatusByLocalBinds(self):
 		"""Определяет статус сборника на основе статусов привязанных записей."""
 
-		BindedNotes: "tuple[Note]" = self._Table.binder.local.get_slaves(self._ID)
+		BindedNotes: "tuple[Note]" = self.bonds.slaves
 		BindedNotesStatuses = list(CurrentNote.status for CurrentNote in BindedNotes if CurrentNote.status)
 
 		if BindedNotesStatuses.count(Statuses.Completed) == len(BindedNotes):
@@ -151,7 +151,7 @@ class Note(BaseNote):
 		#---> Автоматический подсчёт количества историй, если не указано большее значение.
 		#==========================================================================================#
 		StoriesCount = self.stories_count or 0
-		BindsCount = len(self._Table.binder.local.get_slaves(self._ID))
+		BindsCount = len(self.bonds.slaves)
 		if BindsCount - StoriesCount == 1: self.set_stories_count(BindsCount)
 
 		#---> Автоматический подсчёт оценки и определение статуса.

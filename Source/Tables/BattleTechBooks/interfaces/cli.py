@@ -273,7 +273,7 @@ class NoteCLI(BaseNoteCLI):
 		:type count: int
 		"""
 
-		if count and self._Note.type != Types.Compilation: PrintWarning("Stories count expected only for compilations.")
+		if count and self._Note.type not in (Types.Anthology, Types.Compilation): PrintWarning("Stories count expected only for anthology or compilation.")
 		self._Note.set_stories_count(count)
 
 	def _source(self, source: str | None):
@@ -496,7 +496,7 @@ class NoteCLI(BaseNoteCLI):
 		#==========================================================================================#
 		UsedName = self._Note.name
 		AnotherNames = list(self._Note.another_names)
-		StoriesNotes = self._Note.table.binder.local.get_slaves(self._Note.id)
+		StoriesNotes = self._Note.bonds.slaves
 		
 		if self._Note.localized_name:
 			UsedName = self._Note.localized_name
@@ -549,9 +549,9 @@ class NoteCLI(BaseNoteCLI):
 		if self._Note.era: print(" " * 4 + f"🏺 Era: {self._Note.era.name}")
 		if self._Note.estimation: print(" " * 4 + f"⭐ Estimation: {self._Note.estimation}")
 		if self._Note.comment: print(" " * 4 + f"💭 Comment: {self._Note.comment}")
-		if all((not self._Note.table.binder.local.get_slaves(self._Note.id), self._Note.stories_count)): print(" " * 4 + f"📜 Stories: {self._Note.stories_count}")
+		if all((not self._Note.bonds.slaves, self._Note.stories_count)): print(" " * 4 + f"📜 Stories: {self._Note.stories_count}")
 
-		NoteMasters = self._Note.table.binder.local.get_masters(self._Note.id)
+		NoteMasters = self._Note.bonds.masters
 		if NoteMasters:
 			FirstNoteMaster: "Note" = NoteMasters[0]
 			MasterType = FirstNoteMaster.type.value.title() or "Books collection"
