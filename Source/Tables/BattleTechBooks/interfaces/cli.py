@@ -34,7 +34,7 @@ class TableCLI(BaseTableCLI):
 			Index += 1
 			Datetime = "unknown"
 			if Timestamp: Datetime = datetime.fromtimestamp(Timestamp).strftime("%d %B %Y")
-			print(f"{ID} > {Index} ({Datetime})")
+			if ID != Index: print(f"{ID} > {Index} ({Datetime})")
 
 		if not Confirmation("Temporary, notes will receive negative ID and then it will be inversed to new ID."): return
 

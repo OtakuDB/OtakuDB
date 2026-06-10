@@ -90,7 +90,7 @@ class BaseNote:
 
 		else:
 			self._ParseContainers()
-			self.save(use_presaver = False)
+			self.save()
 
 	def _ParseContainers(self):
 		"""Парсит контейнерные типы данных."""
@@ -231,16 +231,15 @@ class BaseNote:
 			case CallbacksTypes.AttachmentsChanged: self._Callback_AttachmentsChanged(*args, **kwargs)
 			case CallbacksTypes.SlaveNoteSaved: self._Callback_SlaveNoteSaved(*args, **kwargs)
 
-	def save(self, use_presaver: bool = True):
-		"""
-		Сохраняет данные записи в локальный файл JSON.
+	def save(self):
+		"""Сохраняет данные записи в локальный файл JSON."""
 
-		:param use_presaver: Указывает, нужно ли вызывать переопределяемый метод, выполняющийся перед сохранением.
-		:type use_presaver: bool
-		"""
+		IsNoteFileExists = self.full_path.exists()
 
-		WriteJSON(self.full_path, self.to_dict(use_presaver, copy = False), atomic = True)
-		for Master in self.bonds.masters: Master.run_callback(CallbacksTypes.SlaveNoteSaved, self)
+		WriteJSON(self.full_path, self.to_dict(copy = False), atomic = True)
+
+		if IsNoteFileExists:
+			for Master in self.bonds.masters: Master.run_callback(CallbacksTypes.SlaveNoteSaved, self)
 
 	def set_id(self, id: int):
 		"""
@@ -283,7 +282,7 @@ class BaseNote:
 
 		self._Data = dict(sorted(self._Data.items(), key = NoteKeysSorter))
 
-	def to_dict(self, use_presaver: bool = True, copy: bool = True, sort: bool = False) -> dict:
+	def to_dict(self, copy: bool = True, sort: bool = False) -> dict:
 		"""
 		Возвращает словарное представление записи.
 
@@ -297,7 +296,7 @@ class BaseNote:
 		:rtype: dict
 		"""
 
-		if use_presaver: self._PreSaveMethod()
+		self._PreSaveMethod()
 		self._Data["metainfo"] = self._Metainfo.to_dict(copy)
 		self._Data["attachments"] = self._Attachments.to_dict()
 		if sort: self.sort()

@@ -1,3 +1,4 @@
+from Source.Interfaces.CLI.Options.Local import TableInterfaceOptions
 from Source.Interfaces.CLI.Templates import PrintTable
 from Source.Interfaces.CLI.Functions import Unstar
 from Source.Core import Exceptions
@@ -6,6 +7,7 @@ from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData
 from dublib.CLI.Templates.Bus import PrintError, PrintWarning
 from dublib.CLI.Templates import Confirmation
 from dublib.CLI.TextStyler import FastStyler
+from dublib.Methods.System import Clear
 
 from typing import TYPE_CHECKING
 from pathlib import Path
@@ -368,6 +370,8 @@ class BaseNoteCLI:
 		self._Interface = interface
 		self._Note = note
 
+		self._InterfaceOptions = TableInterfaceOptions(self._Note.table.manifest.interfaces_options)
+
 		self._PostInitMethod()
 
 	def execute(self, command: ParsedCommandData) -> bool:
@@ -395,6 +399,7 @@ class BaseNoteCLI:
 	def view(self):
 		"""Отображает запись."""
 
+		if self._InterfaceOptions.autoclear: Clear()
 		self._ViewNote()
 		if self._Note.metainfo.has_values: self._ViewMetainfo()
 		if self._Note.attachments.count: self._ViewAttachments()

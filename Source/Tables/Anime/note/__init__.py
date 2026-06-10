@@ -108,7 +108,8 @@ class Note(BaseNote):
 	def _PreSaveMethod(self):
 		"""Метод, выполняющийся перед сохранением записи."""
 
-		self._Data["parts"] = tuple(CurrentPart.to_dict() for CurrentPart in self.__Parts)
+		try: self._Data["parts"] = tuple(CurrentPart.to_dict() for CurrentPart in self.__Parts)
+		except ArithmeticError: pass
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #

@@ -185,7 +185,7 @@ class NoteBonds:
 		for CurrentBond in self.__Bonds.values():
 			if old_slave_id in CurrentBond.slaves_id:
 				Index = CurrentBond.slaves_id.index(old_slave_id)
-				CurrentBond[Index] = new_slave_id
+				CurrentBond.slaves_id[Index] = new_slave_id
 
 class BondsOperator:
 	"""Оператор связей."""

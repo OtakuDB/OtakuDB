@@ -9,7 +9,7 @@ class NoteNotFound(Exception):
 		:type id: int
 		"""
 		
-		super().__init__(f"Note #{id} not found.")
+		super().__init__(id)
 
 class OperationError(Exception):
 	"""Исключение: ошибка во время выполнения операции с таблицей."""

@@ -176,7 +176,7 @@ class Note(BaseNote):
 		return {
 			"localized_name": None,
 			"another_names": [],
-			"type": "novel",
+			"type": "story",
 			"stories_count": None,
 			"era": None,
 			"estimation": None,

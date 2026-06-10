@@ -5,6 +5,7 @@ from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
 from dublib.CLI.Templates.Bus import PrintError, PrintWarning
 from dublib.CLI.Templates import Confirmation
 from dublib.CLI.TextStyler import FastStyler
+from dublib.Methods.System import Clear
 
 from typing import TYPE_CHECKING
 
@@ -274,7 +275,7 @@ class BaseTableCLI:
 					elif type(columns[ColumnName][Index]) != str: columns[ColumnName][Index] = str(columns[ColumnName][Index])
 
 					if len(columns[ColumnName][Index]) > Options.max_width:
-						columns[ColumnName][Index] = columns[ColumnName][Index][:Options.max_width] + "…"
+						columns[ColumnName][Index] = columns[ColumnName][Index][:Options.max_width].rstrip() + "…"
 
 			Buffer = FastStyler(ColumnName).decorate.bold
 			TableObject.add_column(Buffer, columns[ColumnName])
@@ -376,6 +377,8 @@ class BaseTableCLI:
 	
 	def view(self, search_query: str | None = None, reverse: bool = False):
 		"""Выводит список записей таблицы."""
+
+		if self._InterfaceOptions.autoclear: Clear()
 
 		Notes = self._Table.notes
 		if not Notes:
