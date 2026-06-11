@@ -4,7 +4,7 @@ from Source.Interfaces.CLI.Base import BaseTableCLI, BaseNoteCLI
 from Source.Interfaces.CLI.Functions import Unstar
 from Source.Core import Exceptions
 
-from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
+from dublib.CLI.Terminalyzer import ValidableTypes, Command, ParsedCommandData
 from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates.Bus import PrintError
 from dublib.Methods.Data import StringifyFloat
@@ -274,12 +274,12 @@ class NoteCLI(BaseNoteCLI):
 		Com = Command("base", "Set anime base.", "Metainfo")
 		BaesesNames = ", ".join(Element.value for Element in Bases)
 		ComPos = Com.create_position("VALUE", description = f"One of values: {BaesesNames}. Put * to clear.", important = True)
-		ComPos.set_argument(ParametersTypes.Alpha)
+		ComPos.set_argument(ValidableTypes.Alpha)
 		CommandsList.append(Com)
 
 		Com = Command("delpart", "Delete part.")
 		ComPos = Com.create_position("INDEX", "Part index.", important = True)
-		ComPos.set_argument(ParametersTypes.Integer)
+		ComPos.set_argument(ValidableTypes.Integer)
 		Com.base.add_flag("-y", description = "Automatically confirms deletion.")
 		CommandsList.append(Com)
 
@@ -288,7 +288,7 @@ class NoteCLI(BaseNoteCLI):
 
 		Com = Command("editpart", "Edit part data.")
 		ComPos = Com.create_position("INDEX", "Part index.", important = True)
-		ComPos.set_argument(ParametersTypes.Integer)
+		ComPos.set_argument(ValidableTypes.Integer)
 		ComPos = Com.create_position("STATUS", "Status of viewing.")
 		ComPos.add_flag("-a", description = "Mark part as announced.")
 		ComPos.add_flag("-s", description = "Mark part as skipped.")
@@ -296,37 +296,37 @@ class NoteCLI(BaseNoteCLI):
 		ComPos.add_flag("-w", description = "Mark part as fully watched.")
 		Com.base.add_key("--comment", description = "Comment to part. Put * to clear.")
 		Com.base.add_key("--name", description = "Name of part. Put * to clear.")
-		Com.base.add_key("--number", type = ParametersTypes.Number, description = "Number of part. Not index! Put 0 to clear.")
-		Com.base.add_key("--series", type = ParametersTypes.Integer, description = "Series count. Put 0 to clear.")
+		Com.base.add_key("--number", type = ValidableTypes.Number, description = "Number of part. Not index! Put 0 to clear.")
+		Com.base.add_key("--series", type = ValidableTypes.Integer, description = "Series count. Put 0 to clear.")
 		CommandsList.append(Com)
 
 		Com = Command("estimate", "Set estimation.")
 		MaxEstimation = self._Note.table.manifest.custom["max_estimation"]
 		ComPos = Com.create_position("ESTIMATION", f"Estimation from 1 to {MaxEstimation}. Put 0 to clear.", important = True)
-		ComPos.set_argument(ParametersTypes.Integer)
+		ComPos.set_argument(ValidableTypes.Integer)
 		CommandsList.append(Com)
 
 		Com = Command("mark", "Set mark of viewing progress to part.")
 		ComPos = Com.create_position("INDEX", "Part index.", important = True)
-		ComPos.set_argument(ParametersTypes.Integer)
+		ComPos.set_argument(ValidableTypes.Integer)
 		ComPos = Com.create_position("MARK", "Last watched episode number.", important = True)
-		ComPos.set_argument(ParametersTypes.Integer)
+		ComPos.set_argument(ValidableTypes.Integer)
 		CommandsList.append(Com)
 
 		Com = Command("move", "Move part.")
 		ComPos = Com.create_position("INDEX", "Part index.", important = True)
-		ComPos.set_argument(ParametersTypes.Integer)
+		ComPos.set_argument(ValidableTypes.Integer)
 		ComPos = Com.create_position("OPERATION", "Operation type.", important = True)
 		ComPos.add_flag("-up", description = "Up part (index decrease).")
-		ComPos.add_key("--up", type = ParametersTypes.Integer, description = "Up part several times (index decrease).")
+		ComPos.add_key("--up", type = ValidableTypes.Integer, description = "Up part several times (index decrease).")
 		ComPos.add_flag("-down", description = "Down part (index increase).")
-		ComPos.add_key("--down", type = ParametersTypes.Integer, description = "Down part several times (index increase).")
+		ComPos.add_key("--down", type = ValidableTypes.Integer, description = "Down part several times (index increase).")
 		CommandsList.append(Com)
 
 		Com = Command("newpart", "Create new part.")
 		Types = ", ".join(Type.value for Type in PartsTypes)
 		ComPos = Com.create_position("TYPE", f"Type of part: {Types}.", important = True)
-		ComPos.set_argument(ParametersTypes.Alpha)
+		ComPos.set_argument(ValidableTypes.Alpha)
 		CommandsList.append(Com)
 
 		Com = Command("ptypes", "Prints list of parts types.")

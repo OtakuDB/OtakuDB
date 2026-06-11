@@ -133,7 +133,7 @@ class Metainfo:
 
 	def append_to_field(self, field: str, value: str | tuple[str, ...], separator: str | None = ";"):
 		"""
-		Добавляет строку или набор строк в поле, содержащее строку или набор строк.
+		Добавляет строку или набор строк в поле, содержащее строку, набор строк или являющееся пустым.
 
 		:param field: Имя поля.
 		:type field: str
@@ -153,7 +153,8 @@ class Metainfo:
 		else: raise ValueError("Value isn't str or tuple type.")
 
 		FieldValue = self.get_field_value(field, exception = True)
-		if type(FieldValue) == str: FieldValue = [FieldValue]
+		if FieldValue is None: FieldValue = list()
+		elif type(FieldValue) == str: FieldValue = [FieldValue]
 		elif type(FieldValue) == tuple: FieldValue = list(FieldValue)
 		else: raise ValueError(f"Field \"{field}\" has non-string and non-sequence value.")
 

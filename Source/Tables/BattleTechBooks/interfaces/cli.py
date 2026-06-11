@@ -4,7 +4,7 @@ from ..Utils import Chronolog
 from Source.Interfaces.CLI.Base import BaseTableCLI, BaseNoteCLI
 from Source.Interfaces.CLI.Functions import Unstar
 
-from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
+from dublib.CLI.Terminalyzer import ValidableTypes, Command, ParsedCommandData
 from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
 from dublib.CLI.Templates.Bus import PrintError, PrintWarning
 from dublib.CLI.Templates import Confirmation
@@ -294,7 +294,7 @@ class NoteCLI(BaseNoteCLI):
 		"""
 		Задаёт номер журнала Shrapnel.
 
-		:param number: Номер журнала. `0` для очистки.
+		:param number: Номер журнала.
 		:type number: int
 		"""
 
@@ -302,7 +302,10 @@ class NoteCLI(BaseNoteCLI):
 			PrintWarning("Shrapnel issue number can be setted only for stories.")
 			return
 		
-		self._SetMetainfo("story_source", f"Shrapnel Issue #{number}" if number else None)
+		ShrapnelIssue = f"Shrapnel Issue #{number}"
+		
+		try: self._Note.metainfo.append_to_field("story_source", ShrapnelIssue)
+		except Exception as ExceptionData: PrintError(ExceptionData)
 
 	def _status(self, command: ParsedCommandData):
 		"""
@@ -408,8 +411,8 @@ class NoteCLI(BaseNoteCLI):
 
 		Com = Command("era", "Set BattleTech era.")
 		ComPos = Com.create_position("SOURCE", "Source of era data.", important = True)
-		ComPos.set_argument(ParametersTypes.Integer, "Era index.")
-		ComPos.add_key("--year", type = ParametersTypes.UnsignedInteger, description = "Year of book events.")
+		ComPos.set_argument(ValidableTypes.Integer, "Era index.")
+		ComPos.add_key("--year", type = ValidableTypes.UnsignedInteger, description = "Year of book events.")
 		CommandsList.append(Com)
 
 		Com = Command("eras", "Show list of BattleTech eras.")
@@ -417,7 +420,7 @@ class NoteCLI(BaseNoteCLI):
 
 		Com = Command("estimate", "Set estimation.")
 		ComPos = Com.create_position("ESTIMATION", f"Estimation from 1 to 5. Put 0 to clear.", important = True)
-		ComPos.set_argument(ParametersTypes.UnsignedInteger)
+		ComPos.set_argument(ValidableTypes.UnsignedInteger)
 		CommandsList.append(Com)
 
 		Com = Command("localname", "Set localized name.")
@@ -435,14 +438,14 @@ class NoteCLI(BaseNoteCLI):
 		ComPos.set_argument()
 		CommandsList.append(Com)
 
-		Com = Command("scount", "Set stories count (for compilation type).")
+		Com = Command("scount", "Set stories count (for anthologies and compilations only).")
 		ComPos = Com.create_position("COUNT", f"Stories count. Put 0 to clear.", important = True)
-		ComPos.set_argument(ParametersTypes.UnsignedInteger)
+		ComPos.set_argument(ValidableTypes.UnsignedInteger)
 		CommandsList.append(Com)
 
-		Com = Command("shrapnel", "Set Shrapnel issue number. Only for stories.", category = "Metainfo")
-		ComPos = Com.create_position("NUMBER", "Shrapnel issue number. Put 0 to clear.", important = True)
-		ComPos.set_argument(ParametersTypes.UnsignedInteger)
+		Com = Command("shrapnel", "Add Shrapnel issue number as story source. Only for stories.", category = "Metainfo")
+		ComPos = Com.create_position("NUMBER", "Shrapnel issue number.", important = True)
+		ComPos.set_argument(ValidableTypes.UnsignedInteger)
 		CommandsList.append(Com)
 
 		Com = Command("series", "Set series.", category = "Metainfo")

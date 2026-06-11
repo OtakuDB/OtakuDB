@@ -1,7 +1,7 @@
 from .Base import BaseBoxCLI, BaseTableCLI, BaseNoteCLI
 from .Enums import InterractionLevels
 
-from dublib.CLI.Terminalyzer import Command, ParametersTypes,ParsedCommandData, Terminalyzer
+from dublib.CLI.Terminalyzer import Command, ValidableTypes,ParsedCommandData, Terminalyzer
 from dublib.CLI.Templates.Bus import PrintCritical, PrintError
 from dublib.CLI.TextStyler import Codes, TextStyler
 from dublib.Methods.System import Clear
@@ -41,7 +41,7 @@ class Interface:
 
 		Com = Command("mount", "Mount storage directory.", "Global")
 		ComPos = Com.create_position("PATH", "Path to storage directory.", important = True)
-		ComPos.set_argument(ParametersTypes.ValidPath)
+		ComPos.set_argument(ValidableTypes.ValidPath)
 		CommandsList.append(Com)
 
 		return CommandsList
@@ -143,10 +143,10 @@ class Interface:
 			if not CommandData: PrintError("Command not found.")
 			else: return CommandData
 
-		except Exceptions.CLI.Terminalyzer.NotEnoughParameters: PrintError("Not enough parameters.", origin = "CLI")
-		except Exceptions.CLI.Terminalyzer.InvalidParameterType: PrintError("Invalid parameter type.", origin = "CLI")
-		except Exceptions.CLI.Terminalyzer.TooManyParameters: PrintError("Too many parameters.", origin = "CLI")
-		except Exception as ExceptionData: PrintError(str(ExceptionData), origin = type(ExceptionData).__qualname__)
+		except Exceptions.CLI.Terminalyzer.NotEnoughParameters: PrintError("Not enough parameters.")
+		except Exceptions.CLI.Validators.ValidationError as ExceptionData: PrintError(ExceptionData)
+		except Exceptions.CLI.Terminalyzer.TooManyParameters: PrintError("Too many parameters.")
+		except Exception as ExceptionData: PrintError(ExceptionData)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #

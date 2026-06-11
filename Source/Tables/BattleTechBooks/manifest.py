@@ -20,16 +20,40 @@ class Generator(ManifestGenerator):
 
 		manifest.connections.bonds.create_bond_parameters("stories", "Stories that make up the book.", save = False)
 
-		manifest.metainfo_rules.create_field_parameters("author", None, "One or more authors.", save = False)
-		manifest.metainfo_rules.create_field_parameters("publisher", None, "Publisher of paper book.", save = False)
+		manifest.metainfo_rules.create_field_parameters(
+			field = "author",
+			types = str,
+			allow_list = True,
+			description = "One or more authors.",
+			save = False
+		)
+		manifest.metainfo_rules.create_field_parameters(
+			field = "publisher",
+			types = str,
+			description = "Publisher of paper book.",
+			save = False
+		)
 		manifest.metainfo_rules.create_field_parameters(
 			field = "series",
+			types = str,
+			allow_list = True,
 			values = ("Blitzkrieg", "MechWarrior"),
 			description = "Series to which the book belongs.",
 			save = False
 		)
-		manifest.metainfo_rules.create_field_parameters("publication_date", None, "Date of book publication in original.", save = False)
-		manifest.metainfo_rules.create_field_parameters("story_source", None, "Source of story.", save = False)
+		manifest.metainfo_rules.create_field_parameters(
+			field = "publication_date",
+			types = str,
+			description = "Date of book publication in original.",
+			save = False
+		)
+		manifest.metainfo_rules.create_field_parameters(
+			field = "story_source",
+			types = str,
+			allow_list = True,
+			description = "Source of story.",
+			save = False
+		)
 
 		ColumnsNames = ("ID", "Status", "Name", "Author", "Publication", "Type", "Series", "Era", "Estimation")
 		OptionsCLI = {

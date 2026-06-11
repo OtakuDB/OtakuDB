@@ -2,7 +2,7 @@ from ..Options.Local import TableInterfaceOptions
 
 from Source.Core import Exceptions
 
-from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData
+from dublib.CLI.Terminalyzer import Command, ValidableTypes, ParsedCommandData
 from dublib.CLI.Templates.Bus import PrintError
 
 from typing import TYPE_CHECKING
@@ -34,7 +34,7 @@ class BaseBoxCLI:
 
 		Com = Command("create", "Create table.")
 		ComPos = Com.create_position("TYPE", "Type of table.", important = True)
-		ComPos.set_argument(ParametersTypes.Alpha)
+		ComPos.set_argument(ValidableTypes.Alpha)
 		ComPos = Com.create_position("NAME", "Name of table. Used type name as default.")
 		ComPos.set_argument()
 		CommandsList.append(Com)

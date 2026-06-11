@@ -16,6 +16,8 @@ class MetainfoFieldParameters:
 	"""Параметры поля метаданных."""
 
 	name: str
+	types: tuple[type, ...] | None
+	allow_list: bool
 	values: tuple[int | float | str, ...] | None
 	description: str | None
 
@@ -31,6 +33,8 @@ class MetainfoFieldParameters:
 		if Values != None and len(Values) == 1: Values = Values[0]
 
 		return {
+			"types": tuple(CurrentType.__name__ for CurrentType in self.types) if self.types else None,
+			"allow_list": self.allow_list,
 			"values": Values,
 			"description": self.description
 		}
@@ -95,13 +99,40 @@ class MetainfoRules(BaseSection):
 		FieldsData = dict()
 
 		for Field, Parameters in data.items():
+			Types = Parameters.get("types")
+			if Types: Types = self.__ParseTypesString(Types)
+
+			AllowList = bool(Parameters.get("allow_list"))
+
 			Values = Parameters.get("values")
 			if Values != None: Values = ToIterable(Values)
+
 			Description = Parameters.get("description")
 			
-			FieldsData[Field] = MetainfoFieldParameters(Field, Values, Description)
+			FieldsData[Field] = MetainfoFieldParameters(Field, Types, AllowList, Values, Description)
 
 		return FieldsData
+	
+	def __ParseTypesString(self, string: str) -> tuple[type, ...]:
+		"""
+		Парсит допустимые типы из строковых представлений.
+
+		:param string: Обрабатываемая строка, в которой типы разделены символом `;`. Поддерживаются `float`, `int`, `str`.
+		:type string: str
+		:return: Последовательность поддерживаемых типов.
+		:rtype: tuple[type, ...]
+		:raises TypeError: Указан неподдерживаемый тип.
+		"""
+
+		Determinations = {Type.__name__: Type for Type in (float, int, str)}
+		TypesStrings = tuple(String.strip() for String in string.split(";"))
+		Result = list()
+
+		for TypeString in TypesStrings:
+			if TypeString not in Determinations: raise TypeError(f"Unsupported type \"{TypeString}\".")
+			Result.append(Determinations[TypeString])
+
+		return tuple(Result)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -117,12 +148,24 @@ class MetainfoRules(BaseSection):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def create_field_parameters(self, field: str, values: Iterable[int | float | str] | None, description: str | None = None, save: bool = True):
+	def create_field_parameters(
+			self,
+			field: str,
+			types: type | Iterable[type] | None = None,
+			allow_list: bool = False,
+			values: Iterable[int | float | str] | None = None,
+			description: str | None = None,
+			save: bool = True
+		):
 		"""
 		Создаёт параметры поля метаданных.
 
 		:param field: Имя поля.
 		:type field: str
+		:param types: Допустимые в поле типы данных.
+		:type types: type | Iterable[type] | None
+		:param allow_list: Указывает, разрешено ли помещать в поле несколько значений.
+		:type allow_list: bool
 		:param values: Последовательность принимаемых значений или `None` для любого.
 		:type values: Iterable[int | float | str] | None
 		:param description: Описание поля.
@@ -131,7 +174,8 @@ class MetainfoRules(BaseSection):
 		:type save: bool
 		"""
 
-		self.__Fields[field] = MetainfoFieldParameters(field, values, description)
+		if types: types = ToIterable(types)
+		self.__Fields[field] = MetainfoFieldParameters(field, types, allow_list, values, description)
 		if save: self.save()
 
 	def get_field_parameters(self, field: str) -> MetainfoFieldParameters:
@@ -157,7 +201,7 @@ class MetainfoRules(BaseSection):
 		:type data: dict
 		"""
 
-		self.__IsFreeAllowed = bool(data.get("free_allowed"))
+		self.__IsFreeAllowed = bool(data.get("allow_free"))
 		self.__Fields: dict[str, MetainfoFieldParameters] = self.__ParseFields(data.get("fields") or dict())
 
 	def remove_field_parameters(self, field: str, save: bool = True):
@@ -184,6 +228,6 @@ class MetainfoRules(BaseSection):
 		"""
 
 		return {
-			"free_allowed": self.__IsFreeAllowed,
+			"allow_free": self.__IsFreeAllowed,
 			"fields": {FieldData.name: FieldData.to_dict() for FieldData in self.__Fields.values()}
 		}

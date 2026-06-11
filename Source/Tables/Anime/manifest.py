@@ -17,6 +17,12 @@ class Generator(ManifestGenerator):
 
 		manifest.custom["max_estimation"] = 10
 
-		manifest.metainfo_rules.create_field_parameters("base", ("game", "manga", "novel", "original", "ranobe"), "Base for anime.", save = False)
+		manifest.metainfo_rules.create_field_parameters(
+			field = "base",
+			types = str,
+			values = ("game", "manga", "novel", "original", "ranobe"),
+			description = "Base for anime.",
+			save = False
+		)
 
 		return manifest

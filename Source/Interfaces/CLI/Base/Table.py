@@ -1,7 +1,7 @@
 from Source.Interfaces.CLI.Options.Local import TableInterfaceOptions
 from Source.Core import Exceptions
 
-from dublib.CLI.Terminalyzer import ParametersTypes, Command, ParsedCommandData
+from dublib.CLI.Terminalyzer import ValidableTypes, Command, ParsedCommandData
 from dublib.CLI.Templates.Bus import PrintError, PrintWarning
 from dublib.CLI.Templates import Confirmation
 from dublib.CLI.TextStyler import FastStyler
@@ -33,9 +33,9 @@ class BaseTableCLI:
 
 		Com = Command("chid", "Change ID of note.")
 		ComPos = Com.create_position("NOTE_ID", description = "Exists note ID.", important = True)
-		ComPos.set_argument(ParametersTypes.UnsignedInteger)
+		ComPos.set_argument(ValidableTypes.UnsignedInteger)
 		ComPos = Com.create_position("NEW_ID", description = "New note ID.", important = True)
-		ComPos.set_argument(ParametersTypes.UnsignedInteger)
+		ComPos.set_argument(ValidableTypes.UnsignedInteger)
 		ComPos = Com.create_position("MODE", description = "Mode of ID changing. By default may insert only on free index.")
 		ComPos.add_flag("-o", description = "Overwtite exists note.")
 		ComPos.add_flag("-s", description = "Swipe with exists note.")
@@ -47,11 +47,11 @@ class BaseTableCLI:
 
 		Com = Command("column", "Manage column viewing options.")
 		ComPos = Com.create_position("COLUMN", "Column name (case insensitive).", important = True)
-		ComPos.set_argument(ParametersTypes.Alpha)
+		ComPos.set_argument(ValidableTypes.Alpha)
 		ComPos = Com.create_position("OPERATION", "Management operation.", important = True)
 		ComPos.add_flag("-e", "Enable column.")
 		ComPos.add_flag("-d", "Disable column.")
-		ComPos.add_key("--max-width", type = ParametersTypes.UnsignedInteger, description = "Maximal width of column content. Put 0 to clear.")
+		ComPos.add_key("--max-width", type = ValidableTypes.UnsignedInteger, description = "Maximal width of column content. Put 0 to clear.")
 		CommandsList.append(Com)
 
 		Com = Command("columns", "Runs columns visibility manager.", "TUI")
@@ -67,7 +67,7 @@ class BaseTableCLI:
 
 		Com = Command("open", "Open note CLI.")
 		ComPos = Com.create_position("ID", "Note ID.", important = True)
-		ComPos.set_argument(ParametersTypes.UnsignedInteger)
+		ComPos.set_argument(ValidableTypes.UnsignedInteger)
 		CommandsList.append(Com)
 
 		Com = Command("rename", "Rename table.")

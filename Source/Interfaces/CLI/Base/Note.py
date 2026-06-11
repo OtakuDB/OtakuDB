@@ -3,7 +3,7 @@ from Source.Interfaces.CLI.Templates import PrintTable
 from Source.Interfaces.CLI.Functions import Unstar
 from Source.Core import Exceptions
 
-from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData
+from dublib.CLI.Terminalyzer import Command, ValidableTypes, ParsedCommandData
 from dublib.CLI.Templates.Bus import PrintError, PrintWarning
 from dublib.CLI.Templates import Confirmation
 from dublib.CLI.TextStyler import FastStyler
@@ -51,7 +51,7 @@ class BaseNoteCLI:
 		if self._Note.table.manifest.attachments.rule > 0:
 			Com = Command("attach", "Attach file to note.")
 			ComPos = Com.create_position("FILE", description = "Path to file.", important = True)
-			ComPos.set_argument(ParametersTypes.ValidPath)
+			ComPos.set_argument(ValidableTypes.ValidPath)
 			Com.base.add_key("--slot", description = "Slot name to attaching.")
 			Com.base.add_flag("-c", description = "Attach copy of file.")
 			CommandsList.append(Com)
@@ -88,7 +88,7 @@ class BaseNoteCLI:
 			ComPos = Com.create_position("BOND_NAME", description = "Name of bond.", important = True)
 			ComPos.set_argument()
 			ComPos = Com.create_position("NOTE", description = "ID of current table note.", important = True)
-			ComPos.set_argument(ParametersTypes.UnsignedInteger)
+			ComPos.set_argument(ValidableTypes.UnsignedInteger)
 			Com.base.add_flag("-r", description = "Remove binding.")
 			CommandsList.append(Com)
 
