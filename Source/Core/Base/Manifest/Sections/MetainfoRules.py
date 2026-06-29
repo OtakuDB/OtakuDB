@@ -2,7 +2,7 @@ from ._BaseSection import BaseSection
 
 from Source.Core import Exceptions
 
-from dublib.Methods.Data import ToIterable
+from dublib.Methods.Data import ToSequence
 
 from dataclasses import dataclass
 from typing import Iterable
@@ -105,7 +105,7 @@ class MetainfoRules(BaseSection):
 			AllowList = bool(Parameters.get("allow_list"))
 
 			Values = Parameters.get("values")
-			if Values != None: Values = ToIterable(Values)
+			if Values != None: Values = ToSequence(Values)
 
 			Description = Parameters.get("description")
 			
@@ -174,7 +174,7 @@ class MetainfoRules(BaseSection):
 		:type save: bool
 		"""
 
-		if types: types = ToIterable(types)
+		if types: types = ToSequence(types)
 		self.__Fields[field] = MetainfoFieldParameters(field, types, allow_list, values, description)
 		if save: self.save()
 

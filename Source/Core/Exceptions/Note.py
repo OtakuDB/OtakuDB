@@ -3,17 +3,17 @@
 #==========================================================================================#
 
 class MetainfoBlocked(Exception):
-	"""Исключение: невозможно задать метаданные."""
+	"""Исключение: поле метаданных не описано и свободный режим отключён."""
 
 	def __init__(self, message: str | None = None):
 		"""
-		Исключение: невозможно задать метаданные.
+		Исключение: поле метаданных не описано и свободный режим отключён.
 
 		:param message: Описание ошибки.
 		:type message: str | None
 		"""
 
-		super().__init__(message or "Metainfo filtered by manifest or denied.")
+		super().__init__(message or "Metainfo field not described and free metainfo denied.")
 
 class MetainfoFieldNotDescribed(Exception):
 	"""Исключение: поле метаданных не описано."""
@@ -22,7 +22,37 @@ class MetainfoFieldNotDescribed(Exception):
 		"""
 		Исключение: поле метаданных не описано.
 
-		:param field: Название поля метаданных.
+		:param field: Имя поля метаданных.
+		:type field: str
+		"""
+
+		super().__init__(field)
+
+class MetainfoFieldIncorrectTyping(Exception):
+	"""Исключение: неверный тип значения поля метаданных."""
+
+	def __init__(self, field: str, value_type: type, allowed_types: tuple[type, ...]):
+		"""
+		_summary_
+
+		:param field: _description_
+		:type field: str
+		:param value_type: _description_
+		:type value_type: type
+		:param allowed_types: _description_
+		:type allowed_types: tuple[type, ...]
+		"""
+
+		super().__init__(field)
+
+class MetainfoFieldEnlistingDenied(Exception):
+	"""Исключение: использование списков в поле метаданных запрещено."""
+
+	def __init__(self, field: str):
+		"""
+		Исключение: использование списков в поле метаданных запрещено.
+
+		:param field: Имя поля метаданных.
 		:type field: str
 		"""
 

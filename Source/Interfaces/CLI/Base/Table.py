@@ -157,7 +157,7 @@ class BaseTableCLI:
 			instruction = "Navigate by <Up>, <Down> keys, switch by <Space>, save by <Enter>."
 		).ask()
 
-		if EnabledColumns == None: return
+		if EnabledColumns is None: return
 		for Column in ColumnsOptions.names: ColumnsOptions.get_column_options(Column).set_status(Column in EnabledColumns)
 
 	def _delete(self, confirm: bool = False):
@@ -216,7 +216,7 @@ class BaseTableCLI:
 
 		Value = note.metainfo.get_field_value(field)
 		
-		if type(Value) == tuple:
+		if type(Value) is list:
 			ElementsCount = len(Value)
 			Value = Value[0]
 
@@ -225,6 +225,9 @@ class BaseTableCLI:
 			MaxColumnWidth = self._InterfaceOptions.columns.get_column_options(column).max_width
 			if OtherCount:
 				if not MaxColumnWidth or len(Value + OtherLabel) <= MaxColumnWidth: Value += OtherLabel
+
+		else: 
+			Value = str(Value)
 
 		return Value
 
@@ -413,7 +416,7 @@ class BaseTableCLI:
 			
 			for ColumnName in Columns.keys():
 				Value = RowData[ColumnName]
-				if Value == None: Value = ""
+				if Value is None: Value = ""
 				Columns[ColumnName].append(Value)
 
 		self._PrintTable(Columns, sort_by = "ID", reverse = reverse)
