@@ -40,19 +40,19 @@ class TableCLI(BaseTableCLI):
 
 		return CommandsList
 
-	def _GenerateTableRow(self, container: dict[str, None], note: "Note") -> dict[str, str | None]:
+	def _GenerateTableRow(self, container: dict[str, str | None], note: "Note") -> dict[str, str | None]:
 		"""
 		Генерирует данные для заполнения строки таблицы.
 
 		:param container: Словарь, в котром ключи являются названиями колонок.
-		:type container: dict[str, None]
+		:type container: dict[str, str | None]
 		:param note: Запись.
 		:type note: Note
 		:return: Словарь с подставленными значениями.
 		:rtype: dict[str, str | None]
 		"""
 
-		container["ID"] = note.id
+		container["ID"] = str(note.id)
 
 		NoteStatus = note.status
 		match NoteStatus:
@@ -65,7 +65,7 @@ class TableCLI(BaseTableCLI):
 
 		container["Name"] = note.name
 		container["Base"] = self._GenerateCellFromMetainfo(note, "Base", "base")
-		container["Estimation"] = note.estimation
+		container["Estimation"] = str(note.estimation)
 
 		return container
 
@@ -112,17 +112,18 @@ class NoteCLI(BaseNoteCLI):
 		:type command: ParsedCommandData
 		"""
 
-		Index = command.get_position_value("INDEX")
+		Index = command.get_important_position_value("INDEX", expected_type = int)
 		Part = None
 
-		try: Part = self._Note.get_part(Index)
+		try:
+			Part = self._Note.get_part(Index)
 		except IndexError:
 			PrintError(f"Part with index {Index} not found.")
 			return
 		
 		if command.check_key("--name"): Part.rename(Unstar(command.get_key_value("--name")))
 		if command.check_key("--comment"): Part.set_comment(Unstar(command.get_key_value("--comment")))
-		if command.check_key("--number"): Part.set_number(command.get_key_value("--number") or None)
+		if command.check_key("--number"): Part.set_number(command.get_key_value("--number", expected_type = int) or None)
 
 		if command.check_key("--series"):
 			Series = command.get_key_value("--series") or None
@@ -162,7 +163,8 @@ class NoteCLI(BaseNoteCLI):
 
 		Part = None
 
-		try: Part = self._Note.get_part(index)
+		try:
+			Part = self._Note.get_part(index)
 		except IndexError:
 			PrintError(f"Part with index {index} not found.")
 			return
@@ -180,10 +182,11 @@ class NoteCLI(BaseNoteCLI):
 		:type command: ParsedCommandData
 		"""
 
-		Index = command.get_position_value("INDEX")
+		Index = command.get_important_position_value("INDEX", expected_type = int)
 		Operation, Count = None, 1
 
-		try: self._Note.get_part(Index)
+		try:
+			self._Note.get_part(Index)
 		except IndexError:
 			PrintError(f"Part with index {Index} not found.")
 			return
@@ -200,22 +203,22 @@ class NoteCLI(BaseNoteCLI):
 
 		except ValueError: PrintError("Incorrect operations count.")
 
-	def _newpart(self, type: str):
+	def _newpart(self, part_type: str):
 		"""
 		Создаёт новую часть.
 
-		:param type: Тип части.
-		:type type: str
+		:param part_type: Тип части.
+		:type part_type: str
 		"""
 
-		try: type = PartsTypes(type)
-		except:
-			PrintError(f"Unsupported type \"{type}\".")
+		try:
+			PartTypeObject = PartsTypes(part_type)
+		except Exception:
+			PrintError(f"Unsupported type \"{part_type}\".")
 			return
 		
-		type: PartsTypes
-		Index = self._Note.create_part(type)
-		print(f"Created {type.value} with index {Index}.")
+		Index = self._Note.create_part(PartTypeObject)
+		print(f"Created {PartTypeObject.value} with index {Index}.")
 
 	def _tag(self, tag: str, remove: bool):
 		"""
@@ -362,12 +365,13 @@ class NoteCLI(BaseNoteCLI):
 		#==========================================================================================#
 		TotalProgress = StringifyFloat(self._Note.progress * 100.0)
 		TotalProgress = f" ({TotalProgress}% viewed)"
-		StatusEmoji = {
+		StatusEmoji: str = {
 			Statuses.Announced: "ℹ️",
 			Statuses.Watching: "▶️",
 			Statuses.Completed: "✅",
 			Statuses.Dropped: "⛔",
-			Statuses.Planned: "🗓️"
+			Statuses.Planned: "🗓️",
+			None: ""
 		}[self._Note.status]
 
 
@@ -391,7 +395,10 @@ class NoteCLI(BaseNoteCLI):
 		if not Parts: return
 		print(BOLD.get_styled_text("PARTS:"))
 
-		for Index in range(len(Parts)):
+		PartsCount = len(Parts)
+		PartsDigits = len(str(PartsCount))
+
+		for Index in range(PartsCount):
 			Part = Parts[Index]
 
 			#---> Генерация литералов.
@@ -425,6 +432,7 @@ class NoteCLI(BaseNoteCLI):
 
 			#---> Вывод данных части.
 			#==========================================================================================#
-			print(TextStyler(text_color = PartColor).get_styled_text(" " * 4 + f"{Index} ▸ {Part.type.value}{PartNumber}:{PartName}{PartStatusEmoji}"))
+			IndexString = str(Index).rjust(PartsDigits)
+			print(TextStyler(text_color = PartColor).get_styled_text(" " * 4 + f"{IndexString} ▸ {Part.type.value}{PartNumber}:{PartName}{PartStatusEmoji}"))
 			if Series: print(TextStyler(text_color = PartColor).get_styled_text(" " * 12 + Series))
 			if Part.comment: print(" " * 12 + GRAY.get_styled_text(f"💭 {Part.comment}"))

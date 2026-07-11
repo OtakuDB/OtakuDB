@@ -226,7 +226,7 @@ class BaseTableCLI:
 			if OtherCount:
 				if not MaxColumnWidth or len(Value + OtherLabel) <= MaxColumnWidth: Value += OtherLabel
 
-		else: 
+		elif Value is not None: 
 			Value = str(Value)
 
 		return Value
@@ -317,7 +317,7 @@ class BaseTableCLI:
 
 		return list()
 
-	def _GenerateTableRow(self, container: dict[str, None], note: "BaseNote") -> dict[str, str | None]:
+	def _GenerateTableRow(self, container: dict[str, str | None], note: "BaseNote") -> dict[str, str | None]:
 		"""
 		Генерирует данные для заполнения строки таблицы.
 
@@ -329,7 +329,7 @@ class BaseTableCLI:
 		:rtype: dict[str, str | None]
 		"""
 
-		container["ID"] = note.id
+		container["ID"] = str(note.id)
 		container["Name"] = note.name
 
 		return container

@@ -30,10 +30,10 @@ class MetainfoFieldParameters:
 		"""
 
 		Values = self.values
-		if Values != None and len(Values) == 1: Values = Values[0]
+		if Values is not None and len(Values) == 1: Values = Values[0]
 
 		return {
-			"types": tuple(CurrentType.__name__ for CurrentType in self.types) if self.types else None,
+			"types": ";".join(CurrentType.__name__ for CurrentType in self.types) if self.types else None,
 			"allow_list": self.allow_list,
 			"values": Values,
 			"description": self.description
