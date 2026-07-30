@@ -5,7 +5,7 @@ from Source.Core import Exceptions
 
 from dublib.Methods.Filesystem import ListDir
 
-from typing import TYPE_CHECKING
+from typing import cast, TYPE_CHECKING
 from pathlib import Path
 import functools
 import importlib
@@ -30,7 +30,7 @@ class Driver:
 	def root_box(self) -> RootBox | None:
 		"""Корневой контейнер."""
 
-		return self.__Boxes.get(".")
+		return self.__RootBox
 
 	@property
 	def storage_directory(self) -> Path | None:
@@ -79,6 +79,7 @@ class Driver:
 		
 		self.__StorageDirectory: Path | None = None
 		self.__Boxes: dict[str, Box] = dict()
+		self.__RootBox: RootBox | None = None
 
 	def mount(self, directory: Path):
 		"""
@@ -91,7 +92,7 @@ class Driver:
 		
 		if directory.exists():
 			self.__StorageDirectory = directory
-			self.__Boxes["."] = RootBox(self)
+			self.__RootBox = RootBox(self)
 		else: raise FileNotFoundError(directory)
 
 	def unmount(self):
@@ -177,8 +178,10 @@ class Driver:
 		:raises ItemNotFound: Контейнер не найден.
 		"""
 
-		try: return self.__Boxes[virtual_path.as_posix()]
-		except KeyError: raise Exceptions.Driver.ItemNotFound(virtual_path)
+		try:
+			return self.__Boxes[virtual_path.as_posix()]
+		except KeyError:
+			raise Exceptions.Driver.ItemNotFound(virtual_path)
 
 	@require_storage
 	def init_box(self, parent_box: Box | RootBox, name: str) -> Box:
@@ -209,6 +212,8 @@ class Driver:
 		:return: Возвращает `True`, если директория является контейнером.
 		:rtype: bool
 		"""
+
+		self.__StorageDirectory = cast(Path, self.__StorageDirectory)
 
 		FullManifestPath = self.__StorageDirectory / virtual_path / "manifest.json"
 
@@ -248,7 +253,10 @@ class Driver:
 		:raises IncorrectTableType: Несуществующий тип таблицы.
 		"""
 
-		if type not in self.tables_types: raise Exceptions.Driver.IncorrectTableType(type)
+		if type not in self.tables_types:
+			raise Exceptions.Driver.IncorrectTableType(type)
+		
+		self.__StorageDirectory = cast(Path, self.__StorageDirectory)
 
 		TableVirtualPath = box.virtual_path / name
 		TableFullPath = self.__StorageDirectory / TableVirtualPath

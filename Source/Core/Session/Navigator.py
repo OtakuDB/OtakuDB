@@ -41,7 +41,7 @@ class Navigator:
 
 		self.__Driver = driver
 
-		self.__CurrentBox = self.__Driver.root_box
+		self.__CurrentBox: Box | RootBox = self.__Driver.root_box
 
 	def inbox(self, box_name: str) -> Box:
 		"""
@@ -56,7 +56,7 @@ class Navigator:
 
 		if not self.__Driver.storage_directory: raise Exceptions.Driver.StorageUnmounted()
 		Item = self.__CurrentBox.get_item(box_name)
-		if type(Item) != Box: raise Exceptions.Navigator.UnableInboxNonBoxObject(Item.virtual_path)
+		if type(Item) is not Box: raise Exceptions.Navigator.UnableInboxNonBoxObject(Item.virtual_path)
 		self.__CurrentBox = Item
 	
 	def navigate(self, target_path: Path) -> Box:

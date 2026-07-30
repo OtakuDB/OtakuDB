@@ -192,7 +192,6 @@ class Interface:
 		if self.__Driver.storage_directory: Storage = self.__Driver.storage_directory.name
 		if self.__Session.navigator.current_box: VirtualPath = self.__Session.navigator.current_box.virtual_path
 
-
 		if self.__InterractionLevel == InterractionLevels.Table:
 			VirtualPath = VirtualPath / self.__CurrentObject.name
 

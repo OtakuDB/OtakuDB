@@ -119,7 +119,7 @@ class Note(BaseNote):
 		:type slave_note: BaseNote
 		"""
 
-		if self.type not in (Types.Anthology, Types.Compilation): return
+		if self.type is not Types.Compilation: return
 
 		self.__UpdateEstimationByLocalBonds()
 		self.__UpdateStatusByLocalBonds()
@@ -127,10 +127,9 @@ class Note(BaseNote):
 	def _Callback_AttachmentsChanged(self):
 		"""Обработчик вызова: вложения изменены."""
 
-		if self.collection_status == CollectionStatuses.Collected: return
+		if self.collection_status: return
 
 		if self._Attachments.get_slot("ebook").file: self.set_collection_status(CollectionStatuses.Ebook)
-		else: self.set_collection_status(None)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ТРИГГЕРНЫЕ МЕТОДЫ <<<<< #

@@ -273,7 +273,7 @@ class NoteCLI(BaseNoteCLI):
 		:type count: int
 		"""
 
-		if count and self._Note.type not in (Types.Anthology, Types.Compilation): PrintWarning("Stories count expected only for anthology or compilation.")
+		if count and self._Note.type is not Types.Compilation: PrintWarning("Stories count expected only for compilations.")
 		self._Note.set_stories_count(count)
 
 	def _source(self, source: str | None):
@@ -340,7 +340,7 @@ class NoteCLI(BaseNoteCLI):
 		Flag = command.get_position_parameter("TYPE")
 
 		match Flag.name:
-			case "-a": self._Note.set_type(Types.Anthology)
+			case "-a": self._Note.set_type(Types.Article)
 			case "-c": self._Note.set_type(Types.Compilation)
 			case "-n": self._Note.set_type(Types.Novel)
 			case "-s": self._Note.set_type(Types.Story)
@@ -438,8 +438,8 @@ class NoteCLI(BaseNoteCLI):
 		ComPos.set_argument()
 		CommandsList.append(Com)
 
-		Com = Command("scount", "Set stories count (for anthologies and compilations only).")
-		ComPos = Com.create_position("COUNT", f"Stories count. Put 0 to clear.", important = True)
+		Com = Command("scount", "Set stories count (for compilations only).")
+		ComPos = Com.create_position("COUNT", "Stories count. Put 0 to clear.", important = True)
 		ComPos.set_argument(ValidableTypes.UnsignedInteger)
 		CommandsList.append(Com)
 
@@ -471,8 +471,8 @@ class NoteCLI(BaseNoteCLI):
 
 		Com = Command("type", "Set type of book.")
 		ComPos = Com.create_position("TYPE", "Type of book.", important = True)
-		ComPos.add_flag("-a", description = "Anthology (short stories of different plots).")
-		ComPos.add_flag("-c", description = "Compilation (one storyline).")
+		ComPos.add_flag("-a", description = "Article (short story without plot).")
+		ComPos.add_flag("-c", description = "Compilation.")
 		ComPos.add_flag("-n", description = "Novel.")
 		ComPos.add_flag("-s", description = "Story.")
 		CommandsList.append(Com)

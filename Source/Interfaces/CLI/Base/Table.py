@@ -317,16 +317,16 @@ class BaseTableCLI:
 
 		return list()
 
-	def _GenerateTableRow(self, container: dict[str, str | None], note: "BaseNote") -> dict[str, str | None]:
+	def _GenerateTableRow(self, container: dict[str, int | str | None], note: "BaseNote") -> dict[str, int | str | None]:
 		"""
 		Генерирует данные для заполнения строки таблицы.
 
 		:param container: Словарь, в котром ключи являются названиями колонок.
-		:type container: dict[str, None]
+		:type container: dict[str, int | str | None]
 		:param note: Запись.
 		:type note: BaseNote
 		:return: Словарь с подставленными значениями.
-		:rtype: dict[str, str | None]
+		:rtype: dict[str, int | str | None]
 		"""
 
 		container["ID"] = str(note.id)
@@ -408,8 +408,8 @@ class BaseTableCLI:
 
 		#---> Вывод записей.
 		#==========================================================================================#
-		RowData = {Key: None for Key in self._InterfaceOptions.columns.names}
-		Columns = {Key: list() for Key in RowData.keys()}
+		RowData: dict = {Key: None for Key in self._InterfaceOptions.columns.names}
+		Columns: dict = {Key: list() for Key in RowData.keys()}
 
 		for CurrentNote in Notes:
 			RowData = self._GenerateTableRow(RowData, CurrentNote)

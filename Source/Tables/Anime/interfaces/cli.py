@@ -40,19 +40,19 @@ class TableCLI(BaseTableCLI):
 
 		return CommandsList
 
-	def _GenerateTableRow(self, container: dict[str, str | None], note: "Note") -> dict[str, str | None]:
+	def _GenerateTableRow(self, container: dict[str, int | str | None], note: "Note") -> dict[str, int | str | None]:
 		"""
 		Генерирует данные для заполнения строки таблицы.
 
 		:param container: Словарь, в котром ключи являются названиями колонок.
-		:type container: dict[str, str | None]
+		:type container: dict[str, int | str | None]
 		:param note: Запись.
 		:type note: Note
 		:return: Словарь с подставленными значениями.
-		:rtype: dict[str, str | None]
+		:rtype: dict[str, int | str | None]
 		"""
 
-		container["ID"] = str(note.id)
+		container["ID"] = note.id
 
 		NoteStatus = note.status
 		match NoteStatus:

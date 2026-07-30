@@ -38,7 +38,7 @@ class Statuses(Enum):
 class Types(Enum):
 	"""Типы произведений."""
 
-	Anthology = "anthology"
+	Article = "article"
 	Compilation = "compilation"
 	Novel = "novel"
 	Story = "story"
