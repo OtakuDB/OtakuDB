@@ -166,7 +166,7 @@ class Part:
 		:raises ValueError: Неверное значение или попытка задать для фильма.
 		"""
 
-		if type(series) not in (int, type(None)) or type(series) == int and series < 1: raise ValueError("Incorrect series value.")
+		if type(series) not in (int, type(None)) or type(series) is int and series < 1: raise ValueError("Incorrect series value.")
 		if self.type == PartsTypes.Film: raise ValueError("Films not supported series.")
 		self.__Data["series"] = series
 		self.__Note.save()

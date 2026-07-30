@@ -1,5 +1,7 @@
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
+
+from dublib.Methods.Decorators import run_before_method
 
 from Source.Core import Exceptions
 
@@ -25,7 +27,21 @@ class Navigator:
 	def root_box(self) -> RootBox:
 		"""Корневой контейнер."""
 
-		return self.__Driver.root_box
+		return cast(RootBox, self.__Driver.root_box)
+
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def _CheckIsStorageMounted(self):
+		"""
+		Если хранилище отмонтировано, выбрасывает исключение.
+
+		:raises StorageUnmounted: Хранилище отмонтировано.
+		"""
+
+		if not self.__Driver.root_box:
+			raise Exceptions.Driver.StorageUnmounted()
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -41,8 +57,11 @@ class Navigator:
 
 		self.__Driver = driver
 
-		self.__CurrentBox: Box | RootBox = self.__Driver.root_box
+		self._CheckIsStorageMounted()
 
+		self.__CurrentBox: Box | RootBox = cast(RootBox, self.__Driver.root_box)
+
+	@run_before_method("_CheckIsStorageMounted")
 	def inbox(self, box_name: str) -> Box:
 		"""
 		Открывает вложенное хранилище.
@@ -53,12 +72,17 @@ class Navigator:
 		:return: Представление текущего навигации.
 		:rtype: Box
 		"""
-
-		if not self.__Driver.storage_directory: raise Exceptions.Driver.StorageUnmounted()
+		
 		Item = self.__CurrentBox.get_item(box_name)
-		if type(Item) is not Box: raise Exceptions.Navigator.UnableInboxNonBoxObject(Item.virtual_path)
+
+		if type(Item) is not Box:
+			raise Exceptions.Navigator.UnableInboxNonBoxObject(Item.virtual_path)
+		
 		self.__CurrentBox = Item
-	
+
+		return Item
+
+	@run_before_method("_CheckIsStorageMounted")
 	def navigate(self, target_path: Path) -> Box:
 		"""
 		Выполняет переход по вирутальному пути.
@@ -80,16 +104,20 @@ class Navigator:
 				if PathPart == "..": CurrentVirtualPath = CurrentVirtualPath.parent
 				else: CurrentVirtualPath = CurrentVirtualPath / PathPart
 
-			if self.__Driver.is_box(CurrentVirtualPath): self.__CurrentBox = self.__Driver.get_box(CurrentVirtualPath)
-			else: raise Exceptions.Navigator.UnableInboxNonBoxObject(CurrentVirtualPath)
+			if self.__Driver.is_box(CurrentVirtualPath):
+				self.__CurrentBox = self.__Driver.get_box(CurrentVirtualPath)
+			else:
+				raise Exceptions.Navigator.UnableInboxNonBoxObject(CurrentVirtualPath)
 
 		return self.__CurrentBox
 
+	@run_before_method("_CheckIsStorageMounted")
 	def to_root(self):
 		"""Переходит в корневое представление древа навигации."""
 
-		self.__CurrentBox = self.__Driver.root_box
+		self.__CurrentBox = cast(RootBox, self.__Driver.root_box)
 
+	@run_before_method("_CheckIsStorageMounted")
 	def unbox(self):
 		"""
 		Переходит в родительское представление.
@@ -98,8 +126,7 @@ class Navigator:
 		:raises StorageUnmounted: Хранилище отмонтировано.
 		"""
 
-		if not self.__Driver.storage_directory: raise Exceptions.Driver.StorageUnmounted()
+		if type(self.__CurrentBox) is RootBox:
+			raise Exceptions.Navigator.RootUnboxingDenied()
 
-		Parent = self.__CurrentBox.parent
-		if not Parent: raise Exceptions.Driver.RootUnboxingDenied()
-		self.__CurrentBox = Parent
+		self.__CurrentBox = cast(Box, self.__CurrentBox).parent

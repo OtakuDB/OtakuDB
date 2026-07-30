@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Sequence
 
 from dublib.Methods.Data import ToSequence
 
@@ -105,7 +105,7 @@ class MetainfoRules(BaseSection):
 			AllowList = bool(Parameters.get("allow_list"))
 
 			Values = Parameters.get("values")
-			if Values != None: Values = ToSequence(Values)
+			if Values is not None: Values = ToSequence(Values)
 
 			Description = Parameters.get("description")
 			
@@ -151,9 +151,9 @@ class MetainfoRules(BaseSection):
 	def create_field_parameters(
 			self,
 			field: str,
-			types: type | Iterable[type] | None = None,
+			types: type | Sequence[type] | None = None,
 			allow_list: bool = False,
-			values: Iterable[int | float | str] | None = None,
+			values: Sequence[int | float | str] | None = None,
 			description: str | None = None,
 			save: bool = True
 		):
@@ -163,19 +163,19 @@ class MetainfoRules(BaseSection):
 		:param field: Имя поля.
 		:type field: str
 		:param types: Допустимые в поле типы данных.
-		:type types: type | Iterable[type] | None
+		:type types: type | Sequence[type] | None
 		:param allow_list: Указывает, разрешено ли помещать в поле несколько значений.
 		:type allow_list: bool
 		:param values: Последовательность принимаемых значений или `None` для любого.
-		:type values: Iterable[int | float | str] | None
+		:type values: Sequence[int | float | str] | None
 		:param description: Описание поля.
 		:type description: str | None
 		:param save: Указывает, нужно ли выполнить сохранение манифеста после процедуры.
 		:type save: bool
 		"""
 
-		if types: types = ToSequence(types)
-		self.__Fields[field] = MetainfoFieldParameters(field, types, allow_list, values, description)
+		AllowedTypes = ToSequence(types, target_type = tuple) if types else None
+		self.__Fields[field] = MetainfoFieldParameters(field, AllowedTypes, allow_list, tuple(values) if values else None, description)
 		if save: self.save()
 
 	def get_field_parameters(self, field: str) -> MetainfoFieldParameters:

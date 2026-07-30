@@ -2,11 +2,12 @@ import importlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from Source.Core import Exceptions
 from Source.Core.Base.Manifest import Manifest
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Table import BaseTable
-	from Source.Core.Session.Box import Box
+	from Source.Core.Session.Box import Box, RootBox
 
 	from .Driver import Driver
 
@@ -62,14 +63,14 @@ class TableDescriptor:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, driver: "Driver", box: "Box", name: str, manifest: Manifest | None = None):
+	def __init__(self, driver: "Driver", box: "Box | RootBox", name: str, manifest: Manifest | None = None):
 		"""
 		Дескриптор таблицы.
 
 		:param driver: Драйвер хранилища.
 		:type driver: Driver
 		:param box: Контейнер, которому принадлежит таблица.
-		:type box: Box
+		:type box: Box | RootBox
 		:param name: Имя таблицы.
 		:type name: str
 		:param manifest: Манифест таблицы. При отсутствии загружается автоматически.
@@ -81,6 +82,9 @@ class TableDescriptor:
 		self.__Box = box
 		self.__Name = name
 
+		if not self.__Driver.storage_directory:
+			raise Exceptions.Driver.StorageUnmounted()
+		
 		self.__VirtualPath = box.virtual_path / self.__Name
 		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
 
@@ -98,8 +102,11 @@ class TableDescriptor:
 		:type name: str
 		"""
 
+		if not self.__Driver.storage_directory:
+			raise Exceptions.Driver.StorageUnmounted()
+
 		self.__Box.pop_item(self.__Name)
 		self.__VirtualPath = self.__VirtualPath.parent / name
 		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
-		self.__Box.add_item(self, name)
+		self.__Box.add_item(self)
 		self.__Manifest.set_directory(self.full_path)

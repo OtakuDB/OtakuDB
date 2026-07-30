@@ -171,7 +171,7 @@ class BaseNote:
 
 		for Key in ("localized_name", "another_name", "another_names"):
 			NameObject = self._Data.get(Key)
-			if type(NameObject) == list: Strings += NameObject
+			if type(NameObject) is list: Strings += NameObject
 			elif NameObject: Strings.append(NameObject)
 
 		return Strings
@@ -213,7 +213,7 @@ class BaseNote:
 		:type name: str | None
 		"""
 
-		if type(name) == str: name = name.strip()
+		if type(name) is str: name = name.strip()
 		self._Data["name"] = name
 		self.save()
 

@@ -41,7 +41,7 @@ class Note(BaseNote):
 	def era(self) -> Era | None:
 		"""Эра BattleTech."""
 
-		if self._Data.get("era") == None: return
+		if self._Data.get("era") is None: return None
 		self._Table: "Table"
 		
 		for CurrentEra in self._Table.eras:
@@ -284,8 +284,8 @@ class Note(BaseNote):
 		for CurrentEra in self._Table.eras:
 			if CurrentEra.index < 0: continue
 
-			MatchStart = CurrentEra.start_year == None or year >= CurrentEra.start_year
-			MatchEnd = CurrentEra.end_year == None or year <= CurrentEra.end_year
+			MatchStart = CurrentEra.start_year is None or year >= CurrentEra.start_year
+			MatchEnd = CurrentEra.end_year is None or year <= CurrentEra.end_year
 
 			if MatchStart and MatchEnd: self.set_era_by_index(CurrentEra.index)
 

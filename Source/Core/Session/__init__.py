@@ -25,7 +25,7 @@ class Session:
 		"""Версия OtakuDB."""
 
 		try: return porcelain.describe("")
-		except: pass
+		except Exception: pass
 	
 	@property
 	def driver(self) -> Driver:

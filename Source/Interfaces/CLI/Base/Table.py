@@ -274,8 +274,8 @@ class BaseTableCLI:
 
 			if Options.max_width:
 				for Index in range(len(columns[ColumnName])):
-					if columns[ColumnName][Index] == None: columns[ColumnName][Index] = ""
-					elif type(columns[ColumnName][Index]) != str: columns[ColumnName][Index] = str(columns[ColumnName][Index])
+					if columns[ColumnName][Index] is None: columns[ColumnName][Index] = ""
+					elif type(columns[ColumnName][Index]) is not str: columns[ColumnName][Index] = str(columns[ColumnName][Index])
 
 					if len(columns[ColumnName][Index]) > Options.max_width:
 						columns[ColumnName][Index] = columns[ColumnName][Index][:Options.max_width].rstrip() + "…"

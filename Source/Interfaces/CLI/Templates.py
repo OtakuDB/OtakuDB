@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Sequence
 
 from prettytable import PLAIN_COLUMNS, PrettyTable
 
@@ -10,14 +10,14 @@ from .Options.Local import ColumnOptions
 # >>>>> ШАБЛОНЫ МЕТОДОВ ВВОДА-ВЫВОДА <<<<< #
 #==========================================================================================#
 
-def PrintTable(columns: dict[str, list], options: Iterable[ColumnOptions] | None = None, sort_by: str | None = None, reverse: bool = False):
+def PrintTable(columns: dict[str, list], options: Sequence[ColumnOptions] | None = None, sort_by: str | None = None, reverse: bool = False):
 	"""
 	Выводит таблицу.
 
 	:param columns: Словарь, в которором ключи – названия колнок, а значения – списки значений.
 	:type columns: dict[str, list]
 	:param options: Набор параметров для колонок.
-	:type options: Iterable[ColumnOptions] | None
+	:type options: Sequence[ColumnOptions] | None
 	:param sort_by: Указывает название колонки, по которой идёт сортировка.
 	:type sort_by: str | None
 	:param reverse: Переключает реверсирование отображаемого контента.

@@ -20,6 +20,9 @@ class RootBox:
 	def full_path(self) -> Path:
 		"""Полный путь к контейнеру."""
 
+		if not self._Driver.storage_directory:
+			raise Exceptions.Driver.StorageUnmounted()
+
 		return self._Driver.storage_directory / self.virtual_path
 
 	@property
@@ -50,6 +53,10 @@ class RootBox:
 		"""
 
 		self._Driver = driver
+
+		if not self._Driver.storage_directory:
+			raise Exceptions.Driver.StorageUnmounted()
+
 		self._VirtualPath = virtual_path
 		self._FullPath = self._Driver.storage_directory / self._VirtualPath
 		

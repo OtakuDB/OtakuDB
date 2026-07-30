@@ -195,7 +195,7 @@ class BaseNoteCLI:
 			print("Description:", FastStyler(Field.description).decorate.italic)
 			
 			Values = Field.values
-			if Values != None:
+			if Values is not None:
 				print("Values:")
 				for Value in Values: print(" " * 4 + f" > {Value}")
 
@@ -336,10 +336,10 @@ class BaseNoteCLI:
 		
 		for Field in self._Note.metainfo.fields:
 			Value = self._Note.metainfo[Field]
-			if Value == None: continue
+			if Value is None: continue
 			if Field not in self._Note.table.manifest.metainfo_rules.fields_names: Field = FastStyler(Field).colorize.blue
 
-			if type(Value) == tuple:
+			if type(Value) is tuple:
 				print(" " * 4 + f"{Field}:")
 				for Element in Value: print(" " * 9 + f" > {Element}")
 

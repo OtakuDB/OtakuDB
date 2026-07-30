@@ -106,12 +106,12 @@ class Driver:
 	#==========================================================================================#
 
 	@require_storage
-	def create_box(self, parent_box: Box, name: str) -> Box:
+	def create_box(self, parent_box: Box | RootBox, name: str) -> Box:
 		"""
 		Создаёт новый контейнер.
 
 		:param parent_box: Родительский контейнер.
-		:type parent_box: Box
+		:type parent_box: Box | RootBox
 		:param name: Имя контейнера.
 		:type name: str
 		:return: Новый контейнер.
@@ -129,12 +129,12 @@ class Driver:
 		return NewBox
 
 	@require_storage
-	def delete_box(self, parent_box: Box, name: str, purge: bool = False):
+	def delete_box(self, parent_box: Box | RootBox, name: str, purge: bool = False):
 		"""
 		Удаляет контейнер.
 
 		:param parent_box: Родительский контейнер.
-		:type parent_box: Box
+		:type parent_box: Box | RootBox
 		:param name: Имя контейнера.
 		:type name: str
 		:param purge: Указывает, нужно ли удалить содержимое контейнера, если он не пуст.
@@ -237,12 +237,12 @@ class Driver:
 	#==========================================================================================#
 
 	@require_storage
-	def create_table(self, box: Box, name: str, type: str) -> TableDescriptor:
+	def create_table(self, box: Box | RootBox, name: str, type: str) -> TableDescriptor:
 		"""
 		Создаёт новую таблицу.
 
 		:param box: Контейнер.
-		:type box: Box
+		:type box: Box | RootBox
 		:param name: Название таблицы.
 		:type name: str
 		:param type: Тип таблицы.
@@ -274,12 +274,12 @@ class Driver:
 		return Descriptor
 	
 	@require_storage
-	def delete_table(self, box: Box, name: str):
+	def delete_table(self, box: Box | RootBox, name: str):
 		"""
 		Удаляет таблицу.
 
 		:param box: Контейнер.
-		:type box: Box
+		:type box: Box | RootBox
 		:param name: Название таблицы.
 		:type name: str
 		:raises ItemNotFound: Элемент не найден.
