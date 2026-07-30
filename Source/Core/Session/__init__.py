@@ -1,11 +1,11 @@
-from .Navigator import Navigator
-from .Data import SessionData
-from .Driver import Driver
-
-from pathlib import Path
 from os import PathLike
+from pathlib import Path
 
 from dulwich import porcelain
+
+from .Data import SessionData
+from .Driver import Driver
+from .Navigator import Navigator
 
 class Session:
 	"""Сессия взаимодействия."""

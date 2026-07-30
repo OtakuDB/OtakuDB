@@ -1,16 +1,16 @@
-from ..note.Enums import Bases, PartStatuses, PartsTypes, Statuses
-
-from Source.Interfaces.CLI.Base import BaseTableCLI, BaseNoteCLI
-from Source.Interfaces.CLI.Functions import Unstar
-from Source.Core import Exceptions
-
-from dublib.CLI.Terminalyzer import ValidableTypes, Command, ParsedCommandData
-from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
-from dublib.CLI.Templates.Bus import PrintError
-from dublib.Methods.Data import StringifyFloat
-from dublib.CLI.Templates import Confirmation
-
 from typing import TYPE_CHECKING
+
+from dublib.CLI.Templates import Confirmation
+from dublib.CLI.Templates.Bus import PrintError
+from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
+from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
+from dublib.Methods.Data import StringifyFloat
+
+from Source.Core import Exceptions
+from Source.Interfaces.CLI.Base import BaseNoteCLI, BaseTableCLI
+from Source.Interfaces.CLI.Functions import Unstar
+
+from ..note.Enums import Bases, PartStatuses, PartsTypes, Statuses
 
 if TYPE_CHECKING:
 	from ..note import Note

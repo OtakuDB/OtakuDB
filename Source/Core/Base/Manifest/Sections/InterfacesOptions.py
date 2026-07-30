@@ -1,10 +1,10 @@
-from ._BaseSection import BaseSection
-
-from Source.Interfaces.Enums import Interfaces
+from typing import Any
 
 from dublib.Methods.Data import Copy
 
-from typing import Any
+from Source.Interfaces.Enums import Interfaces
+
+from ._BaseSection import BaseSection
 
 class InterfacesOptions(BaseSection):
 	"""Опции интерфейсов."""

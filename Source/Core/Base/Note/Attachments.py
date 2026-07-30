@@ -1,12 +1,12 @@
-from ..Note.Enums import CallbacksTypes
+import os
+import shutil
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from Source.Core import Exceptions
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from pathlib import Path
-import shutil
-import os
+from ..Note.Enums import CallbacksTypes
 
 if TYPE_CHECKING:
 	from . import BaseNote

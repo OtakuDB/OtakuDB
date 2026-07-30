@@ -1,18 +1,18 @@
+import os
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Literal
+
+from dublib.Methods.Data import Copy
+from dublib.Methods.Filesystem import ReadJSON, WriteJSON
+
 from .Attachments import Attachments
 from .Enums import CallbacksTypes
 from .Metainfo import Metainfo
 
-from dublib.Methods.Filesystem import ReadJSON, WriteJSON
-from dublib.Methods.Data import Copy
-
-from typing import Any, Literal, TYPE_CHECKING
-from pathlib import Path
-import os
-
 if TYPE_CHECKING:
+	from Source.Core.Base.Table import BaseTable
 	from Source.Core.Base.Table.Connector import NoteBonds
 	from Source.Core.Session.Driver import Driver
-	from Source.Core.Base.Table import BaseTable
 
 class BaseNote:
 	"""Базовая запись."""

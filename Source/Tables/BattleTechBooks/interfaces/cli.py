@@ -1,20 +1,20 @@
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from dublib.CLI.Templates import Confirmation
+from dublib.CLI.Templates.Bus import PrintError, PrintWarning
+from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
+from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
+
+from Source.Interfaces.CLI.Base import BaseNoteCLI, BaseTableCLI
+from Source.Interfaces.CLI.Functions import Unstar
+
 from ..Structs import CollectionStatuses, Statuses, Types
 from ..Utils import Chronolog
 
-from Source.Interfaces.CLI.Base import BaseTableCLI, BaseNoteCLI
-from Source.Interfaces.CLI.Functions import Unstar
-
-from dublib.CLI.Terminalyzer import ValidableTypes, Command, ParsedCommandData
-from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
-from dublib.CLI.Templates.Bus import PrintError, PrintWarning
-from dublib.CLI.Templates import Confirmation
-
-from typing import TYPE_CHECKING
-from datetime import datetime
-
 if TYPE_CHECKING:
-	from ..table import Table
 	from ..note import Note
+	from ..table import Table
 
 class TableCLI(BaseTableCLI):
 	"""Интерпретатор CLI таблицы."""

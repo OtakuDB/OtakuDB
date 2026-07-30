@@ -1,10 +1,10 @@
-from .TableDescriptor import TableDescriptor
+import os
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from Source.Core import Exceptions
 
-from typing import TYPE_CHECKING
-from pathlib import Path
-import os
+from .TableDescriptor import TableDescriptor
 
 if TYPE_CHECKING:
 	from .Driver import Driver

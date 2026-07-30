@@ -1,18 +1,18 @@
-from ..Options.Local import TableInterfaceOptions
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from dublib.CLI.Templates.Bus import PrintError
+from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from Source.Core import Exceptions
 
-from dublib.CLI.Terminalyzer import Command, ValidableTypes, ParsedCommandData
-from dublib.CLI.Templates.Bus import PrintError
-
-from typing import TYPE_CHECKING
-from pathlib import Path
+from ..Options.Local import TableInterfaceOptions
 
 if TYPE_CHECKING:
+	from Source.Core.Session import Session
+	from Source.Core.Session.Box import Box
 	from Source.Core.Session.TableDescriptor import TableDescriptor
 	from Source.Interfaces.CLI import Interface
-	from Source.Core.Session.Box import Box
-	from Source.Core.Session import Session
 
 class BaseBoxCLI:
 	"""Базовый интерпретатор CLI контейнера."""

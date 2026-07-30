@@ -1,24 +1,29 @@
-from .Base import BaseBoxCLI, BaseTableCLI, BaseNoteCLI
-from .Enums import InterractionLevels
-
-from dublib.CLI.Terminalyzer import Command, ValidableTypes,ParsedCommandData, Terminalyzer
-from dublib.CLI.Templates.Bus import PrintCritical, PrintError
-from dublib.CLI.TextStyler import Codes, TextStyler
-from dublib.Methods.System import Clear
-from dublib.CLI import readline
-from dublib import Exceptions
-
-from typing import TYPE_CHECKING
-from types import ModuleType
-from pathlib import Path
-from os import PathLike
 import importlib
 import shlex
+from os import PathLike
+from pathlib import Path
+from types import ModuleType
+from typing import TYPE_CHECKING
+
+from dublib import Exceptions
+from dublib.CLI import readline
+from dublib.CLI.Templates.Bus import PrintCritical, PrintError
+from dublib.CLI.Terminalyzer import (
+	Command,
+	ParsedCommandData,
+	Terminalyzer,
+	ValidableTypes,
+)
+from dublib.CLI.TextStyler import Codes, TextStyler
+from dublib.Methods.System import Clear
+
+from .Base import BaseBoxCLI, BaseNoteCLI, BaseTableCLI
+from .Enums import InterractionLevels
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Table import BaseTable, BaseNote
-	from Source.Core.Session.Box import Box
+	from Source.Core.Base.Table import BaseNote, BaseTable
 	from Source.Core.Session import Session
+	from Source.Core.Session.Box import Box
 
 class Interface:
 	"""Обработчик интерфейса командной строки."""

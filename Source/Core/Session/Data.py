@@ -1,7 +1,7 @@
-from dublib.Methods.Filesystem import ReadJSON, WriteJSON
-
 from json import JSONDecodeError
 from pathlib import Path
+
+from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 
 class SessionData:
 	"""Данные сессии."""

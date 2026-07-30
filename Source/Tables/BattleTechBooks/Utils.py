@@ -1,8 +1,8 @@
-from Source.Core import Exceptions
-
 from typing import TYPE_CHECKING
 
 import dateparser
+
+from Source.Core import Exceptions
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Table import BaseTable

@@ -1,8 +1,8 @@
-from Source.Interfaces.Enums import Interfaces
-from Source.Core.Session import Session
-from Source import EntryPoint
-
 from dublib.CLI.Terminalyzer import Command, Terminalyzer
+
+from Source import EntryPoint
+from Source.Core.Session import Session
+from Source.Interfaces.Enums import Interfaces
 
 #==========================================================================================#
 # >>>>> ГЕНЕРАЦИЯ КОМАНД <<<<< #

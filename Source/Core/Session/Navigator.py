@@ -1,9 +1,9 @@
-from .Box import Box, RootBox
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from Source.Core import Exceptions
 
-from typing import TYPE_CHECKING
-from pathlib import Path
+from .Box import Box, RootBox
 
 if TYPE_CHECKING:
 	from .Driver import Driver

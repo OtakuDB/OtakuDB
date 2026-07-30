@@ -1,6 +1,6 @@
-from .Structs import Era
-
 from Source.Core.Base.Table import BaseTable
+
+from .Structs import Era
 
 class Table(BaseTable):
 	"""Таблица прочтения произведений BattleTech."""

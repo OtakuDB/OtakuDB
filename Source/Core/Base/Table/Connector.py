@@ -1,9 +1,9 @@
-from Source.Core import Exceptions
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from Source.Core import Exceptions
 
 if TYPE_CHECKING:
 	from . import BaseNote, BaseTable

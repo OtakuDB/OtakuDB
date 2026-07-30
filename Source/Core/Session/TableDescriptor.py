@@ -1,12 +1,13 @@
-from Source.Core.Base.Manifest import Manifest
-
-from typing import TYPE_CHECKING
-from pathlib import Path
 import importlib
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from Source.Core.Base.Manifest import Manifest
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Table import BaseTable
-	from Source.Core.Session.Box import Box 
+	from Source.Core.Session.Box import Box
+
 	from .Driver import Driver
 
 class TableDescriptor:

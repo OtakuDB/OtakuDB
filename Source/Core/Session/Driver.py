@@ -1,16 +1,16 @@
-from .TableDescriptor import TableDescriptor
-from .Box import Box, RootBox
-
-from Source.Core import Exceptions
+import functools
+import importlib
+import os
+import shutil
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 from dublib.Methods.Filesystem import ListDir
 
-from typing import cast, TYPE_CHECKING
-from pathlib import Path
-import functools
-import importlib
-import shutil
-import os
+from Source.Core import Exceptions
+
+from .Box import Box, RootBox
+from .TableDescriptor import TableDescriptor
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Manifest.Generator import ManifestGenerator

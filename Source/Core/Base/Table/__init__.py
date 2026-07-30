@@ -1,22 +1,21 @@
-from ..Manifest import Manifest
-
-from .Connector import Connector
-
-from Source.Core import Exceptions
+import importlib
+import os
+import shutil
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal
 
 from dublib.Methods.Filesystem import ListDir
 
-from typing import Literal, TYPE_CHECKING
-from pathlib import Path
-import importlib
-import shutil
-import os
+from Source.Core import Exceptions
+
+from ..Manifest import Manifest
+from .Connector import Connector
 
 if TYPE_CHECKING:
-	from ..Note import BaseNote
-
-	from Source.Core.Session.TableDescriptor import TableDescriptor
 	from Source.Core.Session.Driver import Driver
+	from Source.Core.Session.TableDescriptor import TableDescriptor
+
+	from ..Note import BaseNote
 
 class BaseTable:
 	"""Базовая таблица."""

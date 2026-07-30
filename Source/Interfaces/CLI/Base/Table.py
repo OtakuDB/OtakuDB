@@ -1,22 +1,22 @@
-from Source.Interfaces.CLI.Options.Local import TableInterfaceOptions
-from Source.Core import Exceptions
+from typing import TYPE_CHECKING
 
-from dublib.CLI.Terminalyzer import ValidableTypes, Command, ParsedCommandData
-from dublib.CLI.Templates.Bus import PrintError, PrintWarning
+import questionary
+from prettytable import PLAIN_COLUMNS, PrettyTable
+
 from dublib.CLI.Templates import Confirmation
+from dublib.CLI.Templates.Bus import PrintError, PrintWarning
+from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.CLI.TextStyler import FastStyler
 from dublib.Methods.System import Clear
 
-from typing import TYPE_CHECKING
-
-from prettytable import PLAIN_COLUMNS, PrettyTable
-import questionary
+from Source.Core import Exceptions
+from Source.Interfaces.CLI.Options.Local import TableInterfaceOptions
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Table import BaseTable
-	from Source.Interfaces.CLI import Interface
 	from Source.Core.Base.Note import BaseNote
+	from Source.Core.Base.Table import BaseTable
 	from Source.Core.Session import Session
+	from Source.Interfaces.CLI import Interface
 
 class BaseTableCLI:
 	"""Базовый интерпретатор CLI таблицы."""

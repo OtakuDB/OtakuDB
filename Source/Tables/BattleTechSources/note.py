@@ -1,8 +1,8 @@
-from .Enums import CollectionStatuses, Statuses, Types
+from typing import Any
 
 from Source.Core.Base.Note import BaseNote
 
-from typing import Any
+from .Enums import CollectionStatuses, Statuses, Types
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #

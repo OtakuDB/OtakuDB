@@ -1,7 +1,7 @@
-from . import Manifest
-
 from abc import ABC, abstractmethod
 from pathlib import Path
+
+from . import Manifest
 
 class ManifestGenerator(ABC):
 	"""Генератор манифеста."""

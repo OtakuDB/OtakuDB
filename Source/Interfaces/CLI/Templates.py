@@ -1,10 +1,10 @@
-from .Options.Local import ColumnOptions
-
-from dublib.CLI.TextStyler import FastStyler
-
 from typing import Iterable
 
 from prettytable import PLAIN_COLUMNS, PrettyTable
+
+from dublib.CLI.TextStyler import FastStyler
+
+from .Options.Local import ColumnOptions
 
 #==========================================================================================#
 # >>>>> ШАБЛОНЫ МЕТОДОВ ВВОДА-ВЫВОДА <<<<< #

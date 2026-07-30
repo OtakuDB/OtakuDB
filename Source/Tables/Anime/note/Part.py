@@ -1,6 +1,6 @@
-from .Enums import PartStatuses, PartsTypes
+from typing import TYPE_CHECKING, Any
 
-from typing import Any, TYPE_CHECKING
+from .Enums import PartStatuses, PartsTypes
 
 if TYPE_CHECKING:
 	from . import Note

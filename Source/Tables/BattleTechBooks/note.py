@@ -1,8 +1,8 @@
-from .Structs import CollectionStatuses, Era, Statuses, Types
+from typing import TYPE_CHECKING, Any
 
 from Source.Core.Base.Note import BaseNote
 
-from typing import Any, TYPE_CHECKING
+from .Structs import CollectionStatuses, Era, Statuses, Types
 
 if TYPE_CHECKING:
 	from .table import Table

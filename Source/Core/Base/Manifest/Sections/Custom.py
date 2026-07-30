@@ -1,6 +1,6 @@
-from ._BaseSection import BaseSection
-
 from typing import Any
+
+from ._BaseSection import BaseSection
 
 class CustomParameters(BaseSection):
 	"""Дополнительные опции."""

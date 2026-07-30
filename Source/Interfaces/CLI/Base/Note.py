@@ -1,21 +1,21 @@
-from Source.Interfaces.CLI.Options.Local import TableInterfaceOptions
-from Source.Interfaces.CLI.Templates import PrintTable
-from Source.Interfaces.CLI.Functions import Unstar
-from Source.Core import Exceptions
+from pathlib import Path
+from typing import TYPE_CHECKING
 
-from dublib.CLI.Terminalyzer import Command, ValidableTypes, ParsedCommandData
-from dublib.CLI.Templates.Bus import PrintError, PrintWarning
 from dublib.CLI.Templates import Confirmation
+from dublib.CLI.Templates.Bus import PrintError, PrintWarning
+from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.CLI.TextStyler import FastStyler
 from dublib.Methods.System import Clear
 
-from typing import TYPE_CHECKING
-from pathlib import Path
+from Source.Core import Exceptions
+from Source.Interfaces.CLI.Functions import Unstar
+from Source.Interfaces.CLI.Options.Local import TableInterfaceOptions
+from Source.Interfaces.CLI.Templates import PrintTable
 
 if TYPE_CHECKING:
-	from Source.Interfaces.CLI import Interface
 	from Source.Core.Base.Note import BaseNote
 	from Source.Core.Session import Session
+	from Source.Interfaces.CLI import Interface
 
 class BaseNoteCLI:
 	"""Базовый интерпретатор CLI записи."""

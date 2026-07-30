@@ -1,9 +1,9 @@
-from typing import TYPE_CHECKING
 import importlib
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from Source.Interfaces.Enums import Interfaces
 	from Source.Core.Session import Session
+	from Source.Interfaces.Enums import Interfaces
 
 def RunInterface(interface: "Interfaces", session: "Session"):
 	"""

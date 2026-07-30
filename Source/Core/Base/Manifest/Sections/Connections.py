@@ -1,8 +1,8 @@
-from ._BaseSection import BaseSection
+from dataclasses import dataclass
 
 from Source.Core import Exceptions
 
-from dataclasses import dataclass
+from ._BaseSection import BaseSection
 
 #==========================================================================================#
 # >>>>> ПАРАМЕТРЫ СВЯЗЕЙ <<<<< #

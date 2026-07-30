@@ -1,9 +1,9 @@
-from ._BaseSection import BaseSection
+from dataclasses import dataclass
+from typing import Literal
 
 from Source.Core import Exceptions
 
-from dataclasses import dataclass
-from typing import Literal
+from ._BaseSection import BaseSection
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

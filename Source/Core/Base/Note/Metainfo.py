@@ -1,9 +1,9 @@
-from Source.Core import Exceptions
+from typing import TYPE_CHECKING, Sequence
 
-from dublib.Methods.Data import Copy, RemoveRecurringSubstrings, ToSequence
 from dublib.CLI.Validators import Validator_Number
+from dublib.Methods.Data import Copy, RemoveRecurringSubstrings, ToSequence
 
-from typing import Sequence, TYPE_CHECKING
+from Source.Core import Exceptions
 
 if TYPE_CHECKING:
 	from . import BaseNote

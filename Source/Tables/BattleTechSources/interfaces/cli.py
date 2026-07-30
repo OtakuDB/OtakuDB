@@ -1,13 +1,13 @@
-from ..Enums import CollectionStatuses, Statuses, Types
+from typing import TYPE_CHECKING
 
-from Source.Interfaces.CLI.Base import BaseTableCLI, BaseNoteCLI
+from dublib.CLI.Templates.Bus import PrintError
+from dublib.CLI.Terminalyzer import Command, ParsedCommandData
+from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
+
+from Source.Interfaces.CLI.Base import BaseNoteCLI, BaseTableCLI
 from Source.Interfaces.CLI.Functions import Unstar
 
-from dublib.CLI.TextStyler import Codes, FastStyler, TextStyler
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData
-from dublib.CLI.Templates.Bus import PrintError
-
-from typing import TYPE_CHECKING
+from ..Enums import CollectionStatuses, Statuses, Types
 
 if TYPE_CHECKING:
 	from ..note import Note

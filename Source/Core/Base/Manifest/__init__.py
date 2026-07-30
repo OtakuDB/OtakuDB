@@ -1,8 +1,15 @@
-from .Sections import AttachmentsParameters, CommonParameters, ConnectionsParameters, CustomParameters, MetainfoRules, InterfacesOptions
+from pathlib import Path
 
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 
-from pathlib import Path
+from .Sections import (
+	AttachmentsParameters,
+	CommonParameters,
+	ConnectionsParameters,
+	CustomParameters,
+	InterfacesOptions,
+	MetainfoRules,
+)
 
 class Manifest:
 	"""Манифест таблицы."""

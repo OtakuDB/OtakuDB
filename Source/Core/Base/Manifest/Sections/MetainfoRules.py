@@ -1,11 +1,11 @@
-from ._BaseSection import BaseSection
-
-from Source.Core import Exceptions
+from dataclasses import dataclass
+from typing import Iterable
 
 from dublib.Methods.Data import ToSequence
 
-from dataclasses import dataclass
-from typing import Iterable
+from Source.Core import Exceptions
+
+from ._BaseSection import BaseSection
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

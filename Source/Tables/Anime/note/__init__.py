@@ -1,9 +1,9 @@
-from .Enums import PartStatuses, PartsTypes, Statuses
-from .Part import Part
+from typing import Any
 
 from Source.Core.Base.Note import BaseNote
 
-from typing import Any
+from .Enums import PartStatuses, PartsTypes, Statuses
+from .Part import Part
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
