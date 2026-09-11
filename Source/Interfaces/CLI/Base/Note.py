@@ -339,7 +339,7 @@ class BaseNoteCLI:
 			if Value is None: continue
 			if Field not in self._Note.table.manifest.metainfo_rules.fields_names: Field = FastStyler(Field).colorize.blue
 
-			if type(Value) is tuple:
+			if type(Value) is list:
 				print(" " * 4 + f"{Field}:")
 				for Element in Value: print(" " * 9 + f" > {Element}")
 
@@ -369,7 +369,8 @@ class BaseNoteCLI:
 		self._Session = session
 		self._Interface = interface
 		self._Note = note
-
+		self._Table = self._Note.table
+		
 		self._InterfaceOptions = TableInterfaceOptions(self._Note.table.manifest.interfaces_options)
 
 		self._PostInitMethod()

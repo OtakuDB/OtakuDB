@@ -2,7 +2,7 @@ import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from Source.Core import Exceptions
 
@@ -32,7 +32,8 @@ class Slot:
 	def full_path(self) -> Path | None:
 		"""Полный путь к файлу."""
 
-		if self.__File: return self.__Attachments.directory / self.__File
+		if self.__File:
+			return self.__Attachments.directory / self.__File
 
 	@property
 	def name(self) -> str:
@@ -95,9 +96,11 @@ class Slot:
 	def clear(self):
 		"""Очищает слот."""
 
-		if not self.__File: return
+		if not self.full_path:
+			return
 
-		try: os.remove(self.full_path)
+		try:
+			os.remove(self.full_path)
 		except FileNotFoundError: pass
 
 		try: 
@@ -182,7 +185,7 @@ class Attachments:
 		"""
 
 		Slots = dict()
-		for Name, File in self.__Data["slots"].items(): Slots[Name] = Slot(self, Name, File)
+		for Name, File in cast(dict, self.__Data["slots"]).items(): Slots[Name] = Slot(self, Name, File)
 		
 		return Slots
 
@@ -224,7 +227,7 @@ class Attachments:
 		Rule = self.__Note.table.manifest.attachments.rule
 		if Rule < 2: raise Exceptions.Note.AttachmentsDenied(bool(Rule))
 
-		self.__Data["free"].append(file.name)
+		cast(list, self.__Data["free"]).append(file.name)
 
 		AttachmentsDirectoryPath = self.directory
 		os.makedirs(AttachmentsDirectoryPath, exist_ok = True)
@@ -287,7 +290,7 @@ class Attachments:
 
 		try:
 			os.remove(self.__Note.table.full_path / ".attachments" / filename)
-			self.__Data["free"].remove(filename)
+			cast(list, self.__Data["free"]).remove(filename)
 			self.__Note.save()
 			self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
 

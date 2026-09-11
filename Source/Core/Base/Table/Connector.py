@@ -285,10 +285,13 @@ class BondsOperator:
 		"""
 
 		self.__Table.get_note(note_id)
+		Bonds = self.__Bonds.get(note_id)
 
-		if not self.__Bonds.get(note_id): self.__Bonds[note_id] = NoteBonds(self, note_id, dict())
+		if not Bonds:
+			Bonds = NoteBonds(self, note_id, dict())
+			self.__Bonds[note_id] = Bonds
 
-		return self.__Bonds.get(note_id)
+		return Bonds
 
 	def get_note_masters(self, slave_id: int) -> "tuple[BaseNote, ...]":
 		"""

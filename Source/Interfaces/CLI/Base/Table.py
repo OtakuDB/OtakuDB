@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import questionary
 from prettytable import PLAIN_COLUMNS, PrettyTable
@@ -114,9 +114,9 @@ class BaseTableCLI:
 		:type command: ParsedCommandData
 		"""
 
-		NoteID = command.arguments[0]
-		NewID = command.arguments[1]
-		Mode = None
+		NoteID: int = command.get_important_position_value("NOTE_ID", expected_type = int)
+		NewID: int = command.get_important_position_value("NEW_ID", expected_type = int)
+		Mode: Literal["i", "o", "s"] | None = None
 
 		if command.check_flag("-i"): Mode = "i"
 		elif command.check_flag("-o"): Mode = "o"
@@ -124,7 +124,7 @@ class BaseTableCLI:
 		
 		try: self._Table.change_note_id(NoteID, NewID, Mode)
 		except Exceptions.Table.NoteNotFound: PrintError(f"Note with ID #{NoteID} not found.")
-		except Exceptions.Table.OperationError as ExceptionData: PrintError(ExceptionData)
+		except Exceptions.Table.OperationError as ExceptionData: PrintError(str(ExceptionData))
 
 	def _column(self, command: ParsedCommandData):
 		"""
@@ -134,7 +134,7 @@ class BaseTableCLI:
 		:type command: ParsedCommandData
 		"""
 
-		Column = command.get_position_value("COLUMN")
+		Column: str = command.get_important_position_value("COLUMN", expected_type = str)
 		ColumnOptions = None
 		
 		try: ColumnOptions = self._InterfaceOptions.columns.get_column_options(Column)
@@ -144,7 +144,9 @@ class BaseTableCLI:
 		
 		if command.check_flag("-e"): ColumnOptions.set_status(True)
 		elif command.check_flag("-d"): ColumnOptions.set_status(False)
-		elif command.check_key("--max-width"): ColumnOptions.set_max_width(command.get_key_value("--max-width") or None)
+		elif command.check_key("--max-width"):
+			MaxWidth: int | None = command.get_key_value("--max-width", expected_type = int) or None
+			ColumnOptions.set_max_width(MaxWidth)
 
 	def _columns(self):
 		"""Запускает диалог для переключения видимости колонок."""

@@ -358,7 +358,7 @@ class NoteCLI(BaseNoteCLI):
 		"""
 
 		match command.name:
-			case "altname": self._altname()
+			case "altname": self._altname(command.get_position_value("NAME"), command.check_flag("-r"))
 			case "author": self._SetMetainfo("author", command.get_position_value("AUTHOR"))
 			case "collection": self._collection(command)
 			case "comment": self._Note.set_comment(Unstar(command.get_position_value("COMMENT")))
@@ -386,7 +386,7 @@ class NoteCLI(BaseNoteCLI):
 		CommandsList = list()
 
 		Com = Command("altname", "Manage alternative names.")
-		ComPos = Com.create_position("ALT_NAME", "Alternative name.", important = True)
+		ComPos = Com.create_position("NAME", "Alternative name.", important = True)
 		ComPos.set_argument()
 		Com.base.add_flag("-r", description = "Remove another name if exists.")
 		CommandsList.append(Com)

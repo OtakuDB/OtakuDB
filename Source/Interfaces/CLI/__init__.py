@@ -3,7 +3,7 @@ import shlex
 from os import PathLike
 from pathlib import Path
 from types import ModuleType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from dublib import Exceptions
 from dublib.CLI import readline
@@ -23,7 +23,7 @@ from .Enums import InterractionLevels
 if TYPE_CHECKING:
 	from Source.Core.Base.Table import BaseNote, BaseTable
 	from Source.Core.Session import Session
-	from Source.Core.Session.Box import Box
+	from Source.Core.Session.Box import Box, RootBox
 
 class Interface:
 	"""Обработчик интерфейса командной строки."""
@@ -149,7 +149,7 @@ class Interface:
 			else: return CommandData
 
 		except Exceptions.CLI.Terminalyzer.NotEnoughParameters: PrintError("Not enough parameters.")
-		except Exceptions.CLI.Validators.ValidationError as ExceptionData: PrintError(ExceptionData)
+		except Exceptions.Validators.ValidationError as ExceptionData: PrintError(ExceptionData)
 		except Exceptions.CLI.Terminalyzer.TooManyParameters: PrintError("Too many parameters.")
 		except Exception as ExceptionData: PrintError(ExceptionData)
 
@@ -210,43 +210,40 @@ class Interface:
 
 		return BoldGreen.get_styled_text(f"{Selector} -> ")
 
-	def set_current_object(self, object: "Box | BaseTable | BaseNote | None"):
+	def set_current_object(self, current_object: "RootBox | Box | BaseTable | BaseNote | None"):
 		"""
 		Устанавливает текущий рабочий объект.
 
-		:param object: Текущий рабочий объект.
-		:type object: Box | BaseTable | BaseNote | None
+		:param current_object: Текущий рабочий объект.
+		:type current_object: RootBox | Box | BaseTable | BaseNote | None
 		"""
 
-		self.__CurrentObject = object
+		self.__CurrentObject = current_object
 
-		match object.__class__.__name__:
+		match current_object.__class__.__name__:
 
 			case None:
 				self.__InterractionLevel = InterractionLevels.Driver
 				self.__Interpreter = None
 
 			case "Box" | "RootBox":
-				object: "Box"
 				self.__InterractionLevel = InterractionLevels.Box
-				self.__Interpreter = BaseBoxCLI(self.__Session, self, object)
+				self.__Interpreter = BaseBoxCLI(self.__Session, self, cast("Box | RootBox", current_object))
 
 			case "Table":
-				object: "BaseTable"
-				Module = self.__ImportModuleCLI(object.manifest.type)
+				Module = self.__ImportModuleCLI(cast("BaseTable", current_object).manifest.type)
 
 				if Module:
-					self.__Interpreter = Module.TableCLI(self.__Session, self, object)
+					self.__Interpreter = Module.TableCLI(self.__Session, self, current_object)
 					self.__InterractionLevel = InterractionLevels.Table
 
 			case "Note":
-				object: "BaseNote"
-				Module = self.__ImportModuleCLI(object.table.manifest.type)
+				Module = self.__ImportModuleCLI(cast("BaseNote", current_object).table.manifest.type)
 
 				if Module:
-					self.__Interpreter = Module.NoteCLI(self.__Session, self, object)
+					self.__Interpreter = Module.NoteCLI(self.__Session, self, current_object)
 					self.__InterractionLevel = InterractionLevels.Note
-					self.__Interpreter.validate()
+					cast("BaseNoteCLI", self.__Interpreter).validate()
 
 	def run(self):
 		"""Запускает CLI."""

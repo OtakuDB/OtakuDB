@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Sequence
 
-from dublib.CLI.Validators import Validator_Number
 from dublib.Methods.Data import Copy, RemoveRecurringSubstrings, ToSequence
+from dublib.Validators import Validator_Number
 
 from Source.Core import Exceptions
 
