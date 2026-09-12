@@ -1,3 +1,0 @@
-questionary
-dulwich>=1.2.6
-dublib==0.28.2
