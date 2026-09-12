@@ -61,7 +61,7 @@ class BaseNote:
 	def searchable_strings(self) -> list[str]:
 		"""Список строк, которые индексируются для поисковых запросов."""
 
-		return self._GetSearchableStrings()
+		return self._export_searchable_strings()
 
 	@property
 	def table(self) -> "BaseTable":
@@ -73,7 +73,7 @@ class BaseNote:
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _LoadData(self):
+	def _load_data(self):
 		"""Считывает данные записи или создаёт локальный файл при отсутствии такового."""
 
 		NoteFullPath = self.full_path
@@ -82,17 +82,17 @@ class BaseNote:
 			"name": None,
 			"metainfo": {},
 			"attachments": dict.fromkeys(self._Table.manifest.attachments.slots_names, None)
-		} | self._GetEmptyNote()
+		} | self._export_empty_note()
 
 		if NoteFullPath.exists():
 			self._Data = self._Data | json.read(NoteFullPath)
-			self._ParseContainers()
+			self._parse_containers()
 
 		else:
-			self._ParseContainers()
+			self._parse_containers()
 			self.save()
 
-	def _ParseContainers(self):
+	def _parse_containers(self):
 		"""Парсит контейнерные типы данных."""
 
 		self._Metainfo = Metainfo(self, self._Data.get("metainfo", {}))
@@ -102,7 +102,7 @@ class BaseNote:
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ОБРАБОТЧИКИ CALLBACK-ВЫЗОВОВ <<<<< #
 	#==========================================================================================#	
 
-	def _Callback_SlaveNoteSaved(self, slave_note: "BaseNote"):
+	def _callback_slave_note_saved(self, slave_note: "BaseNote"):
 		"""
 		Обработчик вызова: привязанные запись выполнила сохранение.
 
@@ -112,7 +112,7 @@ class BaseNote:
 
 		pass
 
-	def _Callback_AttachmentsChanged(self):
+	def _callback_attachments_changed(self):
 		"""Обработчик вызова: вложения изменены."""
 
 		pass
@@ -121,7 +121,7 @@ class BaseNote:
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ТРИГГЕРНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
-	def _PreDictFormatter(self):
+	def _pre_dict_formatter(self):
 		"""Метод, выполняющийся перед конвертированием записи в словарь (фактически, перед её сохранением)."""
 
 		pass
@@ -131,7 +131,7 @@ class BaseNote:
 
 		pass
 
-	def _PostLocalBindMethod(self, note: "BaseNote"):
+	def _post_local_bind(self, note: "BaseNote"):
 		"""
 		Метод, выполняющийся после привязки локальной записи.
 
@@ -145,7 +145,7 @@ class BaseNote:
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
-	def _GetEmptyNote(self) -> dict[str, Any]:
+	def _export_empty_note(self) -> dict[str, Any]:
 		"""
 		Возвращает пустую структуру записи.
 
@@ -157,7 +157,7 @@ class BaseNote:
 
 		return {}
 
-	def _GetSearchableStrings(self) -> list[str]:
+	def _export_searchable_strings(self) -> list[str]:
 		"""
 		Список индексируемых для поисковых запросов строк.
 
@@ -191,13 +191,13 @@ class BaseNote:
 		:raises ValueError: Обязательный ключ отсутствует в файле записи.
 		"""
 
-		self._Driver = driver
+		self._Driver: "Driver" = driver
 		self._Table = table
-		self._ID = note_id
+		self._ID: int = note_id
 		
-		self._LoadData()
+		self._load_data()
 		self.sort()
-		self._ParseContainers()
+		self._parse_containers()
 		self._post_init()
 
 	def delete(self):
@@ -228,8 +228,8 @@ class BaseNote:
 		"""
 
 		match callback_type:
-			case CallbacksTypes.AttachmentsChanged: self._Callback_AttachmentsChanged(*args, **kwargs)
-			case CallbacksTypes.SlaveNoteSaved: self._Callback_SlaveNoteSaved(*args, **kwargs)
+			case CallbacksTypes.AttachmentsChanged: self._callback_attachments_changed(*args, **kwargs)
+			case CallbacksTypes.SlaveNoteSaved: self._callback_slave_note_saved(*args, **kwargs)
 
 	def save(self):
 		"""Сохраняет данные записи в локальный файл JSON."""
@@ -294,7 +294,7 @@ class BaseNote:
 		:rtype: dict
 		"""
 
-		self._PreDictFormatter()
+		self._pre_dict_formatter()
 		self._Data["metainfo"] = self._Metainfo.to_dict(copy)
 		self._Data["attachments"] = self._Attachments.to_dict()
 		if sort: self.sort()

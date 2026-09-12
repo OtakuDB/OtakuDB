@@ -2,13 +2,11 @@ import importlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from otakudb.core import exceptions
-from otakudb.core.base.manifest import Manifest
+from ...core.base.manifest import Manifest
 
 if TYPE_CHECKING:
-	from otakudb.core.base.table import BaseTable
-	from otakudb.core.session.box import Box, RootBox
-
+	from ..base.table import BaseTable
+	from .box import Box, RootBox
 	from .driver import Driver
 
 class TableDescriptor:
@@ -22,42 +20,42 @@ class TableDescriptor:
 	def full_path(self) -> Path:
 		"""Полный путь к таблице."""
 
-		return self.__FullPath
+		return self.__full_path
 
 	@property
 	def manifest(self) -> Manifest:
 		"""Манифест таблицы."""
 
-		return self.__Manifest
+		return self.__manifest
 	
 	@property
 	def name(self) -> str:
 		"""Имя таблицы."""
 
-		return self.__Name
+		return self.__name
 
 	@property
 	def virtual_path(self) -> Path:
 		"""Вирутальный путь к таблице."""
 
-		return self.__VirtualPath
+		return self.__virtual_path
 
 	@property
 	def table(self) -> "BaseTable":
 		"""Таблица."""
 
-		return self.__TableObject
+		return self.__table
 	
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __InintializeTable(self):
+	def __ititialize_table(self):
 		"""Иницилазирует таблицу.."""
 
-		ImportPath = f"Source.Tables.{self.__Manifest.type}.table"
-		TableModule = importlib.import_module(ImportPath)
-		self.__TableObject = TableModule.Table(self.__Driver, self)
+		module_path: str = f"otakudb.tables.{self.__manifest.type}.table"
+		table_module = importlib.import_module(module_path)
+		self.__table = table_module.Table(self.__driver, self)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -78,21 +76,19 @@ class TableDescriptor:
 		:raises FileNotFoundError: Директория таблицы не найдена.
 		"""
 
-		self.__Driver = driver
-		self.__Box = box
-		self.__Name = name
-
-		if not self.__Driver.storage_directory:
-			raise exceptions.driver.StorageUnmountedError()
+		self.__driver: "Driver" = driver
+		self.__box: "Box | RootBox" = box
+		self.__name: str = name
 		
-		self.__VirtualPath = box.virtual_path / self.__Name
-		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
+		self.__virtual_path: Path = self.__box.virtual_path / self.__name
+		self.__full_path = self.__driver.storage_path / self.__virtual_path
 
-		if not self.__FullPath.exists(): raise FileNotFoundError(self.__FullPath)
+		if not self.__full_path.exists():
+			raise FileNotFoundError(self.__full_path)
 
-		self.__Manifest = manifest or Manifest(self.__FullPath).load()
+		self.__manifest = manifest or Manifest(self.__full_path).load()
 
-		self.__InintializeTable()
+		self.__ititialize_table()
 	
 	def rename(self, name: str):
 		"""
@@ -102,11 +98,8 @@ class TableDescriptor:
 		:type name: str
 		"""
 
-		if not self.__Driver.storage_directory:
-			raise exceptions.driver.StorageUnmountedError()
-
-		self.__Box.pop_item(self.__Name)
-		self.__VirtualPath = self.__VirtualPath.parent / name
-		self.__FullPath = self.__Driver.storage_directory / self.__VirtualPath
-		self.__Box.add_item(self)
-		self.__Manifest.set_directory(self.full_path)
+		self.__box.pop_item(self.__name)
+		self.__virtual_path = self.__virtual_path.parent / name
+		self.__full_path = self.__driver.storage_path / self.__virtual_path
+		self.__box.add_item(self)
+		self.__manifest.set_directory(self.full_path)

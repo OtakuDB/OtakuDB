@@ -1,4 +1,3 @@
-from json import JSONDecodeError
 from pathlib import Path
 
 from dublib.functions.filesystem import json
@@ -14,20 +13,9 @@ class SessionData:
 	def last_mounted_storage(self) -> Path | None:
 		"""Путь к последнему монтированному хранилищу."""
 
-		Value = self.__Data.get("last_mounted_storage")
-		if Value: Value = Path(Value)
+		value: str | None = self.__data.get("last_mounted_storage")
 
-		return Value
-
-	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __LoadData(self):
-		"""Загружает данные из файла JSON."""
-
-		try: self.__Data = json.read(".session.json")
-		except (FileNotFoundError, JSONDecodeError): pass
+		return Path(value) if value else None
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -36,22 +24,29 @@ class SessionData:
 	def __init__(self):
 		"""Данные сессии."""
 
-		self.__Data = {}
+		self.__data_file: Path = Path(".session.json")
+		self.__data: dict = {}
+		
+	def load(self):
+		"""Загружает данные из файла данных сессии."""
 
-		self.__LoadData()
+		if not self.__data_file.exists():
+			return
+
+		self.__data = json.read(self.__data_file)
 
 	def save(self):
-		"""Сохраняет данные в файл JSON."""
+		"""Сохраняет данные в файл данных сессии."""
 
-		json.write(".session.json", self.__Data)
-		
-	def set_last_mounted_storage(self, path: Path | None):
+		json.write(self.__data_file, self.__data)
+
+	def set_last_mounted_storage(self, storage_path: Path | None):
 		"""
 		Задаёт путь к последнему монтированному хранилищу.
 
-		:param path: Путь к хранилищу.
-		:type path: Path | None
+		:param storage_path: Путь к хранилищу.
+		:type storage_path: Path | None
 		"""
 		
-		self.__Data["last_mounted_storage"] = path.as_posix() if path else None
+		self.__data["last_mounted_storage"] = storage_path.as_posix() if storage_path else None
 		self.save()

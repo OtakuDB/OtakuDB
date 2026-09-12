@@ -19,28 +19,25 @@ class RootBox:
 	def full_path(self) -> Path:
 		"""Полный путь к контейнеру."""
 
-		if not self._Driver.storage_directory:
-			raise exceptions.driver.StorageUnmountedError()
-
-		return self._Driver.storage_directory / self.virtual_path
+		return self._full_path
 
 	@property
 	def items(self) -> "tuple[Box | TableDescriptor, ...]":
 		"""Последовательность содержащихся в контейнере элементов."""
 
-		return tuple(self._Items.values())
+		return tuple(self._items.values())
 	
 	@property
 	def virtual_path(self) -> Path:
 		"""Виртуальный путь к контейнеру."""
 
-		return self._VirtualPath
+		return self._virtual_path
 	
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _BaseInit(self, driver: "Driver", virtual_path: Path):
+	def _base_init(self, driver: "Driver", virtual_path: Path):
 		"""
 		Базовый метод инициализации контейнера.
 
@@ -51,15 +48,11 @@ class RootBox:
 		:raises FileNotFoundError: Директория контейнера не найдена.
 		"""
 
-		self._Driver = driver
-
-		if not self._Driver.storage_directory:
-			raise exceptions.driver.StorageUnmountedError()
-
-		self._VirtualPath = virtual_path
-		self._FullPath = self._Driver.storage_directory / self._VirtualPath
+		self._driver: "Driver" = driver
+		self._virtual_path: Path = virtual_path
+		self._full_path: Path = self._driver.storage_path / self._virtual_path
 		
-		self._Items: dict[str, Box | TableDescriptor] = {}
+		self._items: dict[str, Box | TableDescriptor] = {}
 
 		self.reload()
 
@@ -76,18 +69,21 @@ class RootBox:
 		:raises FileNotFoundError: Директория контейнера не найдена.
 		"""
 
-		self._BaseInit(driver, Path())
+		self._base_init(driver, Path())
 
 	def add_item(self, item: "Box | TableDescriptor"):
 		"""
-		Добавляет новый элемент в контейнер.
+		Добавляет элемент в контейнер.
 
-		:param item: Новый элемент.
+		:param item: Элемент.
 		:type item: Box | TableDescriptor
+		:raises BoxItemOverrideError: Перезапись элемента контейнера.
 		"""
 
-		if item.name in self._Items: raise exceptions.driver.BoxItemOverrideError(item.virtual_path)
-		self._Items[item.name] = item
+		if item.name in self._items:
+			raise exceptions.session.box.BoxItemOverrideError(item.virtual_path)
+
+		self._items[item.name] = item
 
 	def create_box(self, name: str) -> "Box":
 		"""
@@ -97,10 +93,9 @@ class RootBox:
 		:type name: str
 		:return: Новый контейнер.
 		:rtype: Box
-		:raises ItemAlreadyExists: Элемент с таким именем уже существует.
 		"""
 
-		return self._Driver.create_box(self, name)
+		return self._driver.create_box(self, name)
 
 	def create_table(self, name: str, table_type: str) -> "TableDescriptor":
 		"""
@@ -112,11 +107,9 @@ class RootBox:
 		:type table_type: str
 		:return: Дескриптор таблицы.
 		:rtype: TableDescriptor
-		:raises ItemAlreadyExists: Элемент с таким именем уже существует.
-		:raises IncorrectTableType: Несуществующий тип таблицы.
 		"""
 
-		return self._Driver.create_table(self, name, table_type)
+		return self._driver.create_table(self, name, table_type)
 
 	def delete_table(self, name: str):
 		"""
@@ -127,7 +120,7 @@ class RootBox:
 		:raises ItemNotFound: Элемент не найден.
 		"""
 
-		self._Driver.delete_table(self, name)
+		self._driver.delete_table(self, name)
 
 	def get_item(self, name: str) -> "Box | TableDescriptor":
 		"""
@@ -137,10 +130,14 @@ class RootBox:
 		:type name: str
 		:return: Элемент.
 		:rtype: Box | TableDescriptor
-		:raises KeyError: Элемент не найден.
+		:raises ItemNotFoundError: Элемент не найден.
 		"""
 
-		return self._Items[name]
+		if name not in self._items:
+			virtual_path: Path = self._virtual_path / name
+			raise exceptions.session.driver.ItemNotFoundError(virtual_path)
+
+		return self._items[name]
 
 	def pop_item(self, name: str) -> "Box | TableDescriptor":
 		"""
@@ -150,35 +147,30 @@ class RootBox:
 		:type name: str
 		:return: Элемент.
 		:rtype: Box | TableDescriptor
-		:raises ItemNotFound: Элемент не найден.
+		:raises ItemNotFoundError: Элемент не найден.
 		"""
 
-		if name not in self._Items: raise exceptions.driver.ItemNotFoundError(self._VirtualPath / name)
-		Item = self.get_item(name)
-		del self._Items[name]
+		if name not in self._items:
+			virtual_path: Path = self._virtual_path / name
+			raise exceptions.session.driver.ItemNotFoundError(virtual_path)
 
-		return Item
+		return self._items.pop(name)
 
 	def reload(self):
-		"""
-		Сканирует и обновляет элементы контейнера.
-		
-		:raises FileNotFoundError: Директория контейнера не найдена.
-		"""
+		"""Сканирует директорию контейнера и заново получает вложенные элементы."""
 
-		Elements = tuple(Value.name for Value in os.scandir(self.full_path) if Value.is_dir())
-		Items = {}
+		elements_names: tuple[str, ...] = tuple(Value.name for Value in os.scandir(self.full_path) if Value.is_dir())
+		items: dict[str, "Box | TableDescriptor"] = {}
 
-		for Element in Elements:
-			ElementVirtualPath = self.virtual_path / Element
+		for name in elements_names:
+			element_virtual_path = self._virtual_path / name
 
-			if self._Driver.is_box(ElementVirtualPath):
-				if not self._Driver.is_box_initialized(ElementVirtualPath): self._Driver.init_box(self, Element)
-				Items[Element] = self._Driver.get_box(ElementVirtualPath)
+			if self._driver.is_box(element_virtual_path):
+				items[name] = self._driver.get_box(element_virtual_path, auto_init = True)
+			else:
+				items[name] = TableDescriptor(self._driver, self, name)
 
-			else: Items[Element] = TableDescriptor(self._Driver, self, Element)
-
-		self._Items = Items
+		self._items = items
 
 class Box(RootBox):
 	"""Контейнер."""
@@ -191,13 +183,13 @@ class Box(RootBox):
 	def name(self) -> str:
 		"""Имя контейнера."""
 
-		return self.__Name
+		return self.__name
 
 	@property
 	def parent(self) -> "Box | RootBox":
 		"""Родительский контейнер."""
 
-		return self.__ParentBox
+		return self.__parent_box
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -215,10 +207,10 @@ class Box(RootBox):
 		:type name: str
 		"""
 
-		self._BaseInit(driver, parent_box.virtual_path / name)
+		self._base_init(driver, parent_box.virtual_path / name)
 
-		self.__ParentBox = parent_box
-		self.__Name = name
+		self.__parent_box: "Box | RootBox" = parent_box
+		self.__name: str = name
 
 	def delete(self, purge: bool = False):
 		"""
@@ -226,8 +218,6 @@ class Box(RootBox):
 		
 		:param purge: Указывает, нужно ли удалить содержимое контейнера, если он не пуст.
 		:type purge: bool
-		:raises BoxNotEmpty: Контейнер не пуст.
-		:raises ItemNotFound: Элемент не найден.
 		"""
 
-		self._Driver.delete_box(self.__ParentBox, self.__Name, purge)
+		self._driver.delete_box(self.__parent_box, self.__name, purge)

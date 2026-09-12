@@ -1,17 +1,12 @@
-import functools
 import importlib
-import os
+import pkgutil
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
 
-from otakudb.core import exceptions
-
+from ... import tables
+from .. import exceptions
 from .box import Box, RootBox
 from .table_descriptor import TableDescriptor
-
-if TYPE_CHECKING:
-	from otakudb.core.base.manifest.generator import ManifestGenerator
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -25,89 +20,91 @@ class Driver:
 	#==========================================================================================#
 
 	@property
-	def root_box(self) -> RootBox | None:
+	def root_box(self) -> RootBox:
 		"""Корневой контейнер."""
 
-		return self.__RootBox
+		return self.__root_box
 
 	@property
-	def storage_directory(self) -> Path | None:
-		"""Директория хранилища."""
+	def storage_path(self) -> Path:
+		"""Путь к директории хранилища."""
 
-		return self.__StorageDirectory
+		return self.__storage_path
 
 	@property
-	def tables_types(self) -> tuple[str, ...]:
+	def available_tables_types(self) -> tuple[str, ...]:
 		"""Последовательность названий доступных типов таблиц."""
 
-		# To-Do: список таблиц получать иначе.
-		Types = os.listdir("Source/Tables")
-		if "__pycache__" in Types: Types.remove("__pycache__")
-
-		return tuple(Types)
+		return tuple(info.name for info in pkgutil.iter_modules(tables.__path__))
 
 	#==========================================================================================#
-	# >>>>> ДЕКОРАТОРЫ <<<<< #
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	@staticmethod
-	def require_storage(function):
+	def __free_box(self, virtual_path: Path):
 		"""
-		Декоратор. Проверяет, примонтировано ли хранилище, перед выполнением метода.
+		Выгружает контейнер.
 
-		:param function: Метод объекта.
-		:type function: Callable
-		:return: Обёрнутая функция.
-		:rtype: Callable
-		:raises Exceptions.Driver.StorageUnmountedError: Хранилище отмонтировано.
+		:param virtual_path: Виртуальный путь к контейнеру.
+		:type virtual_path: Path
+		:raises BoxAlreadyInitializedError: Контейнер не инициализирован.
 		"""
 
-		@functools.wraps(function)
-		def Wrapper(self: "Driver", *args, **kwargs):
-			if not self.__StorageDirectory: raise exceptions.driver.StorageUnmountedError()
-			return function(self, *args, **kwargs)
-		
-		return Wrapper
+		box_virtual_path: str = virtual_path.as_posix()
+
+		if not self.is_box_initialized(virtual_path):
+			raise exceptions.session.box.BoxNotInitializedError(virtual_path)
+
+		del self.__boxes[box_virtual_path]
+
+	def __init_box(self, parent_box: Box | RootBox, name: str) -> Box:
+		"""
+		Инициализирует существующий контейнер.
+
+		:param parent_box: Родительский контейнер.
+		:type parent_box: Box | RootBox
+		:param name: Имя контейнера.
+		:type name: str
+		:return: Контейнер.
+		:rtype: Box
+		:raises BoxAlreadyInitializedError: Контейнер уже инициализирован.
+		"""
+
+		virtual_path: Path = parent_box.virtual_path / name
+		box_virtual_path: str = virtual_path.as_posix()
+
+		if self.is_box_initialized(virtual_path):
+			raise exceptions.session.box.BoxAlreadyInitializedError(virtual_path)
+
+		box = Box(self, parent_box, name)
+		self.__boxes[box_virtual_path] = box
+
+		return box
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self):
-		"""Драйвер хранилища."""
-		
-		self.__StorageDirectory: Path | None = None
-		self.__Boxes: dict[str, Box] = {}
-		self.__RootBox: RootBox | None = None
-
-	def mount(self, directory: Path):
+	def __init__(self, storage_path: Path):
 		"""
-		Монтирует директорию как хранилище.
-
-		:param directory: Директория хранилища или `None` для отключения.
-		:type directory: Path | None
-		:raises FileNotFoundError: Директория хранилища не найдена.
+		Драйвер хранилища.
+		
+		:param storage_path: Путь к директории хранилища.
+		:type storage_path: Path
 		"""
 		
-		if directory.exists():
-			self.__StorageDirectory = directory
-			self.__RootBox = RootBox(self)
-		else: raise FileNotFoundError(directory)
+		self.__storage_path: Path = storage_path
 
-	def unmount(self):
-		"""Отмонтирует хранилище."""
-
-		self.__StorageDirectory = None
-		self.__RootBox = None
-
+		self.__root_box: RootBox = RootBox(self)
+		self.__boxes: dict[str, Box] = {}
+		
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С КОНТЕЙНЕРАМИ <<<<< #
 	#==========================================================================================#
 
-	@require_storage
 	def create_box(self, parent_box: Box | RootBox, name: str) -> Box:
 		"""
-		Создаёт новый контейнер.
+		Создаёт контейнер.
 
 		:param parent_box: Родительский контейнер.
 		:type parent_box: Box | RootBox
@@ -118,16 +115,18 @@ class Driver:
 		:raises ItemAlreadyExistsError: Элемент с таким именем уже существует.
 		"""
 
-		NewBoxFullPath = parent_box.full_path / name
-		if NewBoxFullPath.exists(): raise exceptions.driver.ItemAlreadyExistsError(NewBoxFullPath)
-		else: os.makedirs(NewBoxFullPath)
+		new_box_full_path: Path = parent_box.full_path / name
+		
+		if new_box_full_path.exists():
+			raise exceptions.session.driver.ItemAlreadyExistsError(new_box_full_path)
+		else:
+			new_box_full_path.mkdir()
 
-		NewBox = self.init_box(parent_box, name)
-		parent_box.add_item(NewBox)
+		new_box = self.__init_box(parent_box, name)
+		parent_box.add_item(new_box)
 
-		return NewBox
+		return new_box
 
-	@require_storage
 	def delete_box(self, parent_box: Box | RootBox, name: str, purge: bool = False):
 		"""
 		Удаляет контейнер.
@@ -142,83 +141,61 @@ class Driver:
 		:raises ItemNotFoundError: Элемент не найден.
 		"""
 
-		TargetBoxVirtualPath = parent_box.virtual_path / name
-		TargetBox = self.get_box(TargetBoxVirtualPath)
+		target_box_virtual_path = parent_box.virtual_path / name
+		target_box = self.get_box(target_box_virtual_path)
 		parent_box.pop_item(name)
-		self.free_box(TargetBoxVirtualPath)
+		self.__free_box(target_box_virtual_path)
 
-		if purge: shutil.rmtree(TargetBox.full_path)
+		if purge:
+			shutil.rmtree(target_box.full_path)
+
 		else: 
-			if TargetBox.items: raise exceptions.driver.BoxNotEmptyError(TargetBox.virtual_path)
-			else: TargetBox.full_path.rmdir()
+			if target_box.items:
+				raise exceptions.session.box.BoxNotEmptyError(target_box_virtual_path)
+			else:
+				target_box.full_path.rmdir()
 
-	@require_storage
-	def free_box(self, virtual_path: Path):
-		"""
-		Выгружает контейнер.
-
-		:param virtual_path: Виртуальный путь к контейнеру.
-		:type virtual_path: Path
-		:raises Exceptions.Driver.ItemNotFound: Контейнер не найден.
-		"""
-
-		try: del self.__Boxes[virtual_path.as_posix()]
-		except KeyError: raise exceptions.driver.ItemNotFoundError(virtual_path)
-
-	@require_storage
-	def get_box(self, virtual_path: Path) -> Box:
+	def get_box(self, virtual_path: Path, auto_init: bool = False) -> Box:
 		"""
 		Возвращает инициализированный контейнер.
 
 		:param virtual_path: Вирутальный путь к контейнеру.
 		:type virtual_path: Path
+		:param auto_init: Указывает, следует ли инициализировать контейнер, если он существует.
+		:type auto_init: bool
 		:return: Контейнер.
 		:rtype: Box
+		:raises BoxNotInitializedError: Контейнер не инициализирован.
 		:raises ItemNotFoundError: Контейнер не найден.
 		"""
 
-		try:
-			return self.__Boxes[virtual_path.as_posix()]
-		except KeyError:
-			raise exceptions.driver.ItemNotFoundError(virtual_path)
+		if not self.is_item_exists(virtual_path):
+			raise exceptions.session.driver.ItemNotFoundError(virtual_path)
 
-	@require_storage
-	def init_box(self, parent_box: Box | RootBox, name: str) -> Box:
-		"""
-		Инициализирует существующий контейнер.
+		if self.is_box_initialized(virtual_path):
+			return self.__boxes[virtual_path.as_posix()] 
 
-		:param parent_box: Родительский контейнер.
-		:type parent_box: Box | RootBox
-		:param name: Имя контейнера.
-		:type name: str
-		:return: Контейнер.
-		:rtype: Box
-		:raises FileNotFoundError: Директория контейнера не найдена.
-		"""
+		if auto_init:
+			parent_box = self.get_box(virtual_path.parent) if len(virtual_path.parts) > 1 else self.__root_box
+			self.__init_box(parent_box, virtual_path.name)
+			return self.__boxes[virtual_path.as_posix()] 
 
-		VirtualPath = parent_box.virtual_path / name
-		self.__Boxes[VirtualPath.as_posix()] = Box(self, parent_box, name)
+		raise exceptions.session.box.BoxNotInitializedError(virtual_path)
 
-		return self.get_box(VirtualPath)
-
-	@require_storage
 	def is_box(self, virtual_path: Path) -> bool:
 		"""
-		Проверяет, представляет ли директория по вирутальному пути контейнер.
+		Проверяет, ведёт ли вирутальный путь к контейнеру.
 
-		:param virtual_path: Виртуальный путь к директории.
+		:param virtual_path: Виртуальный путь.
 		:type virtual_path: Path
 		:return: Возвращает `True`, если директория является контейнером.
 		:rtype: bool
 		"""
 
-		self.__StorageDirectory = cast(Path, self.__StorageDirectory)
+		full_manifest_path: Path = self.__storage_path / virtual_path / "manifest.json"
 
-		FullManifestPath = self.__StorageDirectory / virtual_path / "manifest.json"
-
-		return not FullManifestPath.exists()
+		return not full_manifest_path.exists()
 	
-	@require_storage
 	def is_box_initialized(self, virtual_path: Path) -> bool:
 		"""
 		Проверяет, инициализирован ли контейнер.
@@ -229,16 +206,29 @@ class Driver:
 		:rtype: bool
 		"""
 
-		return virtual_path.as_posix() in self.__Boxes
+		return virtual_path.as_posix() in self.__boxes
+
+	def is_item_exists(self, virtual_path: Path) -> bool:
+		"""
+		Проверяет, существует ли элемент по указанному вирутальному пути.
+
+		:param virtual_path: Виртуальный путь.
+		:type virtual_path: Path
+		:return: Возвращает `True`, если элемент существует.
+		:rtype: bool
+		"""
+
+		full_path: Path = self.__storage_path / virtual_path
+
+		return full_path.exists()
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С ТАБЛИЦАМИ <<<<< #
 	#==========================================================================================#
 
-	@require_storage
 	def create_table(self, box: Box | RootBox, name: str, table_type: str) -> TableDescriptor:
 		"""
-		Создаёт новую таблицу.
+		Создаёт таблицу.
 
 		:param box: Контейнер.
 		:type box: Box | RootBox
@@ -249,30 +239,30 @@ class Driver:
 		:return: Дескриптор таблицы.
 		:rtype: TableDescriptor
 		:raises ItemAlreadyExistsError: Элемент с таким именем уже существует.
-		:raises IncorrectTableTypeError: Несуществующий тип таблицы.
+		:raises TableTypeNotFoundError: Тип таблицы не найден.
 		"""
 
-		if type not in self.tables_types:
-			raise exceptions.driver.IncorrectTableTypeError(table_type)
+		if table_type not in self.available_tables_types:
+			raise exceptions.session.driver.TableTypeNotFoundError(table_type)
 		
-		self.__StorageDirectory = cast(Path, self.__StorageDirectory)
+		table_virtual_path: Path = box.virtual_path / name
+		table_full_path: Path = self.__storage_path / table_virtual_path
 
-		TableVirtualPath = box.virtual_path / name
-		TableFullPath = self.__StorageDirectory / TableVirtualPath
+		if table_full_path.exists():
+			raise exceptions.session.driver.ItemAlreadyExistsError(table_virtual_path)
+		
+		table_full_path.mkdir()
 
-		if TableFullPath.exists(): raise exceptions.driver.ItemAlreadyExistsError(TableVirtualPath)
-		else: os.makedirs(TableFullPath)
+		# To-Do: использовать новую модель манифеста.
+		manifest_generator_module = importlib.import_module(f"otakudb.tables.{table_type}.manifest")
+		manifest_generator = manifest_generator_module.Generator(table_full_path, table_type)
+		manifest = manifest_generator.generate()
 
-		ManifestGeneratorModule = importlib.import_module(f"Source.Tables.{table_type}.manifest")
-		ManifestGenerator: "ManifestGenerator" = ManifestGeneratorModule.Generator(TableFullPath, table_type)
-		Manifest = ManifestGenerator.generate()
+		descriptor = TableDescriptor(self, box, name, manifest)
+		box.add_item(descriptor) 
 
-		Descriptor = TableDescriptor(self, box, name, Manifest)
-		box.add_item(Descriptor) 
+		return descriptor
 
-		return Descriptor
-	
-	@require_storage
 	def delete_table(self, box: Box | RootBox, name: str):
 		"""
 		Удаляет таблицу.
@@ -281,8 +271,8 @@ class Driver:
 		:type box: Box | RootBox
 		:param name: Название таблицы.
 		:type name: str
-		:raises ItemNotFound: Элемент не найден.
+		:raises ItemNotFoundError: Элемент не найден.
 		"""
 
-		Descriptor = box.pop_item(name)
-		shutil.rmtree(Descriptor.full_path)
+		descriptor = box.pop_item(name)
+		shutil.rmtree(descriptor.full_path)

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-class RootUnboxingDeniedError(Exception):
+class RootUnboxingError(Exception):
 	"""Исключение: невозможно подняться из корневого каталога."""
 
 	def __init__(self):
@@ -8,14 +8,14 @@ class RootUnboxingDeniedError(Exception):
 
 		super().__init__("Storage root can't be unboxed.")
 
-class UnableInboxNonBoxObjectError(Exception):
-	"""Исключение: невозможно открыть объект, не являющийся хранилищем."""
+class UnableInboxNonBoxItemError(Exception):
+	"""Исключение: невозможно открыть объект, не являющийся контейнером."""
 
 	def __init__(self, virtual_path: Path):
 		"""
-		Исключение: невозможно открыть объект, не являющийся хранилищем.
+		Исключение: невозможно открыть объект, не являющийся контейнером.
 
-		:param virtual_path: Виртуальный путь к объекты.
+		:param virtual_path: Виртуальный путь к объекту.
 		:type virtual_path: Path
 		"""
 

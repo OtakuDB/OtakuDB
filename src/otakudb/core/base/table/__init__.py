@@ -55,7 +55,7 @@ class BaseTable:
 	def notes_id(self) -> tuple[int, ...]:
 		"""Список ID записей."""
 
-		return self._GetNotesID()
+		return self._get_notes_id()
 
 	@property
 	def virtual_path(self) -> Path:
@@ -67,7 +67,7 @@ class BaseTable:
 	# >>>>> ЗАЩИЩЁННЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
-	def _GenerateNewNoteID(self) -> int:
+	def _generate_new_note_id(self) -> int:
 		"""
 		Генерирует новый ID с повторным использованием освободившихся.
 
@@ -75,7 +75,7 @@ class BaseTable:
 		:rtype: int
 		"""
 
-		SequenceID = self._GetNotesID()
+		SequenceID = self._get_notes_id()
 
 		if self.manifest.common.recycle_id:
 			for ID in range(1, len(SequenceID) + 1):
@@ -83,7 +83,7 @@ class BaseTable:
 
 		return int(max(SequenceID)) + 1 if len(SequenceID) > 0 else 1
 
-	def _GetNoteClass(self) -> type:
+	def _get_note_class(self) -> type:
 		"""
 		Возвращает класс записи.
 
@@ -91,12 +91,12 @@ class BaseTable:
 		:rtype: type
 		"""
 
-		ImportPath = f"Source.Tables.{self.manifest.type}.note"
+		ImportPath = f"otakudb.tables.{self.manifest.type}.note"
 		NoteModule = importlib.import_module(ImportPath)
 
 		return NoteModule.Note
 
-	def _GetNotesID(self) -> tuple[int, ...]:
+	def _get_notes_id(self) -> tuple[int, ...]:
 		"""
 		Возвращает список ID записей в таблице, полученный путём сканирования файлов JSON.
 
@@ -149,7 +149,7 @@ class BaseTable:
 		self._Descriptor = descriptor
 
 		self._Notes: "dict[int, BaseNote]" = {}
-		self._NoteClass = self._GetNoteClass()
+		self._NoteClass = self._get_note_class()
 		self._Connector = Connector(self)
 		
 		self._post_init()
@@ -162,7 +162,7 @@ class BaseTable:
 	def load_data(self):
 		"""Загружает данные таблицы."""
 
-		for ID in self._GetNotesID(): self._Notes[ID] = self._NoteClass(self._Driver, self, ID)
+		for ID in self._get_notes_id(): self._Notes[ID] = self._NoteClass(self._Driver, self, ID)
 		self._post_load()
 
 	def rename(self, name: str):
@@ -260,7 +260,7 @@ class BaseTable:
 		:rtype: Note
 		"""
 
-		NewNoteID = self._GenerateNewNoteID()
+		NewNoteID = self._generate_new_note_id()
 		self._Notes[NewNoteID] = self._NoteClass(self._Driver, self, NewNoteID)
 
 		return self._Notes[NewNoteID]

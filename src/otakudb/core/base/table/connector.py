@@ -73,7 +73,7 @@ class NoteBonds:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __ParseData(self, data: dict[str, list[int]]) -> dict[str, Bond]:
+	def __parse_data(self, data: dict[str, list[int]]) -> dict[str, Bond]:
 		"""
 		Парсит данные связей.
 
@@ -111,7 +111,7 @@ class NoteBonds:
 		self.__NoteID = note_id
 
 		self.__Table = operator.table
-		self.__Bonds: dict[str, Bond] = self.__ParseData(data)
+		self.__Bonds: dict[str, Bond] = self.__parse_data(data)
 
 	def bind(self, bond_name: str, slave_id: int):
 		"""
@@ -204,7 +204,7 @@ class BondsOperator:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __LoadData(self):
+	def __load_data(self):
 		"""Считывает данные из файла _.bonds.json_ в директории таблицы и парсит их."""
 
 		self.__Bonds: dict[int, NoteBonds] = {}
@@ -215,9 +215,9 @@ class BondsOperator:
 			Buffer = json.read(DataFilePath)
 			for MasterID in Buffer.keys(): self.__Bonds[int(MasterID)] = NoteBonds(self, int(MasterID), Buffer[MasterID])
 
-		self.__UpdateBondsCache()
+		self.__update_bonds_cache()
 
-	def __UpdateBondsCache(self):
+	def __update_bonds_cache(self):
 		"""Обновляет кэш связей."""
 
 		self.__Cache: dict[int, NoteBondsCache] = {}
@@ -246,7 +246,7 @@ class BondsOperator:
 
 		self.__Table = table
 		
-		self.__LoadData()
+		self.__load_data()
 
 	def bind(self, master_id: int, bond_name: str, slave_id: int):
 		"""
@@ -272,7 +272,7 @@ class BondsOperator:
 		MasterBond.slaves_id.append(slave_id)
 
 		self.save()
-		self.__UpdateBondsCache()
+		self.__update_bonds_cache()
 
 	def get_note_bonds(self, note_id: int) -> NoteBonds:
 		"""
@@ -391,7 +391,7 @@ class BondsOperator:
 		try:
 			MasterBond.slaves_id.remove(slave_id)
 			self.save()
-			self.__UpdateBondsCache()
+			self.__update_bonds_cache()
 		except ValueError: pass
 
 	def update_note_id(self, old_id: int, new_id: int):
@@ -413,7 +413,7 @@ class BondsOperator:
 		for CurrentNoteBonds in self.__Bonds.values(): CurrentNoteBonds.update_slaves_id(old_id, new_id)
 
 		self.save()
-		self.__UpdateBondsCache()
+		self.__update_bonds_cache()
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
