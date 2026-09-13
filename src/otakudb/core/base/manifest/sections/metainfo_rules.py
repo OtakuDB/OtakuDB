@@ -15,9 +15,9 @@ class MetainfoFieldParameters:
 	"""Параметры поля метаданных."""
 
 	name: str
-	types: tuple[type, ...] | None
+	types: tuple[type[float | int | str], ...] | None
 	allow_list: bool
-	values: tuple[int | float | str, ...] | None
+	values: tuple[float | int | str, ...] | None
 	description: str | None
 
 	def to_dict(self) -> dict:
@@ -53,19 +53,19 @@ class MetainfoRules(BaseSection):
 	def is_free_allowed(self) -> bool:
 		"""Состояние: разрешены ли неопределённые в правилах поля метаданных."""
 
-		return self.__IsFreeAllowed
+		return self.__is_free_allowed
 	
 	@property
-	def fields(self) -> tuple[MetainfoFieldParameters, ...]:
+	def fields_parameters(self) -> tuple[MetainfoFieldParameters, ...]:
 		"""Последовательность параметров полей метаданных."""
 
-		return tuple(self.__Fields.values())
+		return tuple(self.__fields.values())
 
 	@property
 	def fields_names(self) -> tuple[str, ...]:
 		"""Последовательность имён описанных полей метаданных."""
 
-		return tuple(self.__Fields.keys())
+		return tuple(self.__fields.keys())
 	
 	@property
 	def rule(self) -> int:
@@ -77,15 +77,16 @@ class MetainfoRules(BaseSection):
 		* 2 – разрешены все метаданные.
 		"""
 
-		if not all((self.__IsFreeAllowed, self.__Fields)): return 0
-		elif not self.__IsFreeAllowed: return 1
-		else: return 2
+		if not all((self.__is_free_allowed, self.__fields)): return 0
+		elif not self.__is_free_allowed: return 1
+		
+		return 2
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __ParseFields(self, data: dict[str, dict]) -> dict[str, MetainfoFieldParameters]:
+	def __parse_fields_parameters(self, data: dict[str, dict]) -> dict[str, MetainfoFieldParameters]:
 		"""
 		Парсит словарь данных полей в объектные представления.
 
@@ -95,24 +96,25 @@ class MetainfoRules(BaseSection):
 		:rtype: dict[str, MetainfoFieldParameters]
 		"""
 		
-		FieldsData = {}
+		fields_parameters: dict = {}
 
-		for Field, Parameters in data.items():
-			Types = Parameters.get("types")
-			if Types: Types = self.__ParseTypesString(Types)
+		for name, parameters in data.items():
+			types: str | None = parameters.get("types")
+			is_allow_list: bool = bool(parameters.get("allow_list"))
+			values: list | None = parameters.get("values")
+			description: str | None = parameters.get("description")
 
-			AllowList = bool(Parameters.get("allow_list"))
+			fields_parameters[name] = MetainfoFieldParameters(
+				name = name,
+				types = self.__parse_field_types(types) if types else None,
+				allow_list = is_allow_list,
+				values = to_sequence(values) if values else (),
+				description = description
+			)
 
-			Values = Parameters.get("values")
-			if Values is not None: Values = to_sequence(Values)
-
-			Description = Parameters.get("description")
-			
-			FieldsData[Field] = MetainfoFieldParameters(Field, Types, AllowList, Values, Description)
-
-		return FieldsData
+		return fields_parameters
 	
-	def __ParseTypesString(self, string: str) -> tuple[type, ...]:
+	def __parse_field_types(self, string: str) -> tuple[type, ...]:
 		"""
 		Парсит допустимые типы из строковых представлений.
 
@@ -123,25 +125,52 @@ class MetainfoRules(BaseSection):
 		:raises TypeError: Указан неподдерживаемый тип.
 		"""
 
-		Determinations = {Type.__name__: Type for Type in (float, int, str)}
-		TypesStrings = tuple(String.strip() for String in string.split(";"))
-		Result = []
+		determinations: dict[str, type[float | int | str]] = {value_type.__name__: value_type for value_type in (float, int, str)}
+		types_strings: tuple[str, ...] = tuple(part.strip() for part in string.split(";"))
+		result: list[type[float | int | str]] = []
 
-		for TypeString in TypesStrings:
-			if TypeString not in Determinations: raise TypeError(f"Unsupported type \"{TypeString}\".")
-			Result.append(Determinations[TypeString])
+		for part in types_strings:
 
-		return tuple(Result)
+			if part not in determinations:
+				raise TypeError(f"Unsupported type \"{part}\".")
+
+			result.append(determinations[part])
+
+		return tuple(result)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def _parse(self, data: dict):
+		"""
+		Парсит данные из переданного словаря.
+
+		:param data: Словарь данных.
+		:type data: dict
+		"""
+
+		self.__is_free_allowed = bool(data.get("allow_free"))
+		self.__fields = self.__parse_fields_parameters(data.get("fields", {}))
+
 	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		self.__IsFreeAllowed = False
-		self.__Fields: dict[str, MetainfoFieldParameters] = {}
+		self.__is_free_allowed: bool = False
+		self.__fields: dict[str, MetainfoFieldParameters] = {}
+
+	def _to_dict(self) -> dict:
+		"""
+		Возвращает словарное представление объекта.
+
+		:return: Словарное представление объекта.
+		:rtype: dict
+		"""
+
+		return {
+			"allow_free": self.__is_free_allowed,
+			"fields": {field.name: field.to_dict() for field in self.__fields.values()}
+		}
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -150,7 +179,7 @@ class MetainfoRules(BaseSection):
 	def create_field_parameters(
 			self,
 			field: str,
-			types: type | Sequence[type] | None = None,
+			types: type[float | int | str] | Sequence[type[float | int | str]] | None = None,
 			allow_list: bool = False,
 			values: Sequence[int | float | str] | None = None,
 			description: str | None = None
@@ -161,7 +190,7 @@ class MetainfoRules(BaseSection):
 		:param field: Имя поля.
 		:type field: str
 		:param types: Допустимые в поле типы данных.
-		:type types: type | Sequence[type] | None
+		:type types: type[float | int | str] | Sequence[type[float | int | str]] | None
 		:param allow_list: Указывает, разрешено ли помещать в поле несколько значений.
 		:type allow_list: bool
 		:param values: Последовательность принимаемых значений или `None` для любого.
@@ -170,8 +199,13 @@ class MetainfoRules(BaseSection):
 		:type description: str | None
 		"""
 
-		AllowedTypes = to_sequence(types, target_type = tuple) if types else None
-		self.__Fields[field] = MetainfoFieldParameters(field, AllowedTypes, allow_list, tuple(values) if values else None, description)
+		self.__fields[field] = MetainfoFieldParameters(
+			name = field,
+			types = to_sequence(types) if types else None,
+			allow_list = allow_list,
+			values = tuple(values) if values else None,
+			description = description
+		)
 
 	def get_field_parameters(self, field: str) -> MetainfoFieldParameters:
 		"""
@@ -184,20 +218,10 @@ class MetainfoRules(BaseSection):
 		:raises MetainfoFieldNotDescribed: Данные поля не найдены.
 		"""
 
-		if field not in self.__Fields: raise exceptions.note.MetainfoFieldNotDescribedError(field)
+		if field not in self.__fields:
+			raise exceptions.note.metainfo.MetainfoFieldNotDescribedError(field)
 
-		return self.__Fields[field]
-
-	def parse(self, data: dict):
-		"""
-		Парсит данные из переданного словаря.
-
-		:param data: Словарь данных.
-		:type data: dict
-		"""
-
-		self.__IsFreeAllowed = bool(data.get("allow_free"))
-		self.__Fields: dict[str, MetainfoFieldParameters] = self.__ParseFields(data.get("fields") or {})
+		return self.__fields[field]
 
 	def remove_field_parameters(self, field: str):
 		"""
@@ -208,18 +232,7 @@ class MetainfoRules(BaseSection):
 		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
 		"""
 
-		if field not in self.__Fields: raise exceptions.note.MetainfoFieldNotDescribedError(field)
-		del self.__Fields[field]
+		if field not in self.__fields:
+			raise exceptions.note.metainfo.MetainfoFieldNotDescribedError(field)
 
-	def to_dict(self) -> dict:
-		"""
-		Возвращает словарное представление объекта.
-
-		:return: Словарное представление объекта.
-		:rtype: dict
-		"""
-
-		return {
-			"allow_free": self.__IsFreeAllowed,
-			"fields": {FieldData.name: FieldData.to_dict() for FieldData in self.__Fields.values()}
-		}
+		del self.__fields[field]

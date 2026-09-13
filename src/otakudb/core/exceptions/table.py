@@ -1,3 +1,16 @@
+class ManifestError(Exception):
+	"""Исключение: ошибка манифеста."""
+
+	def __init__(self, message: str):
+		"""
+		Исключение: ошибка манифеста.
+
+		:param message: Сообщение об ошибке.
+		:type message: str
+		"""
+		
+		super().__init__(message)
+
 class NoteNotFoundError(Exception):
 	"""Исключение: запись не найдена."""
 

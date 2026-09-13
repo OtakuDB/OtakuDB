@@ -54,11 +54,39 @@ class AttachmentsSection(BaseSection):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def _parse(self, data: dict):
+		"""
+		Парсит данные из переданного словаря.
+
+		:param data: Словарь данных.
+		:type data: dict
+		"""
+
+		self.set_attachments_rule(data["rule"])
+		self.__slots.clear()
+		slots_data: dict = data.get("slots", {})
+
+		for slot, description in slots_data.items():
+			self.create_slot_parameters(slot, description)
+
 	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self.__rule: Literal[0, 1, 2] = 0
 		self.__slots: dict[str, SlotParameters] = {}
+
+	def _to_dict(self) -> dict[str, int | dict]:
+		"""
+		Возвращает словарное представление объекта.
+
+		:return: Словарное представление объекта.
+		:rtype: dict[str, int | dict]
+		"""
+
+		return {
+			"rule": self.__rule,
+			"slots": {slot.name: slot.description for slot in self.__slots.values()}
+		}
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -75,7 +103,7 @@ class AttachmentsSection(BaseSection):
 		:raises AttachmentSlotAlreadyDescribedError: Слот уже описан.
 		"""
 
-		if slot in self.__slots: raise exceptions.note.AttachmentSlotAlreadyDescribedError(slot)
+		if slot in self.__slots: raise exceptions.note.attachments.AttachmentSlotAlreadyDescribedError(slot)
 		self.__slots[slot] = SlotParameters(slot, description)
 
 	def get_slot_parameters(self, slot: str) -> SlotParameters:
@@ -90,24 +118,9 @@ class AttachmentsSection(BaseSection):
 		"""
 
 		if slot not in self.__slots:
-			raise exceptions.note.AttachmentSlotNotDescribedError(slot)
+			raise exceptions.note.attachments.AttachmentSlotNotDescribedError(slot)
 
 		return self.__slots[slot]
-
-	def parse(self, data: dict):
-		"""
-		Парсит данные из переданного словаря.
-
-		:param data: Словарь данных.
-		:type data: dict
-		"""
-
-		self.set_attachments_rule(data["rule"])
-		self.__slots.clear()
-		slots_data: dict = data.get("slots", {})
-
-		for slot, description in slots_data.items():
-			self.create_slot_parameters(slot, description)
 
 	def remove_slot_parameters(self, slot: str):
 		"""
@@ -118,7 +131,7 @@ class AttachmentsSection(BaseSection):
 		:raises AttachmentSlotNotDescribed: Слот не описан.
 		"""
 
-		if slot not in self.__slots: raise exceptions.note.AttachmentSlotAlreadyDescribedError(slot)
+		if slot not in self.__slots: raise exceptions.note.attachments.AttachmentSlotAlreadyDescribedError(slot)
 		del self.__slots[slot]
 
 	def set_attachments_rule(self, rule: Literal[0, 1, 2]):
@@ -136,18 +149,8 @@ class AttachmentsSection(BaseSection):
 		:raises ValueError: Индекс правила выходит за пределы диапазона.
 		"""
 
-		if rule not in (0, 1, 2): raise ValueError("Rule must be between 0 and 2.")
+		if rule not in (0, 1, 2):
+			raise ValueError("Rule must be between 0 and 2.")
+			
 		self.__rule = rule
 
-	def to_dict(self) -> dict[str, int | dict]:
-		"""
-		Возвращает словарное представление объекта.
-
-		:return: Словарное представление объекта.
-		:rtype: dict[str, int | dict]
-		"""
-
-		return {
-			"rule": self.__rule,
-			"slots": {slot.name: slot.description for slot in self.__slots.values()}
-		}

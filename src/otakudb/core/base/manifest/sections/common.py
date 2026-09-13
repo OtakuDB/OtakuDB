@@ -17,10 +17,32 @@ class CommonSection(BaseSection):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def _parse(self, data: dict):
+		"""
+		Парсит данные из переданного словаря.
+
+		:param data: Словарь данных.
+		:type data: dict
+		"""
+
+		self.__recycle_id = bool(data.get("recycle_id"))
+
 	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self.__recycle_id = True
+
+	def _to_dict(self) -> dict:
+		"""
+		Возвращает словарное представление объекта.
+
+		:return: Словарное представление объекта.
+		:rtype: dict
+		"""
+
+		return {
+			"recycle_id": self.__recycle_id
+		}
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -35,25 +57,3 @@ class CommonSection(BaseSection):
 		"""
 
 		self.__recycle_id = status
-
-	def parse(self, data: dict):
-		"""
-		Парсит данные из переданного словаря.
-
-		:param data: Словарь данных.
-		:type data: dict
-		"""
-
-		self.__recycle_id = bool(data.get("recycle_id"))
-
-	def to_dict(self) -> dict:
-		"""
-		Возвращает словарное представление объекта.
-
-		:return: Словарное представление объекта.
-		:rtype: dict
-		"""
-
-		return {
-			"recycle_id": self.__recycle_id
-		}

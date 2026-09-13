@@ -1,13 +1,17 @@
-from pathlib import Path
+from typing import TYPE_CHECKING, Self
 
 from dublib.functions.filesystem import json
 
+from ... import exceptions
 from .sections.attachments import AttachmentsSection
 from .sections.common import CommonSection
 from .sections.connections import ConnectionsSection
 from .sections.custom import CustomSection
 from .sections.interfaces_options import InterfacesOptions
 from .sections.metainfo_rules import MetainfoRules
+
+if TYPE_CHECKING:
+	from pathlib import Path
 
 class Manifest:
 	"""Манифест таблицы."""
@@ -17,14 +21,21 @@ class Manifest:
 	#==========================================================================================#
 
 	@property
-	def directory(self) -> Path:
+	def directory(self) -> "Path":
 		"""Путь к директории таблицы."""
 
 		return self.__directory
 
 	@property
-	def table_type(self) -> str | None:
-		"""Тип таблицы."""
+	def table_type(self) -> str:
+		"""
+		Тип таблицы.
+
+		:raises ManifestError: Тип таблицы не определён.
+		"""
+
+		if not self.__table_type:
+			raise exceptions.table.ManifestError("Table type undefined.")
 
 		return self.__table_type
 	
@@ -72,27 +83,43 @@ class Manifest:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, directory: Path):
+	def __init__(self, directory: "Path", table_type: str | None = None):
 		"""
 		Манифест таблицы.
 
 		:param directory: Полный путь к директории таблицы.
 		:type directory: PathLike
+		:param table_type: Тип таблицы.
+		:type table_type: str | None
 		"""
 
-		self.set_directory(directory)
+		self.__directory: "Path" = directory
 
-		self.__manifest_path = self.__directory / "manifest.json"
-		self.__table_type: str | None = None
-
+		self.__manifest_path: "Path" = self.__directory / "manifest.json"
+		self.__table_type: str | None = table_type
+		
 		self.__attachments = AttachmentsSection(self)
 		self.__common = CommonSection(self)
 		self.__custom = CustomSection(self)
 		self.__connections = ConnectionsSection(self)
 		self.__metainfo_rules = MetainfoRules(self)
-		self.__interfaces_options = InterfacesOptions(self) 
+		self.__interfaces_options = InterfacesOptions(self)
 
-	def load(self) -> "Manifest":
+	def change_directory(self, directory: "Path"):
+		"""
+		Задаёт полный путь к директории таблицы.
+
+		:param directory: Полный путь к директории таблицы.
+		:type directory: Path
+		:raises FileNotFoundError: Директория таблицы не найдена.
+		"""
+
+		if not directory.exists():
+			raise FileNotFoundError(directory)
+
+		self.__directory = directory
+
+	def load(self) -> Self:
 		"""
 		Читает и парсит манифест.
 
@@ -118,30 +145,6 @@ class Manifest:
 
 		json.write(self.__manifest_path, self.to_dict(), atomic = True)
 
-	def set_directory(self, full_path: Path):
-		"""
-		Задаёт полный путь к директории таблицы.
-
-		:param full_path: Полный путь к директории таблицы.
-		:type full_path: Path
-		:raises FileNotFoundError: Директория таблицы не найдена.
-		"""
-
-		if not full_path.exists():
-			raise FileNotFoundError(full_path)
-
-		self.__directory = full_path
-
-	def set_type(self, table_type: str):
-		"""
-		Задаёт тип таблицы.
-
-		:param table_type: Тип таблицы.
-		:type table_type: str
-		"""
-
-		self.__type = table_type
-
 	def to_dict(self) -> dict:
 		"""
 		Возвращает словарное представление объекта.
@@ -151,7 +154,7 @@ class Manifest:
 		"""
 
 		return {
-			"type": self.__type,
+			"type": self.__table_type,
 			"attachments": self.__attachments.to_dict(),
 			"common": self.__common.to_dict(),
 			"connections": self.__connections.to_dict(),

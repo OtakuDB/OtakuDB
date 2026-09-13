@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from . import Manifest
+
+if TYPE_CHECKING:
+	from pathlib import Path
 
 class ManifestGenerator(ABC):
 	"""Генератор манифеста."""
@@ -29,7 +32,7 @@ class ManifestGenerator(ABC):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, directory: Path, table_type: str):
+	def __init__(self, directory: "Path", table_type: str):
 		"""
 		Генератор манифеста.
 
@@ -39,8 +42,8 @@ class ManifestGenerator(ABC):
 		:type table_type: str
 		"""
 
-		self.__Directory = directory
-		self.__Type = table_type
+		self.__directory: "Path" = directory
+		self.__table_type: str = table_type
 
 	def generate(self) -> Manifest:
 		"""
@@ -50,9 +53,8 @@ class ManifestGenerator(ABC):
 		:rtype: Manifest
 		"""
 		
-		ManifestObject = Manifest(self.__Directory)
-		ManifestObject.set_type(self.__Type)
-		ManifestObject = self._edit_manifest(ManifestObject)
-		ManifestObject.save()
+		manifest = Manifest(self.__directory, self.__table_type)
+		manifest = self._edit_manifest(manifest)
+		manifest.save()
 
-		return ManifestObject
+		return manifest
