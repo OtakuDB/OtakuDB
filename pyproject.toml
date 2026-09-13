@@ -12,7 +12,7 @@ dev = ["ruff", "ty"]
 
 [tool.ruff.lint]
 select = ["A", "ARG", "C", "E", "F", "I", "N818"]
-ignore = ["C901", "E701", "E501"]
+ignore = ["E701", "E501"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 1

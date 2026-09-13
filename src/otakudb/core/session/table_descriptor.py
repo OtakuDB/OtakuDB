@@ -102,4 +102,4 @@ class TableDescriptor:
 		self.__virtual_path = self.__virtual_path.parent / name
 		self.__full_path = self.__driver.storage_path / self.__virtual_path
 		self.__box.add_item(self)
-		self.__manifest.set_directory(self.full_path)
+		self.__manifest.change_directory(self.full_path)

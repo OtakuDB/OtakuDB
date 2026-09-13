@@ -6,13 +6,15 @@ from dublib.functions.filesystem import json
 from .... import exceptions
 
 if TYPE_CHECKING:
+	from pathlib import Path
+
 	from .. import BaseNote, BaseTable
 
 #==========================================================================================#
-# >>>>> ВСОПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ СВЯЗЕЙ <<<<< #
+# >>>>> ВСОПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
 
-@dataclass
+@dataclass(frozen = True)
 class NoteBondsCache:
 	"""Кэш связей записи."""
 
@@ -26,7 +28,7 @@ class Bond:
 	name: str
 	slaves_id: list[int]
 
-class NoteBonds:
+class NoteBonds[N: "BaseNote"]:
 	"""Связи записи."""
 
 	#==========================================================================================#
@@ -46,28 +48,34 @@ class NoteBonds:
 		return tuple(self.__bonds.keys())
 
 	@property
-	def has_masters(self) -> bool:
-		"""Состояние: имеются ли привязавшие записи.."""
+	def has_bonds(self) -> bool:
+		"""Состояние: имеются ли связи."""
 
-		return self.__Operator.is_note_has_masters(self.__NoteID)
+		return all((self.has_masters, self.has_slaves))
+
+	@property
+	def has_masters(self) -> bool:
+		"""Состояние: имеются ли привязавшие записи."""
+
+		return self.__operator.is_note_has_masters(self.__note_id)
 
 	@property
 	def has_slaves(self) -> bool:
 		"""Состояние: имеются ли привязанные записи.."""
 
-		return self.__Operator.is_note_has_slaves(self.__NoteID)
+		return self.__operator.is_note_has_slaves(self.__note_id)
 
 	@property
-	def masters(self) -> "tuple[BaseNote, ...]":
+	def masters(self) -> tuple[N, ...]:
 		"""Привязавшие записи."""
 
-		return self.__Operator.get_note_masters(self.__NoteID)
+		return self.__operator.get_note_masters(self.__note_id)
 
 	@property
-	def slaves(self) -> "tuple[BaseNote, ...]":
+	def slaves(self) -> tuple[N, ...]:
 		"""Привязанные записи."""
 
-		return self.__Operator.get_note_slaves(self.__NoteID)
+		return self.__operator.get_note_slaves(self.__note_id)
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -83,13 +91,17 @@ class NoteBonds:
 		:rtype: dict[str, Bond]
 		"""
 
-		for BondName in self.__table.manifest.connections.bonds.names:
-			if BondName not in data: data[BondName] = []
+		bonds: dict[str, Bond] = {}
 
-		Bonds = {}
-		for Name, SlavesList in data.items(): Bonds[Name] = Bond(Name, SlavesList)
+		for name in self.__table.manifest.connections.bonds.names:
 
-		return Bonds
+			if name not in data:
+				bonds[name] = Bond(name, [])
+				continue
+
+			bonds[name] = Bond(name, data[name])
+
+		return bonds
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -107,11 +119,11 @@ class NoteBonds:
 		:type data: dict[str, list[int]]
 		"""
 
-		self.__Operator = operator
-		self.__NoteID = note_id
+		self.__operator: "BondsOperator" = operator
+		self.__note_id: int = note_id
 
-		self.__table = operator.table
 		self.__bonds: dict[str, Bond] = self.__parse_data(data)
+		self.__table = operator.table
 
 	def bind(self, bond_name: str, slave_id: int):
 		"""
@@ -123,7 +135,7 @@ class NoteBonds:
 		:type slave_id: int
 		"""
 
-		self.__Operator.bind(self.__NoteID, bond_name, slave_id)
+		self.__operator.bind(self.__note_id, bond_name, slave_id)
 
 	def get_bond(self, bond_name: str) -> Bond:
 		"""
@@ -136,7 +148,10 @@ class NoteBonds:
 		:raises BondNotDescribedError: Связь не описана.
 		"""
 
-		if bond_name not in self.__bonds: raise exceptions.note.BondNotDescribedError(bond_name)
+		if bond_name not in self.__bonds:
+			raise exceptions.note.bonds.BondNotDescribedError(bond_name)
+
+		# To-Do: заменить список ID кортедом для неизменяемости извне.
 
 		return self.__bonds[bond_name]
 
@@ -148,7 +163,7 @@ class NoteBonds:
 		:type new_note_id: int
 		"""
 
-		self.__NoteID = new_note_id
+		self.__note_id = new_note_id
 
 	def to_dict(self) -> dict:
 		"""
@@ -170,7 +185,7 @@ class NoteBonds:
 		:type slave_id: int
 		"""
 
-		self.__Operator.unbind(self.__NoteID, bond_name, slave_id)		
+		self.__operator.unbind(self.__note_id, bond_name, slave_id)		
 
 	def update_slaves_id(self, old_slave_id: int, new_slave_id: int):
 		"""
@@ -182,16 +197,16 @@ class NoteBonds:
 		:type new_slave_id: int
 		"""
 
-		for CurrentBond in self.__bonds.values():
-			if old_slave_id in CurrentBond.slaves_id:
-				Index = CurrentBond.slaves_id.index(old_slave_id)
-				CurrentBond.slaves_id[Index] = new_slave_id
+		for bond in self.__bonds.values():
+			if old_slave_id in bond.slaves_id:
+				index: int = bond.slaves_id.index(old_slave_id)
+				bond.slaves_id[index] = new_slave_id
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class BondsOperator:
+class BondsOperator[N: "BaseNote"]:
 	"""Оператор связей."""
 
 	#==========================================================================================#
@@ -205,22 +220,33 @@ class BondsOperator:
 		return self.__table
 
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ УПРАВЛЕНИЯ КЭШЕМ <<<<< #
 	#==========================================================================================#
 
-	def __load_data(self):
-		"""Считывает данные из файла _.bonds.json_ в директории таблицы и парсит их. Также обновляет кэш связей."""
+	def __add_bond_to_cache(self, master_id: int, slave_id: int):
+		"""
+		Добавляет данные о связи в кэш.
 
-		data_file = self.__table.full_path / ".bonds.json"
+		:param master_id: ID записи, к которой осуществляется привязка. 
+		:type master_id: int
+		:param slave_id: ID привязываемой записи.
+		:type slave_id: int
+		"""
 
-		if data_file.exists():
-			buffer = json.read(data_file)
-			self.__bonds = {int(master_id): NoteBonds(self, int(master_id), buffer[master_id]) for master_id in buffer.keys()}
+		for note_id in (master_id, slave_id):
+			if note_id not in self.__cache:
+				self.__cache[note_id] = NoteBondsCache()
 
-		self.__update_bonds_cache()
+		master_cache: NoteBondsCache = self.__cache[master_id]
+		if slave_id not in master_cache.slaves:
+			master_cache.slaves.append(slave_id)
 
-	def __update_bonds_cache(self):
-		"""Обновляет кэш связей."""
+		slave_cache: NoteBondsCache = self.__cache[slave_id]
+		if master_id not in slave_cache.masters:
+			slave_cache.masters.append(master_id)
+
+	def __refresh_bonds_cache(self):
+		"""Обновляет кэш связей. Перезаписывает текущие данные."""
 
 		self.__cache.clear()
 
@@ -239,6 +265,37 @@ class BondsOperator:
 
 					if master_id not in self.__cache[slave_id].masters:
 						self.__cache[slave_id].masters.append(master_id)
+	
+	def __remove_bond_from_cache(self, master_id: int, slave_id: int):
+		"""
+		Удаляет данные о связи из кэша.
+
+		:param master_id: ID записи, к которой осуществлена привязка. 
+		:type master_id: int
+		:param slave_id: ID привязанной записи.
+		:type slave_id: int
+		"""
+
+		master_cache: NoteBondsCache | None = self.__cache.get(master_id)
+		if master_cache and slave_id in master_cache.slaves:
+			master_cache.slaves.remove(slave_id)
+
+		slave_cache: NoteBondsCache | None = self.__cache.get(slave_id)
+		if slave_cache and master_id in slave_cache.masters:
+			slave_cache.masters.remove(master_id)
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __load_data(self):
+		"""Считывает данные из файла _.bonds.json_ в директории таблицы и парсит их. Также обновляет кэш связей."""
+
+		if self.__bonds_file.exists():
+			data: dict = json.read(self.__bonds_file)
+			self.__bonds = {int(master_id): NoteBonds(self, int(master_id), data[master_id]) for master_id in data.keys()}
+
+		self.__refresh_bonds_cache()
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -252,8 +309,10 @@ class BondsOperator:
 		:type table: BaseTable
 		"""
 
-		self.__table = table
-		self.__bonds: dict[int, NoteBonds] = {}
+		self.__table: "BaseTable" = table
+
+		self.__bonds_file: "Path" = self.__table.full_path / ".bonds.json"
+		self.__bonds: dict[int, NoteBonds[N]] = {}
 		self.__cache: dict[int, NoteBondsCache] = {}
 
 		self.__load_data()
@@ -271,21 +330,21 @@ class BondsOperator:
 		:raises MaxBindedNotesCountReachedError: Достигнуто максимальное количество прикрепляемых записей.
 		"""
 
-		self.__table.get_note(master_id)
-		self.__table.get_note(slave_id)
+		self.__table.is_note_exists(master_id, not_found_error = True)
+		self.__table.is_note_exists(slave_id, not_found_error = True)
 
 		bond_parameters = self.__table.manifest.connections.bonds.get_bond_parameters(bond_name)
-		master_bond = self.get_note_bonds(master_id).get_bond(bond_name)
+		bond: Bond = self.get_note_bonds(master_id).get_bond(bond_name)
 
-		if bond_parameters.count and len(master_bond.slaves_id) >= bond_parameters.count:
-			raise exceptions.note.MaxBindedNotesCountReachedError(bond_name, bond_parameters.count)
+		if bond_parameters.count and len(bond.slaves_id) >= bond_parameters.count:
+			raise exceptions.note.bonds.MaxBindedNotesCountReachedError(bond_name, bond_parameters.count)
 
-		master_bond.slaves_id.append(slave_id)
+		bond.slaves_id.append(slave_id)
 
 		self.save()
-		self.__update_bonds_cache()
+		self.__add_bond_to_cache(master_id, slave_id)
 
-	def get_note_bonds(self, note_id: int) -> NoteBonds:
+	def get_note_bonds(self, note_id: int) -> NoteBonds[N]:
 		"""
 		Возвращает связи записи.
 
@@ -295,16 +354,17 @@ class BondsOperator:
 		:rtype: NoteBonds
 		"""
 
-		self.__table.get_note(note_id)
-		Bonds = self.__bonds.get(note_id)
+		self.__table.is_note_exists(note_id, not_found_error = True)
 
-		if not Bonds:
-			Bonds = NoteBonds(self, note_id, {})
-			self.__bonds[note_id] = Bonds
+		bonds: NoteBonds | None = self.__bonds.get(note_id)
 
-		return Bonds
+		if bonds is None:
+			bonds = NoteBonds(self, note_id, {})
+			self.__bonds[note_id] = bonds
 
-	def get_note_masters(self, slave_id: int) -> "tuple[BaseNote, ...]":
+		return bonds
+
+	def get_note_masters(self, slave_id: int) -> tuple[N, ...]:
 		"""
 		Возвращает привязавшие записи.
 
@@ -314,13 +374,15 @@ class BondsOperator:
 		:rtype: tuple[BaseNote, ...]
 		"""
 
-		BindedNotes: list["BaseNote"] = []
+		masters: list[N] = []
+		
 		if slave_id in self.__cache:
-			for MasterID in self.__cache[slave_id].masters: BindedNotes.append(self.__table.get_note(MasterID))
+			for master_id in self.__cache[slave_id].masters:
+				masters.append(self.__table.get_note(master_id))
 
-		return tuple(sorted(BindedNotes, key = lambda CurrentNote: CurrentNote.id))
+		return tuple(sorted(masters, key = lambda note: note.id))
 
-	def get_note_slaves(self, master_id: int) -> "tuple[BaseNote, ...]":
+	def get_note_slaves(self, master_id: int) -> tuple[N, ...]:
 		"""
 		Возвращает привязанные записи.
 
@@ -331,11 +393,13 @@ class BondsOperator:
 		:raises NoteNotFound: Запись не найдена в таблице.
 		"""
 
-		BindedNotes: list["BaseNote"] = []
-		if master_id in self.__cache:
-			for SlaveID in self.__cache[master_id].slaves: BindedNotes.append(self.__table.get_note(SlaveID))
+		slaves: list[N] = []
 
-		return tuple(sorted(BindedNotes, key = lambda CurrentNote: CurrentNote.id))
+		if master_id in self.__cache:
+			for slave_id in self.__cache[master_id].slaves:
+				slaves.append(self.__table.get_note(slave_id))
+
+		return tuple(sorted(slaves, key = lambda note: note.id))
 
 	def is_note_has_masters(self, slave_id: int) -> bool:
 		"""
@@ -347,7 +411,8 @@ class BondsOperator:
 		:rtype: bool
 		"""
 
-		if slave_id not in self.__cache: return False
+		if slave_id not in self.__cache:
+			return False
 
 		return bool(self.__cache[slave_id].masters)
 	
@@ -362,14 +427,15 @@ class BondsOperator:
 		:raises NoteNotFound: Запись не найдена в таблице.
 		"""
 
-		if master_id not in self.__cache: return False
+		if master_id not in self.__cache:
+			return False
 
 		return bool(self.__cache[master_id].slaves)
 
 	def save(self):
 		"""Сохраняет данные связей в файл _.bonds.json_ в директории таблицы."""
 
-		json.write(self.__table.full_path / ".bonds.json", self.to_dict(), atomic = True)
+		json.write(self.__bonds_file, self.to_dict(), atomic = True)
 
 	def to_dict(self) -> dict:
 		"""
@@ -379,7 +445,7 @@ class BondsOperator:
 		:rtype: dict
 		"""
 
-		return {NoteID: CurrentNoteBonds.to_dict() for NoteID, CurrentNoteBonds in self.__bonds.items() if CurrentNoteBonds.bonds}
+		return {note_id: bonds.to_dict() for note_id, bonds in self.__bonds.items() if bonds.has_bonds}
 
 	def unbind(self, master_id: int, bond_name: str, slave_id: int):
 		"""
@@ -393,17 +459,18 @@ class BondsOperator:
 		:type slave_id: int
 		"""
 
-		self.__table.get_note(master_id)
-		self.__table.get_note(slave_id)
+		self.__table.is_note_exists(master_id, not_found_error = True)
+		self.__table.is_note_exists(slave_id, not_found_error = True)
+
+		# Проверка наличия описания связи.
 		self.__table.manifest.connections.bonds.get_bond_parameters(bond_name)
 
-		MasterBond = self.get_note_bonds(master_id).get_bond(bond_name)
+		bond: Bond = self.get_note_bonds(master_id).get_bond(bond_name)
 
-		try:
-			MasterBond.slaves_id.remove(slave_id)
+		if slave_id in bond.slaves_id:
+			bond.slaves_id.remove(slave_id)
 			self.save()
-			self.__update_bonds_cache()
-		except ValueError: pass
+			self.__remove_bond_from_cache(master_id, slave_id)
 
 	def update_note_id(self, old_id: int, new_id: int):
 		"""
@@ -416,12 +483,12 @@ class BondsOperator:
 		"""
 
 		if old_id in self.__bonds:
-			Buffer = self.__bonds[old_id]
-			Buffer.set_note_id(new_id)
-			del self.__bonds[old_id]
-			self.__bonds[new_id] = Buffer
+			buffer: NoteBonds = self.__bonds.pop(old_id)
+			buffer.set_note_id(new_id)
+			self.__bonds[new_id] = buffer
 
-		for CurrentNoteBonds in self.__bonds.values(): CurrentNoteBonds.update_slaves_id(old_id, new_id)
+		for note_bonds in self.__bonds.values():
+			note_bonds.update_slaves_id(old_id, new_id)
 
 		self.save()
-		self.__update_bonds_cache()
+		self.__refresh_bonds_cache()

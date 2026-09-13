@@ -76,9 +76,9 @@ class Slot:
 		"""
 		
 		match self.__Note.table.manifest.attachments.rule:
-			case 0: raise exceptions.note.AttachmentsDeniedError(False)
+			case 0: raise exceptions.note.attachments.AttachmentsDeniedError(False)
 		
-		if self.__File: raise exceptions.note.AttachmentSlotAlreadyFilledError(self.__Name)
+		if self.__File: raise exceptions.note.attachments.AttachmentSlotAlreadyFilledError(self.__Name)
 		self.__File = file.name
 
 
@@ -224,7 +224,7 @@ class Attachments:
 		"""
 		
 		Rule = self.__Note.table.manifest.attachments.rule
-		if Rule < 2: raise exceptions.note.AttachmentsDeniedError(bool(Rule))
+		if Rule < 2: raise exceptions.note.attachments.AttachmentsDeniedError(bool(Rule))
 
 		cast(list, self.__Data["free"]).append(file.name)
 
@@ -249,7 +249,7 @@ class Attachments:
 		:raises AttachmentSlotNotDescribed: Слот вложения не описан.
 		"""
 
-		if slot not in self.__Slots: raise exceptions.note.AttachmentSlotNotDescribedError(slot)
+		if slot not in self.__Slots: raise exceptions.note.attachments.AttachmentSlotNotDescribedError(slot)
 
 		return self.__Slots[slot]
 

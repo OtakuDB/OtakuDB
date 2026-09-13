@@ -45,14 +45,14 @@ class BaseTable[N: "BaseNote"]:
 		return self._descriptor.name
 
 	@property
-	def notes(self) -> "tuple[BaseNote, ...]":
+	def notes(self) -> tuple[N, ...]:
 		"""Список записей."""
 
 		return tuple(self._notes.values())
 	
 	@property
 	def notes_id(self) -> tuple[int, ...]:
-		"""Список ID записей."""
+		"""Последовательность ID записей."""
 
 		return self._get_notes_id()
 
@@ -63,7 +63,107 @@ class BaseTable[N: "BaseNote"]:
 		return self._descriptor.virtual_path
 
 	#==========================================================================================#
-	# >>>>> ЗАЩИЩЁННЫЕ МЕТОДЫ <<<<< #
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ИЗМЕНЕНИЯ ID ЗАПИСЕЙ <<<<< #
+	#==========================================================================================#
+
+	def _change_note_id(self, note_id: int, new_id: int, is_target_note_exists: bool):
+		"""
+		Обрабатывает режим изменения ID записи: базовое изменение.
+
+		:param note_id: Текущий ID.
+		:type note_id: int
+		:param new_id: Новый ID.
+		:type new_id: int
+		:param is_target_note_exists: Состояние: существует ли запись с новым ID.
+		:type is_target_note_exists: bool
+		"""
+
+		if is_target_note_exists:
+			raise exceptions.table.OperationError("Unable insert. Target ID already exists.")
+
+		self._notes[new_id] = self._notes[note_id]
+		self._notes[new_id].set_id(new_id)
+		del self._notes[note_id]
+
+	def _insert_note(self, note_id: int, new_id: int, is_target_note_exists: bool):
+		"""
+		Обрабатывает режим изменения ID записи: вставка.
+
+		:param note_id: Текущий ID.
+		:type note_id: int
+		:param new_id: Новый ID.
+		:type new_id: int
+		:param is_target_note_exists: Состояние: существует ли запись с новым ID.
+		:type is_target_note_exists: bool
+		"""
+
+		if not is_target_note_exists:
+			self.change_note_id(note_id, new_id)
+			return
+
+		self.change_note_id(note_id, 0)
+
+		affected_notes_id: list[int] = sorted(note.id for note in self._notes.values() if note.id >= new_id)
+		buffer: list[int] = []
+
+		for current_note_id in affected_notes_id:
+
+			if not buffer:
+				buffer.append(current_note_id)
+				continue
+
+			if current_note_id - buffer[-1] != 1: break 
+			buffer.append(current_note_id)
+
+		affected_notes_id = list(reversed(buffer))
+
+		for current_note_id in affected_notes_id:
+			self.change_note_id(current_note_id, current_note_id + 1)
+
+		self.change_note_id(0, new_id)
+		
+	def _overwrite_note(self, note_id: int, new_id: int, is_target_note_exists: bool):
+		"""
+		Обрабатывает режим изменения ID записи: перезапись.
+
+		:param note_id: Текущий ID.
+		:type note_id: int
+		:param new_id: Новый ID.
+		:type new_id: int
+		:param is_target_note_exists: Состояние: существует ли запись с новым ID.
+		:type is_target_note_exists: bool
+		"""
+
+		if is_target_note_exists: self.delete_note(new_id)
+		self._notes[note_id].set_id(new_id)
+
+	def _swap_note(self, note_id: int, new_id: int, is_target_note_exists: bool):
+		"""
+		Обрабатывает режим изменения ID записи: обмен.
+
+		:param note_id: Текущий ID.
+		:type note_id: int
+		:param new_id: Новый ID.
+		:type new_id: int
+		:param is_target_note_exists: Состояние: существует ли запись с новым ID.
+		:type is_target_note_exists: bool
+		"""
+
+		if not is_target_note_exists:
+			raise exceptions.table.OperationError("Unable swap. Target ID is free.")
+
+		FirstNote = self._notes[note_id]
+		SecondNote = self._notes[new_id]
+
+		FirstNote.set_id(0)
+		SecondNote.set_id(note_id)
+		FirstNote.set_id(new_id)
+
+		self._notes[note_id] = SecondNote
+		self._notes[new_id] = FirstNote
+
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
 	def _generate_new_note_id(self) -> int:
@@ -195,60 +295,19 @@ class BaseTable[N: "BaseNote"]:
 		:raises ValueError: Неверный режим изменения.
 		"""
 
-		IsTargetNoteExists = new_id in self._notes
-
 		if note_id not in self._notes:
 			raise exceptions.table.NoteNotFoundError(note_id)
 
-		if mode not in (None, "i", "o", "s"): raise ValueError("Incorrect changing mode.")
+		if mode not in (None, "i", "o", "s"):
+			raise ValueError("Incorrect changing mode.")
+
+		is_target_note_exists: bool = self.is_note_exists(new_id)
 
 		match mode:
-
-			case None:
-				if IsTargetNoteExists: raise exceptions.table.OperationError("Unable insert. Target ID already exists.")
-				self._notes[new_id] = self._notes[note_id]
-				self._notes[new_id].set_id(new_id)
-				del self._notes[note_id]
-
-			case "i":
-
-				if not IsTargetNoteExists:
-					self.change_note_id(note_id, new_id)
-					return
-
-				self.change_note_id(note_id, 0)
-
-				AffectedNotesID = sorted(CurrentNote.id for CurrentNote in self._notes.values() if CurrentNote.id >= new_id)
-				Buffer = []
-
-				for CurrentID in AffectedNotesID:
-
-					if not Buffer:
-						Buffer.append(CurrentID)
-						continue
-
-					if CurrentID - Buffer[-1] != 1: break 
-					Buffer.append(CurrentID)
-
-				AffectedNotesID = list(reversed(Buffer))
-				for CurrentID in AffectedNotesID: self.change_note_id(CurrentID, CurrentID + 1)
-				self.change_note_id(0, new_id)
-
-			case "o":
-				self.delete_note(new_id)
-				self._notes[note_id].set_id(new_id)
-
-			case "s":
-				if not IsTargetNoteExists: raise exceptions.table.OperationError("Unable swap. Target ID is free.")
-				FirstNote = self._notes[note_id]
-				SecondNote = self._notes[new_id]
-
-				FirstNote.set_id(0)
-				SecondNote.set_id(note_id)
-				FirstNote.set_id(new_id)
-
-				self._notes[note_id] = SecondNote
-				self._notes[new_id] = FirstNote
+			case None: self._change_note_id(note_id, new_id, is_target_note_exists)
+			case "i": self._insert_note(note_id, new_id, is_target_note_exists)
+			case "o": self._overwrite_note(note_id, new_id, is_target_note_exists)
+			case "s": self._swap_note(note_id, new_id, is_target_note_exists)
 
 	def create_note(self) -> N:
 		"""
@@ -297,14 +356,22 @@ class BaseTable[N: "BaseNote"]:
 
 		return self._notes[note_id]
 	
-	def is_note_exists(self, note_id: int) -> bool:
+	def is_note_exists(self, note_id: int, not_found_error: bool = False) -> bool:
 		"""
 		Проверяет, существует ли запись с указанным ID.
 
 		:param note_id: ID записи.
 		:type note_id: int
+		:param not_found_error: Указывает, выбрасывать ли исключение при отсутствии записи.
+		:type not_found_error: bool
 		:return: Возвращает `True`, если запись существует.
 		:rtype: bool
+		:raises NoteNotFoundError: Запись не найдена.
 		"""
 
-		return note_id in self._notes
+		is_note_found: bool = note_id in self._notes
+
+		if not is_note_found and not_found_error:
+			raise exceptions.table.NoteNotFoundError(note_id)
+
+		return is_note_found

@@ -114,14 +114,14 @@ class MetainfoRules(BaseSection):
 
 		return fields_parameters
 	
-	def __parse_field_types(self, string: str) -> tuple[type, ...]:
+	def __parse_field_types(self, string: str) -> tuple[type[float | int | str], ...]:
 		"""
 		Парсит допустимые типы из строковых представлений.
 
 		:param string: Обрабатываемая строка, в которой типы разделены символом `;`. Поддерживаются `float`, `int`, `str`.
 		:type string: str
 		:return: Последовательность поддерживаемых типов.
-		:rtype: tuple[type, ...]
+		:rtype: tuple[type[float | int | str], ...]
 		:raises TypeError: Указан неподдерживаемый тип.
 		"""
 

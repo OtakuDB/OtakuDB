@@ -48,12 +48,12 @@ class Metainfo:
 		FieldParameters = self.__Note.table.manifest.metainfo_rules.get_field_parameters(field)
 		
 		if not FieldParameters.allow_list:
-			if len(value) > 1: raise exceptions.note.MetainfoFieldEnlistingDeniedError(field)
+			if len(value) > 1: raise exceptions.note.metainfo.MetainfoFieldEnlistingDeniedError(field)
 
 		if FieldParameters.types:
 			for Element in value:
 				ElementType = type(Element)
-				if ElementType not in FieldParameters.types: raise exceptions.note.MetainfoFieldIncorrectTypingError(field, ElementType, FieldParameters.types)
+				if ElementType not in FieldParameters.types: raise exceptions.note.metainfo.MetainfoFieldIncorrectTypingError(field, ElementType, FieldParameters.types)
 
 	def __NormalizeString(self, value: str, separator: str | None = ";") -> str | list[str]:
 		"""
@@ -115,7 +115,7 @@ class Metainfo:
 		"""
 
 		if field not in self.__MetainfoRules.fields_names:
-			raise exceptions.note.MetainfoFieldNotDescribedError(field)
+			raise exceptions.note.metainfo.MetainfoFieldNotDescribedError(field)
 
 		try:
 			del self.__Data[field]
@@ -134,7 +134,7 @@ class Metainfo:
 		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
 		"""
 		
-		if field not in self.__MetainfoRules.fields_names: raise exceptions.note.MetainfoFieldNotDescribedError(field)
+		if field not in self.__MetainfoRules.fields_names: raise exceptions.note.metainfo.MetainfoFieldNotDescribedError(field)
 
 		return self.__Data.get(field)
 
@@ -150,7 +150,7 @@ class Metainfo:
 		:raises ValueError: Кортежи могут содержать только строки.
 		"""
 
-		if not self.__MetainfoRules.is_free_allowed and field not in self.__MetainfoRules.fields_names: raise exceptions.note.MetainfoBlockedError()
+		if not self.__MetainfoRules.is_free_allowed and field not in self.__MetainfoRules.fields_names: raise exceptions.note.metainfo.MetainfoBlockedError()
 
 		if value is None:
 			self.clear_field(field)
