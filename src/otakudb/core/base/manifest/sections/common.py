@@ -11,7 +11,7 @@ class CommonSection(BaseSection):
 	def recycle_id(self) -> bool:
 		"""Указывает, необходимо ли занимать освободившиеся ID."""
 
-		return self.__RecycleID
+		return self.__recycle_id
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -20,24 +20,21 @@ class CommonSection(BaseSection):
 	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		self.__RecycleID = True
+		self.__recycle_id = True
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def set_recycle_id(self, status: bool, save: bool = True):
+	def set_recycle_id(self, status: bool):
 		"""
 		Задаёт состояние утилизации свободных ID.
 
 		:param status: Состояние утилизации свободных ID.
 		:type status: bool
-		:param save: Указывает, нужно ли выполнить сохранение манифеста после процедуры.
-		:type save: bool
 		"""
 
-		self.__RecycleID = status
-		if save: self.save()
+		self.__recycle_id = status
 
 	def parse(self, data: dict):
 		"""
@@ -47,7 +44,7 @@ class CommonSection(BaseSection):
 		:type data: dict
 		"""
 
-		self.__RecycleID = bool(data.get("recycle_id"))
+		self.__recycle_id = bool(data.get("recycle_id"))
 
 	def to_dict(self) -> dict:
 		"""
@@ -58,5 +55,5 @@ class CommonSection(BaseSection):
 		"""
 
 		return {
-			"recycle_id": self.__RecycleID
+			"recycle_id": self.__recycle_id
 		}

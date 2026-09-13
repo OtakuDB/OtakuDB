@@ -36,19 +36,19 @@ class AttachmentsSection(BaseSection):
 		* 2 – разрешены все вложения.
 		"""
 
-		return self.__Rule
+		return self.__rule
 
 	@property
 	def slots(self) -> tuple[SlotParameters, ...]:
 		"""Последовательность определений слотов."""
 
-		return tuple(self.__Slots.values())
+		return tuple(self.__slots.values())
 	
 	@property
 	def slots_names(self) -> tuple[str, ...]:
 		"""Последовательность имён слотов."""
 
-		return tuple(self.__Slots.keys())
+		return tuple(self.__slots.keys())
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -57,14 +57,14 @@ class AttachmentsSection(BaseSection):
 	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		self.__Rule = 0
-		self.__Slots: dict[str, SlotParameters] = {}
+		self.__rule: Literal[0, 1, 2] = 0
+		self.__slots: dict[str, SlotParameters] = {}
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def create_slot_parameters(self, slot: str, description: str | None, save: bool = True):
+	def create_slot_parameters(self, slot: str, description: str | None):
 		"""
 		Резервирует слот вложений для особого взаимодействия.
 
@@ -72,14 +72,11 @@ class AttachmentsSection(BaseSection):
 		:type slot: str
 		:param description: Описание слота.
 		:type description: str | None
-		:param save: Указывает, нужно ли выполнить сохранение манифеста после процедуры.
-		:type save: bool
 		:raises AttachmentSlotAlreadyDescribedError: Слот уже описан.
 		"""
 
-		if slot in self.__Slots: raise exceptions.note.AttachmentSlotAlreadyDescribedError(slot)
-		self.__Slots[slot] = SlotParameters(slot, description)
-		if save: self.save()
+		if slot in self.__slots: raise exceptions.note.AttachmentSlotAlreadyDescribedError(slot)
+		self.__slots[slot] = SlotParameters(slot, description)
 
 	def get_slot_parameters(self, slot: str) -> SlotParameters:
 		"""
@@ -92,9 +89,10 @@ class AttachmentsSection(BaseSection):
 		:raises AttachmentSlotNotDescribed: Слот не описан.
 		"""
 
-		if slot not in self.__Slots: raise exceptions.note.AttachmentSlotNotDescribedError(slot)
+		if slot not in self.__slots:
+			raise exceptions.note.AttachmentSlotNotDescribedError(slot)
 
-		return self.__Slots[slot]
+		return self.__slots[slot]
 
 	def parse(self, data: dict):
 		"""
@@ -104,27 +102,26 @@ class AttachmentsSection(BaseSection):
 		:type data: dict
 		"""
 
-		self.set_attachments_rule(data["rule"], save = False)
-		self.__Slots = {}
-		SlotsData = data.get("slots") or {}
-		for Slot, Description in SlotsData.items(): self.create_slot_parameters(Slot, Description, save = False)
+		self.set_attachments_rule(data["rule"])
+		self.__slots.clear()
+		slots_data: dict = data.get("slots", {})
 
-	def remove_slot_parameters(self, slot: str, save: bool = True):
+		for slot, description in slots_data.items():
+			self.create_slot_parameters(slot, description)
+
+	def remove_slot_parameters(self, slot: str):
 		"""
 		Удаляет слот вложений.
 
 		:param slot: Имя слота.
 		:type slot: str
-		:param save: Указывает, нужно ли выполнить сохранение манифеста после процедуры.
-		:type save: bool
 		:raises AttachmentSlotNotDescribed: Слот не описан.
 		"""
 
-		if slot not in self.__Slots: raise exceptions.note.AttachmentSlotAlreadyDescribedError(slot)
-		del self.__Slots[slot]
-		if save: self.save()
+		if slot not in self.__slots: raise exceptions.note.AttachmentSlotAlreadyDescribedError(slot)
+		del self.__slots[slot]
 
-	def set_attachments_rule(self, rule: Literal[0, 1, 2], save: bool = True):
+	def set_attachments_rule(self, rule: Literal[0, 1, 2]):
 		"""
 		Задаёт правило использования вложений.
 		
@@ -140,8 +137,7 @@ class AttachmentsSection(BaseSection):
 		"""
 
 		if rule not in (0, 1, 2): raise ValueError("Rule must be between 0 and 2.")
-		self.__Rule = rule
-		if save: self.save()
+		self.__rule = rule
 
 	def to_dict(self) -> dict[str, int | dict]:
 		"""
@@ -152,6 +148,6 @@ class AttachmentsSection(BaseSection):
 		"""
 
 		return {
-			"rule": self.__Rule,
-			"slots": {Slot.name: Slot.description for Slot in self.__Slots.values()}
+			"rule": self.__rule,
+			"slots": {slot.name: slot.description for slot in self.__slots.values()}
 		}

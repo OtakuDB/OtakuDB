@@ -153,8 +153,7 @@ class MetainfoRules(BaseSection):
 			types: type | Sequence[type] | None = None,
 			allow_list: bool = False,
 			values: Sequence[int | float | str] | None = None,
-			description: str | None = None,
-			save: bool = True
+			description: str | None = None
 		):
 		"""
 		Создаёт параметры поля метаданных.
@@ -169,13 +168,10 @@ class MetainfoRules(BaseSection):
 		:type values: Sequence[int | float | str] | None
 		:param description: Описание поля.
 		:type description: str | None
-		:param save: Указывает, нужно ли выполнить сохранение манифеста после процедуры.
-		:type save: bool
 		"""
 
 		AllowedTypes = to_sequence(types, target_type = tuple) if types else None
 		self.__Fields[field] = MetainfoFieldParameters(field, AllowedTypes, allow_list, tuple(values) if values else None, description)
-		if save: self.save()
 
 	def get_field_parameters(self, field: str) -> MetainfoFieldParameters:
 		"""
@@ -203,20 +199,17 @@ class MetainfoRules(BaseSection):
 		self.__IsFreeAllowed = bool(data.get("allow_free"))
 		self.__Fields: dict[str, MetainfoFieldParameters] = self.__ParseFields(data.get("fields") or {})
 
-	def remove_field_parameters(self, field: str, save: bool = True):
+	def remove_field_parameters(self, field: str):
 		"""
 		Удаляет параметры поля метаданных.
 
 		:param field: Имя поля.
 		:type field: str
-		:param save: Указывает, нужно ли выполнить сохранение манифеста после процедуры.
-		:type save: bool
 		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
 		"""
 
 		if field not in self.__Fields: raise exceptions.note.MetainfoFieldNotDescribedError(field)
 		del self.__Fields[field]
-		if save: self.save()
 
 	def to_dict(self) -> dict:
 		"""

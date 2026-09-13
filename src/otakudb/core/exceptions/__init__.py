@@ -1,3 +1,3 @@
-from . import navigator, note, session, table
+from . import note, session, table
 
-__all__ = ["session", "navigator", "note", "table"]
+__all__ = ["session", "note", "table"]

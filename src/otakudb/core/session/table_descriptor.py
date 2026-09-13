@@ -53,7 +53,7 @@ class TableDescriptor:
 	def __ititialize_table(self):
 		"""Иницилазирует таблицу.."""
 
-		module_path: str = f"otakudb.tables.{self.__manifest.type}.table"
+		module_path: str = f"otakudb.tables.{self.__manifest.table_type}.table"
 		table_module = importlib.import_module(module_path)
 		self.__table = table_module.Table(self.__driver, self)
 

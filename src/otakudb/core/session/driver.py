@@ -2,11 +2,15 @@ import importlib
 import pkgutil
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ... import tables
 from .. import exceptions
 from .box import Box, RootBox
 from .table_descriptor import TableDescriptor
+
+if TYPE_CHECKING:
+	from ..base.manifest.generator import ManifestGenerator
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -253,9 +257,8 @@ class Driver:
 		
 		table_full_path.mkdir()
 
-		# To-Do: использовать новую модель манифеста.
 		manifest_generator_module = importlib.import_module(f"otakudb.tables.{table_type}.manifest")
-		manifest_generator = manifest_generator_module.Generator(table_full_path, table_type)
+		manifest_generator: "ManifestGenerator" = manifest_generator_module.Generator(table_full_path, table_type)
 		manifest = manifest_generator.generate()
 
 		descriptor = TableDescriptor(self, box, name, manifest)

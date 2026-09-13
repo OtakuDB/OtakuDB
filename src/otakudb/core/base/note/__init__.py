@@ -11,7 +11,7 @@ from .metainfo import Metainfo
 
 if TYPE_CHECKING:
 	from otakudb.core.base.table import BaseTable
-	from otakudb.core.base.table.connector import NoteBonds
+	from otakudb.core.base.table.connector.bonds import NoteBonds
 	from otakudb.core.session.driver import Driver
 
 class BaseNote:

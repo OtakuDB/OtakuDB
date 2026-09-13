@@ -5,16 +5,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from ... import exceptions
-from ..manifest import Manifest
 from .connector import Connector
 
 if TYPE_CHECKING:
-	from otakudb.core.session.driver import Driver
-	from otakudb.core.session.table_descriptor import TableDescriptor
-
+	from ...session.driver import Driver
+	from ...session.table_descriptor import TableDescriptor
+	from ..manifest import Manifest
 	from ..note import BaseNote
 
-class BaseTable:
+class BaseTable[N: "BaseNote"]:
 	"""Базовая таблица."""
 
 	#==========================================================================================#
@@ -25,31 +24,31 @@ class BaseTable:
 	def connector(self) -> Connector:
 		"""Оператор связей."""
 
-		return self._Connector
+		return self._connector
 
 	@property
 	def full_path(self) -> Path:
 		"""Полный путь к директории таблицы."""
 
-		return self._Descriptor.full_path
+		return self._descriptor.full_path
 
 	@property
-	def manifest(self) -> Manifest:
+	def manifest(self) -> "Manifest":
 		"""Манифест таблицы."""
 
-		return self._Descriptor.manifest
+		return self._descriptor.manifest
 
 	@property
 	def name(self) -> str:
 		"""Название таблицы."""
 
-		return self._Descriptor.name
+		return self._descriptor.name
 
 	@property
 	def notes(self) -> "tuple[BaseNote, ...]":
 		"""Список записей."""
 
-		return tuple(self._Notes.values())
+		return tuple(self._notes.values())
 	
 	@property
 	def notes_id(self) -> tuple[int, ...]:
@@ -61,7 +60,7 @@ class BaseTable:
 	def virtual_path(self) -> Path:
 		"""Виртуальный путь к таблице."""
 
-		return self._Descriptor.virtual_path
+		return self._descriptor.virtual_path
 
 	#==========================================================================================#
 	# >>>>> ЗАЩИЩЁННЫЕ МЕТОДЫ <<<<< #
@@ -75,26 +74,27 @@ class BaseTable:
 		:rtype: int
 		"""
 
-		SequenceID = self._get_notes_id()
+		notes_id: tuple[int, ...] = self._get_notes_id()
 
 		if self.manifest.common.recycle_id:
-			for ID in range(1, len(SequenceID) + 1):
-				if ID not in SequenceID: return ID
+			for note_id in range(1, len(notes_id) + 1):
+				if note_id not in notes_id:
+					return note_id
 
-		return int(max(SequenceID)) + 1 if len(SequenceID) > 0 else 1
+		return max(notes_id) + 1 if notes_id else 1
 
-	def _get_note_class(self) -> type:
+	def _get_note_class(self) -> type[N]:
 		"""
 		Возвращает класс записи.
 
 		:return: Класс записи.
-		:rtype: type
+		:rtype: type[BaseNote]
 		"""
 
-		ImportPath = f"otakudb.tables.{self.manifest.type}.note"
-		NoteModule = importlib.import_module(ImportPath)
+		module_path: str = f"otakudb.tables.{self.manifest.table_type}.note"
+		note_module = importlib.import_module(module_path)
 
-		return NoteModule.Note
+		return note_module.Note
 
 	def _get_notes_id(self) -> tuple[int, ...]:
 		"""
@@ -104,16 +104,11 @@ class BaseTable:
 		:rtype: tuple[int]
 		"""
 
-		ListID = []
-		Files = os.listdir(self.full_path)
-		Files = list(filter(lambda File: File.endswith(".json") and File[:-5].isdigit(), Files))
-
-		for File in Files: 
-			if not File.replace(".json", "").isdigit(): Files.remove(File)
-
-		for File in Files: ListID.append(int(File.replace(".json", "")))
-		
-		return tuple(ListID)
+		return tuple(
+			int(entry.name[:-5])
+			for entry in os.scandir(self.full_path)
+			if entry.is_file() and entry.name.endswith(".json") and entry.name[:-5].isdigit()
+		)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -137,32 +132,31 @@ class BaseTable:
 		"""
 		Базовая таблица.
 
-		:param session: Сессия.
-		:type session: Session
-		:param storage: Путь к каталогу таблицы.
-		:type storage: PathLike
-		:param name: Название таблицы.
-		:type name: str
+		:param driver: Драйвер хранилища.
+		:type driver: Driver
+		:param descriptor: Дескриптор таблицы.
+		:type descriptor: TableDescriptor
 		"""
-		
-		self._Driver = driver
-		self._Descriptor = descriptor
 
-		self._Notes: "dict[int, BaseNote]" = {}
-		self._NoteClass = self._get_note_class()
-		self._Connector = Connector(self)
+		self._driver: "Driver" = driver
+		self._descriptor: "TableDescriptor" = descriptor
+
+		self._notes: dict[int, N] = {}
+		self._note_class: type[N] = self._get_note_class()
+
+		self._connector = Connector(self)
 		
 		self._post_init()
 
 	def delete(self):
-		"""Удаляет таблицу."""
+		"""Удаляет директорию таблицы."""
 
 		shutil.rmtree(self.full_path)
 
 	def load_data(self):
 		"""Загружает данные таблицы."""
-
-		for ID in self._get_notes_id(): self._Notes[ID] = self._NoteClass(self._Driver, self, ID)
+		
+		self._notes = {note_id: self._note_class(self._driver, self, note_id) for note_id in self.notes_id}
 		self._post_load()
 
 	def rename(self, name: str):
@@ -174,12 +168,14 @@ class BaseTable:
 		:raises ValueError: Невозможное имя.
 		"""
 
-		if "/" in name or "\"" in name: raise ValueError("Name can't contains slashes.")
-		TableFullPath = self.full_path
-		OldPath = TableFullPath
-		NewPath = TableFullPath.parent / name
-		os.rename(OldPath, NewPath)
-		self._Descriptor.rename(name)
+		if "/" in name or "\\" in name:
+			raise ValueError("Name can't contains slashes.")
+
+		old_full_path: Path = self.full_path
+		new_full_path = old_full_path.parent / name
+		os.rename(old_full_path, new_full_path)
+
+		self._descriptor.rename(name)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УПРАВЛЕНИЯ ЗАПИСЯМИ <<<<< #
@@ -199,18 +195,20 @@ class BaseTable:
 		:raises ValueError: Неверный режим изменения.
 		"""
 
-		IsTargetNoteExists = new_id in self._Notes
+		IsTargetNoteExists = new_id in self._notes
 
-		if note_id not in self._Notes: raise exceptions.table.NoteNotFoundError(note_id)
+		if note_id not in self._notes:
+			raise exceptions.table.NoteNotFoundError(note_id)
+
 		if mode not in (None, "i", "o", "s"): raise ValueError("Incorrect changing mode.")
 
 		match mode:
 
 			case None:
 				if IsTargetNoteExists: raise exceptions.table.OperationError("Unable insert. Target ID already exists.")
-				self._Notes[new_id] = self._Notes[note_id]
-				self._Notes[new_id].set_id(new_id)
-				del self._Notes[note_id]
+				self._notes[new_id] = self._notes[note_id]
+				self._notes[new_id].set_id(new_id)
+				del self._notes[note_id]
 
 			case "i":
 
@@ -220,7 +218,7 @@ class BaseTable:
 
 				self.change_note_id(note_id, 0)
 
-				AffectedNotesID = sorted(CurrentNote.id for CurrentNote in self._Notes.values() if CurrentNote.id >= new_id)
+				AffectedNotesID = sorted(CurrentNote.id for CurrentNote in self._notes.values() if CurrentNote.id >= new_id)
 				Buffer = []
 
 				for CurrentID in AffectedNotesID:
@@ -238,32 +236,33 @@ class BaseTable:
 
 			case "o":
 				self.delete_note(new_id)
-				self._Notes[note_id].set_id(new_id)
+				self._notes[note_id].set_id(new_id)
 
 			case "s":
 				if not IsTargetNoteExists: raise exceptions.table.OperationError("Unable swap. Target ID is free.")
-				FirstNote = self._Notes[note_id]
-				SecondNote = self._Notes[new_id]
+				FirstNote = self._notes[note_id]
+				SecondNote = self._notes[new_id]
 
 				FirstNote.set_id(0)
 				SecondNote.set_id(note_id)
 				FirstNote.set_id(new_id)
 
-				self._Notes[note_id] = SecondNote
-				self._Notes[new_id] = FirstNote
+				self._notes[note_id] = SecondNote
+				self._notes[new_id] = FirstNote
 
-	def create_note(self) -> "BaseNote":
+	def create_note(self) -> N:
 		"""
 		Создаёт запись.
 
 		:return: Запись.
-		:rtype: Note
+		:rtype: BaseNote
 		"""
 
-		NewNoteID = self._generate_new_note_id()
-		self._Notes[NewNoteID] = self._NoteClass(self._Driver, self, NewNoteID)
+		new_note_id: int = self._generate_new_note_id()
+		new_note: N = self._note_class(self._driver, self, new_note_id)
+		self._notes[new_note_id] = new_note
 
-		return self._Notes[NewNoteID]
+		return new_note
 
 	def delete_note(self, note_id: int):
 		"""
@@ -274,24 +273,29 @@ class BaseTable:
 		:raises NoteNotFoundError: Запись не найдена в таблице.
 		"""
 
-		if note_id not in self._Notes: raise exceptions.table.NoteNotFoundError(note_id)
-		del self._Notes[note_id]
-		os.remove(self.full_path / f"{note_id}.json")
+		if not self.is_note_exists(note_id):
+			raise exceptions.table.NoteNotFoundError(note_id)
 
-	def get_note(self, note_id: int) -> "BaseNote":
+		del self._notes[note_id]
+
+		note_path: Path = self.full_path / f"{note_id}.json"
+		note_path.unlink()
+
+	def get_note(self, note_id: int) -> N:
 		"""
 		Возвращает запись.
 
 		:param note_id: ID записи.
 		:type note_id: int
 		:return: Запись.
-		:rtype: Note
+		:rtype: BaseNote
 		:raises NoteNotFound: Запись не найдена в таблице.
 		"""
 
-		if note_id not in self._Notes: raise exceptions.table.NoteNotFoundError(note_id)
+		if not self.is_note_exists(note_id):
+			raise exceptions.table.NoteNotFoundError(note_id)
 
-		return self._Notes[note_id]
+		return self._notes[note_id]
 	
 	def is_note_exists(self, note_id: int) -> bool:
 		"""
@@ -303,4 +307,4 @@ class BaseTable:
 		:rtype: bool
 		"""
 
-		return note_id in self._Notes
+		return note_id in self._notes

@@ -60,7 +60,7 @@ class BondsParameters(BaseSection):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
-	def create_bond_parameters(self, bond_name: str, description: str | None = None, count: int | None = None, save: bool = True):
+	def create_bond_parameters(self, bond_name: str, description: str | None = None, count: int | None = None):
 		"""
 		Создаёт определение параметров связи.
 
@@ -70,14 +70,11 @@ class BondsParameters(BaseSection):
 		:type description: str | None
 		:param count: Максимальное количество прикрепляемых записей. При `None` неограничено. 
 		:type count: int | None
-		:param save: Указывает, нужно ли выполнить сохранение манифеста после процедуры.
-		:type save: bool
 		:raises BondAlreadyDescribedError: Связь уже описана.
 		"""
 
 		if bond_name in self.__Bonds: raise exceptions.note.BondAlreadyDescribedError(bond_name)
 		self.__Bonds[bond_name] = BondParameters(bond_name, description, count)
-		if save: self.save()
 
 	def get_bond_parameters(self, bond_name: str) -> BondParameters:
 		"""
@@ -103,9 +100,9 @@ class BondsParameters(BaseSection):
 		"""
 
 		self.__Bonds = {}
-		for Key in data.keys(): self.create_bond_parameters(Key, data.get("description"), data.get("count"), save = False)
+		for Key in data.keys(): self.create_bond_parameters(Key, data.get("description"), data.get("count"))
 
-	def remove_bond_parameters(self, bond_name: str, save: bool = True):
+	def remove_bond_parameters(self, bond_name: str):
 		"""
 		Удаляет параметры связи.
 
@@ -118,7 +115,6 @@ class BondsParameters(BaseSection):
 
 		if bond_name in self.__Bonds: raise exceptions.note.BondNotDescribedError(bond_name)
 		del self.__Bonds[bond_name]
-		if save: self.save()
 
 	def to_dict(self) -> dict[str, dict]:
 		"""
@@ -200,8 +196,8 @@ class ConnectionsSection(BaseSection):
 	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		self.__Bonds = BondsParameters(self._Manifest)
-		self.__Hyperlinks = HyperlinksParameters(self._Manifest)
+		self.__Bonds = BondsParameters(self._manifest)
+		self.__Hyperlinks = HyperlinksParameters(self._manifest)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #

@@ -28,7 +28,7 @@ class BaseSection(ABC):
 		:type manifest: Manifest
 		"""
 
-		self._Manifest = manifest
+		self._manifest = manifest
 
 		self._post_init()
 
@@ -42,11 +42,6 @@ class BaseSection(ABC):
 		"""
 
 		pass
-
-	def save(self):
-		"""Сохраняет манифест в локальный файл JSON."""
-
-		self._Manifest.save()
 
 	@abstractmethod
 	def to_dict(self) -> dict[str, Any]:

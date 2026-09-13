@@ -42,7 +42,6 @@ class CustomSection(BaseSection):
 		"""
 
 		self.__Data[key] = value
-		self.save()
 
 	def parse(self, data: dict):
 		"""

@@ -48,7 +48,7 @@ class InterfacesOptions(BaseSection):
 
 		self.__Data = data
 
-	def set_options(self, interface: Interfaces, options: dict[str, Any], save: bool = True):
+	def set_options(self, interface: Interfaces, options: dict[str, Any]):
 		"""
 		Задаёт словарь параметров интерфейса.
 
@@ -56,12 +56,9 @@ class InterfacesOptions(BaseSection):
 		:type interface: Interfaces
 		:param options: Словарь параметров.
 		:type options: dict[str, Any]
-		:param save: Указывает, нужно ли выполнить сохранение манифеста после процедуры.
-		:type save: bool
 		"""
 
 		self.__Data[interface.value] = options
-		if save: self.save()
 
 	def to_dict(self) -> dict:
 		"""

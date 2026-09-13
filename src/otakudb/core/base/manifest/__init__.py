@@ -20,13 +20,13 @@ class Manifest:
 	def directory(self) -> Path:
 		"""Путь к директории таблицы."""
 
-		return self.__Directory
+		return self.__directory
 
 	@property
-	def type(self) -> str | None:
+	def table_type(self) -> str | None:
 		"""Тип таблицы."""
 
-		return self.__Type
+		return self.__table_type
 	
 	#==========================================================================================#
 	# >>>>> СЕКЦИИ <<<<< #
@@ -36,37 +36,37 @@ class Manifest:
 	def attachments(self) -> AttachmentsSection:
 		"""Параметры вложений"""
 
-		return self.__Attachments
+		return self.__attachments
 
 	@property
 	def common(self) -> CommonSection:
 		"""Общие опции таблиц."""
 
-		return self.__Common
+		return self.__common
 
 	@property
 	def connections(self) -> ConnectionsSection:
 		"""Параметры соединений."""
 
-		return self.__Connections
+		return self.__connections
 
 	@property
 	def custom(self) -> CustomSection:
 		"""Дополнительные опции."""
 
-		return self.__Custom
+		return self.__custom
 
 	@property
 	def metainfo_rules(self) -> MetainfoRules:
 		"""Правила метаданных."""
 
-		return self.__MetainfoRules
+		return self.__metainfo_rules
 
 	@property
 	def interfaces_options(self) -> InterfacesOptions:
 		"""Опции интерфейсов."""
 
-		return self.__InterfacesOptions
+		return self.__interfaces_options
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -82,15 +82,15 @@ class Manifest:
 
 		self.set_directory(directory)
 
-		self.__ManifestPath = self.__Directory / "manifest.json"
-		self.__Type: str | None = None
+		self.__manifest_path = self.__directory / "manifest.json"
+		self.__table_type: str | None = None
 
-		self.__Attachments = AttachmentsSection(self)
-		self.__Common = CommonSection(self)
-		self.__Custom = CustomSection(self)
-		self.__Connections = ConnectionsSection(self)
-		self.__MetainfoRules = MetainfoRules(self)
-		self.__InterfacesOptions = InterfacesOptions(self) 
+		self.__attachments = AttachmentsSection(self)
+		self.__common = CommonSection(self)
+		self.__custom = CustomSection(self)
+		self.__connections = ConnectionsSection(self)
+		self.__metainfo_rules = MetainfoRules(self)
+		self.__interfaces_options = InterfacesOptions(self) 
 
 	def load(self) -> "Manifest":
 		"""
@@ -101,49 +101,46 @@ class Manifest:
 		:raises FileNotFoundError: Выбрасывается при отсутствии файла манифеста.
 		"""
 
-		Data = json.read(self.__ManifestPath)
-		self.__Type = Data["type"]
+		data: dict = json.read(self.__manifest_path)
+		self.__table_type = data["type"]
 
-		self.__Attachments.parse(Data.get("attachments") or {})
-		self.__Common.parse(Data.get("common") or {})
-		self.__Connections.parse(Data.get("connections") or {})
-		self.__Custom.parse(Data.get("custom") or {})
-		self.__MetainfoRules.parse(Data.get("metainfo_rules") or {})
-		self.__InterfacesOptions.parse(Data.get("interfaces_options") or {})
+		self.__attachments.parse(data.get("attachments", {}))
+		self.__common.parse(data.get("common", {}))
+		self.__connections.parse(data.get("connections", {}))
+		self.__custom.parse(data.get("custom", {}))
+		self.__metainfo_rules.parse(data.get("metainfo_rules", {}))
+		self.__interfaces_options.parse(data.get("interfaces_options", {}))
 
 		return self
 
 	def save(self):
 		"""Сохраняет манифест."""
 
-		json.write(self.__ManifestPath, self.to_dict(), atomic = True)
+		json.write(self.__manifest_path, self.to_dict(), atomic = True)
 
-	def set_directory(self, directory: Path):
+	def set_directory(self, full_path: Path):
 		"""
 		Задаёт полный путь к директории таблицы.
 
-		:param directory: _description_
-		:type directory: Path
+		:param full_path: Полный путь к директории таблицы.
+		:type full_path: Path
 		:raises FileNotFoundError: Директория таблицы не найдена.
 		"""
 
-		if not directory.exists():
-			raise FileNotFoundError(directory)
+		if not full_path.exists():
+			raise FileNotFoundError(full_path)
 
-		self.__Directory = directory
+		self.__directory = full_path
 
-	def set_type(self, table_type: str, save: bool = True):
+	def set_type(self, table_type: str):
 		"""
 		Задаёт тип таблицы.
 
 		:param table_type: Тип таблицы.
 		:type table_type: str
-		:param save: Указывает, нужно ли выполнить сохранение манифеста после процедуры.
-		:type save: bool
 		"""
 
-		self.__Type = table_type
-		if save: self.save()
+		self.__type = table_type
 
 	def to_dict(self) -> dict:
 		"""
@@ -154,11 +151,11 @@ class Manifest:
 		"""
 
 		return {
-			"type": self.__Type,
-			"attachments": self.__Attachments.to_dict(),
-			"common": self.__Common.to_dict(),
-			"connections": self.__Connections.to_dict(),
-			"custom": self.__Custom.to_dict(),
-			"metainfo_rules": self.__MetainfoRules.to_dict(),
-			"interfaces_options": self.__InterfacesOptions.to_dict()
+			"type": self.__type,
+			"attachments": self.__attachments.to_dict(),
+			"common": self.__common.to_dict(),
+			"connections": self.__connections.to_dict(),
+			"custom": self.__custom.to_dict(),
+			"metainfo_rules": self.__metainfo_rules.to_dict(),
+			"interfaces_options": self.__interfaces_options.to_dict()
 		}
