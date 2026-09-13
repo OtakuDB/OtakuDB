@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, overload
 
 from dublib.functions.filesystem import json
 
@@ -28,6 +28,13 @@ class Bond:
 	name: str
 	slaves_id: list[int]
 
+@dataclass(frozen = True)
+class ReadOnlyBond:
+	"""Связь."""
+
+	name: str
+	slaves_id: tuple[int, ...]
+
 class NoteBonds[N: "BaseNote"]:
 	"""Связи записи."""
 
@@ -36,10 +43,10 @@ class NoteBonds[N: "BaseNote"]:
 	#==========================================================================================#
 
 	@property
-	def bonds(self) -> tuple[Bond, ...]:
+	def bonds(self) -> tuple[ReadOnlyBond, ...]:
 		"""Последовательность связей."""
 
-		return tuple(self.__bonds.values())
+		return tuple(self.__create_read_only_bond(bond) for bond in self.__bonds.values())
 	
 	@property
 	def bonds_names(self) -> tuple[str, ...]:
@@ -80,6 +87,18 @@ class NoteBonds[N: "BaseNote"]:
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
+
+	def __create_read_only_bond(self, bond: Bond) -> ReadOnlyBond:
+		"""
+		Преобразует связь в объект только для чтения.
+
+		:param bond: Связь.
+		:type bond: Bond
+		:return: Объект связи только для чтения.
+		:rtype: ReadOnlyBond
+		"""
+
+		return ReadOnlyBond(bond.name, tuple(bond.slaves_id))
 
 	def __parse_data(self, data: dict[str, list[int]]) -> dict[str, Bond]:
 		"""
@@ -137,23 +156,33 @@ class NoteBonds[N: "BaseNote"]:
 
 		self.__operator.bind(self.__note_id, bond_name, slave_id)
 
-	def get_bond(self, bond_name: str) -> Bond:
+	@overload
+	def get_bond(self, bond_name: str, read_only: Literal[False]) -> Bond: ...
+	@overload
+	def get_bond(self, bond_name: str, read_only: Literal[True] = True) -> ReadOnlyBond: ...
+
+	def get_bond(self, bond_name: str, read_only: bool = True) -> ReadOnlyBond | Bond:
 		"""
 		Возвращает связь.
 
 		:param bond_name: Имя связи.
 		:type bond_name: str
+		:param read_only: Указывает, должна ли связь быть изменяемой. Изменяемая связь должна использоваться только внутри оператора связей!
+		:type read_only: bool
 		:return: Связь.
-		:rtype: Bond
+		:rtype: ReadOnlyBond | Bond
 		:raises BondNotDescribedError: Связь не описана.
 		"""
 
 		if bond_name not in self.__bonds:
 			raise exceptions.note.bonds.BondNotDescribedError(bond_name)
 
-		# To-Do: заменить список ID кортедом для неизменяемости извне.
+		bond: Bond = self.__bonds[bond_name]
 
-		return self.__bonds[bond_name]
+		if read_only:
+			return self.__create_read_only_bond(bond)
+
+		return bond
 
 	def set_note_id(self, new_note_id: int):
 		"""
@@ -334,7 +363,7 @@ class BondsOperator[N: "BaseNote"]:
 		self.__table.is_note_exists(slave_id, not_found_error = True)
 
 		bond_parameters = self.__table.manifest.connections.bonds.get_bond_parameters(bond_name)
-		bond: Bond = self.get_note_bonds(master_id).get_bond(bond_name)
+		bond: Bond = self.get_note_bonds(master_id).get_bond(bond_name, read_only = False)
 
 		if bond_parameters.count and len(bond.slaves_id) >= bond_parameters.count:
 			raise exceptions.note.bonds.MaxBindedNotesCountReachedError(bond_name, bond_parameters.count)
@@ -465,7 +494,7 @@ class BondsOperator[N: "BaseNote"]:
 		# Проверка наличия описания связи.
 		self.__table.manifest.connections.bonds.get_bond_parameters(bond_name)
 
-		bond: Bond = self.get_note_bonds(master_id).get_bond(bond_name)
+		bond: Bond = self.get_note_bonds(master_id).get_bond(bond_name, read_only = False)
 
 		if slave_id in bond.slaves_id:
 			bond.slaves_id.remove(slave_id)
