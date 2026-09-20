@@ -4,7 +4,7 @@ version = "0.3.0"
 dependencies = [
 	"questionary",
 	"dulwich>=1.2.6",
-	"dublib==0.30.2"
+	"dublib==0.31.0"
 ]
 
 [project.optional-dependencies]

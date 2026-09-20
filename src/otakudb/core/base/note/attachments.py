@@ -1,13 +1,14 @@
 import os
 import shutil
 from dataclasses import dataclass
-from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from ....core import exceptions
 from .enums import CallbacksTypes
 
 if TYPE_CHECKING:
+	from pathlib import Path
+
 	from . import BaseNote
 
 #==========================================================================================#
@@ -25,20 +26,20 @@ class Slot:
 	def file(self) -> str | None:
 		"""Имя файла."""
 
-		return self.__File
+		return self.__file
 	
 	@property
 	def full_path(self) -> Path | None:
 		"""Полный путь к файлу."""
 
-		if self.__File:
-			return self.__Attachments.directory / self.__File
+		if self.__file:
+			return self.__attachments.directory / self.__file
 
 	@property
 	def name(self) -> str:
 		"""Имя слота."""
 
-		return self.__Name
+		return self.__name
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -56,11 +57,11 @@ class Slot:
 		:type file: str | None
 		"""
 
-		self.__Attachments = attachments
-		self.__Name = name
-		self.__File = file
+		self.__attachments: "Attachments" = attachments
+		self.__name: str = name
+		self.__file: str | None = file
 
-		self.__Note = self.__Attachments.note
+		self.__note: "BaseNote" = self.__attachments.note
 
 	def attach(self, file: Path, copy: bool = False):
 		"""
@@ -75,22 +76,21 @@ class Slot:
 		:raises AttachmentSlotNotDescribed: Слот вложения не описан.
 		"""
 		
-		match self.__Note.table.manifest.attachments.rule:
+		match self.__note.table.manifest.attachments.rule:
 			case 0: raise exceptions.note.attachments.AttachmentsDeniedError(False)
 		
-		if self.__File: raise exceptions.note.attachments.AttachmentSlotAlreadyFilledError(self.__Name)
-		self.__File = file.name
+		if self.__file:
+			raise exceptions.note.attachments.AttachmentSlotAlreadyFilledError(self.__name)
 
+		self.__file = file.name
 
-		AttachmentDirectory = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
-		os.makedirs(AttachmentDirectory, exist_ok = True)
-		AttachmentPath = AttachmentDirectory / file
+		attachment_path: "Path" = self.__attachments.directory / file
 
-		if copy: shutil.copy(file, AttachmentPath)
-		else: os.replace(file, AttachmentPath)
+		if copy: shutil.copy(file, attachment_path)
+		else: os.replace(file, attachment_path)
 		
-		self.__Note.save()
-		self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
+		self.__note.save()
+		self.__note.run_callback(CallbacksTypes.AttachmentsChanged)
 
 	def clear(self):
 		"""Очищает слот."""
@@ -98,17 +98,10 @@ class Slot:
 		if not self.full_path:
 			return
 
-		try:
-			os.remove(self.full_path)
-		except FileNotFoundError: pass
+		self.full_path.unlink(missing_ok = True)
 
-		try: 
-			AttachmentsDirectory = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
-			AttachmentsDirectory.rmdir()
-		except (FileNotFoundError, OSError): pass
-
-		self.__Note.save()
-		self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
+		self.__note.save()
+		self.__note.run_callback(CallbacksTypes.AttachmentsChanged)
 
 	def is_exists(self) -> bool:
 		"""
@@ -118,14 +111,16 @@ class Slot:
 		:rtype: bool
 		"""
 
-		FullPath = self.full_path
-		if not FullPath: return False
+		full_path: "Path | None" = self.full_path
 
-		return FullPath.exists()
+		if not full_path:
+			return False
+
+		return full_path.exists()
 
 @dataclass(frozen = True)
-class ValidationError:
-	"""Описание ошибки валидации."""
+class AttachmentFileErrorData:
+	"""Attachment file error data."""
 
 	slot: str | None
 	file: str
@@ -134,7 +129,7 @@ class ValidationError:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class Attachments:
+class Attachments[N: "BaseNote" = "BaseNote"]:
 	"""Вложения."""
 
 	#==========================================================================================#
@@ -143,56 +138,55 @@ class Attachments:
 
 	@property
 	def directory(self) -> Path:
-		"""Путь к директории вложений записи."""
+		"""Note attachments directory."""
 
-		return self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
+		return self.__note_attachments_directory
 
 	@property
 	def count(self) -> int:
-		"""Количество вложений."""
+		"""Attachments count."""
 
-		return len(self.__Data["free"]) + sum(1 for slot in self.slots if slot.file)
+		return len(self.__free) + sum(1 for slot in self.slots if slot.file)
 
 	@property
 	def free(self) -> tuple[str, ...]:
-		"""Последовательность имён файлов свободных вложений."""
+		"""Free attachments files names."""
 
-		return tuple(Value for Value in self.__Data["free"])
+		return tuple(self.__free)
 
 	@property
-	def note(self) -> "BaseNote":
-		"""Запись, к которой относятся вложения."""
+	def note(self) -> N:
+		"""Note to which the attachments belong."""
 
-		return self.__Note
+		return self.__note
 
 	@property
 	def slots(self) -> tuple[Slot, ...]:
-		"""Последовательность данных слотов."""
+		"""Slots info."""
 
-		return tuple(self.__Slots.values())
+		return tuple(self.__slots.values())
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __ParseSlots(self) -> dict[str, Slot]:
+	def __parse_slots(self, slota_data: dict[str, str | None]) -> dict[str, Slot]:
 		"""
-		Парсит данные слотов в объекты.
+		Parse slots info raw data into typed objects.
 
-		:return: Словарь данных слотов.
-		:rtype: dict[str, SlotInfo]
+		:param slota_data: Raw slots data dictionary.
+		:type slota_data: dict[str, str  |  None]
+		:return: Dictionary in wich key is slot name and value is slot info.
+		:rtype: dict[str, Slot]
 		"""
 
-		Slots = {}
-		for Name, File in cast(dict, self.__Data["slots"]).items(): Slots[Name] = Slot(self, Name, File)
-		
-		return Slots
+		return {name: Slot(self, name, file) for name, file in slota_data.items()}
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, note: "BaseNote", data: dict):
+	def __init__(self, note: N, data: dict):
 		"""
 		Оператор вложений.
 
@@ -202,41 +196,41 @@ class Attachments:
 		:type data: dict
 		"""
 
-		self.__Note = note
-		self.__Data: dict[str, dict | list[str]] = {
-			"slots": data.get("slots") or dict.fromkeys(self.__Note.table.manifest.attachments.slots_names),
-			"free": data.get("free", [])
-		}
+		self.__note: N = note
 
-		if bool(note.table.manifest.attachments.rule): os.makedirs(self.__Note.table.full_path / ".attachments", exist_ok = True)
+		self.__note_attachments_directory: "Path" = self.__note.table.full_path / ".attachments" / str(self.__note.id)
 
-		self.__Slots: dict[str, Slot] = self.__ParseSlots()
+		if bool(note.table.manifest.attachments.rule):
+			self.__note_attachments_directory.mkdir(parents = True, exist_ok = True)
 
-	def attach(self, file: Path, copy: bool = False):
+		self.__slots: dict[str, Slot] = self.__parse_slots(data.get("slots") or dict.fromkeys(self.__note.table.manifest.attachments.slots_names))
+		self.__free: list[str] = data.get("free", [])
+
+	def attach(self, file: "Path", copy: bool = False):
 		"""
-		Прикрепляет свободный файл к записи.
+		Make free attachment.
 
-		:param file: Путь к файлу.
+		:param file: File path.
 		:type file: Path
-		:param copy: Указывает, нужно ли скопировать файл или переместить. 
+		:param copy: Enable file copying instead replacing.
 		:type copy: bool
-		:raises AttachmentsDenied: Вложение запрещено.
+		:raises AttachmentsDeniedError: Attachments denied.
 		"""
 		
-		Rule = self.__Note.table.manifest.attachments.rule
-		if Rule < 2: raise exceptions.note.attachments.AttachmentsDeniedError(bool(Rule))
+		rule: int = self.__note.table.manifest.attachments.rule
 
-		cast(list, self.__Data["free"]).append(file.name)
+		if rule < 2:
+			raise exceptions.note.attachments.AttachmentsDeniedError(bool(rule))
 
-		AttachmentsDirectoryPath = self.directory
-		os.makedirs(AttachmentsDirectoryPath, exist_ok = True)
-		AttachmentPath = AttachmentsDirectoryPath / file
+		self.__free.append(file.name)
 
-		if copy: shutil.copy(file, AttachmentPath)
-		else: os.replace(file, AttachmentPath)
+		attachment_path: "Path" = self.__note_attachments_directory / file
+
+		if copy: shutil.copy(file, attachment_path)
+		else: os.replace(file, attachment_path)
 		
-		self.__Note.save()
-		self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
+		self.__note.save()
+		self.__note.run_callback(CallbacksTypes.AttachmentsChanged)
 
 	def get_slot(self, slot: str) -> Slot:
 		"""
@@ -246,12 +240,13 @@ class Attachments:
 		:type slot: str
 		:return: Данные о слоте.
 		:rtype: SlotInfo
-		:raises AttachmentSlotNotDescribed: Слот вложения не описан.
+		:raises AttachmentSlotNotDescribedError: Слот вложения не описан.
 		"""
 
-		if slot not in self.__Slots: raise exceptions.note.attachments.AttachmentSlotNotDescribedError(slot)
+		if slot not in self.__slots:
+			raise exceptions.note.attachments.AttachmentSlotNotDescribedError(slot)
 
-		return self.__Slots[slot]
+		return self.__slots[slot]
 
 	def move(self, new_id: int):
 		"""
@@ -262,9 +257,9 @@ class Attachments:
 		"""
 
 		if self.count > 0:
-			OldAttachmentsPath = self.__Note.table.full_path / ".attachments" / str(self.__Note.id)
-			NewAttachmentsPath =  self.__Note.table.full_path / ".attachments" / str(new_id)
-			shutil.move(OldAttachmentsPath, NewAttachmentsPath)
+			old_note_attachments_path: "Path" = self.__note_attachments_directory
+			new_note_attachments_path = old_note_attachments_path.with_stem(str(new_id))
+			shutil.move(old_note_attachments_path, new_note_attachments_path)
 
 	def to_dict(self) -> dict:
 		"""
@@ -275,43 +270,45 @@ class Attachments:
 		"""
 
 		return {
-			"slots": {Name: SlotData.file for Name, SlotData in self.__Slots.items()},
-			"free": self.__Data["free"]
+			"slots": {name: slot.file for name, slot in self.__slots.items()},
+			"free": self.__free
 		}
 
-	def unnatach(self, filename: str):
+	def unattach(self, filename: str):
 		"""
-		Удаляет свободное вложение по имени.
+		Delete free attachment.
 
-		:param filename: Имя вложения.
+		:param filename: Attachment file name.
 		:type filename: str
+		:raises FileNotFoundError: Attachment file not found.
 		"""
 
-		try:
-			os.remove(self.__Note.table.full_path / ".attachments" / filename)
-			cast(list, self.__Data["free"]).remove(filename)
-			self.__Note.save()
-			self.__Note.run_callback(CallbacksTypes.AttachmentsChanged)
+		attachment_path: "Path" = self.__note_attachments_directory / filename
+		attachment_path.unlink()
 
-		except (FileNotFoundError, ValueError): pass
+		self.__free.remove(filename)
 
-	def validate(self) -> tuple[ValidationError, ...]:
+		self.__note.save()
+		self.__note.run_callback(CallbacksTypes.AttachmentsChanged)
+
+	def validate(self) -> tuple[AttachmentFileErrorData, ...]:
 		"""
 		Проверяет существование заданных файлов вложений.
 
 		:return: Последовательность структур, описывающих отсутствующие вложения.
-		:rtype: tuple[ValidationError, ...]
+		:rtype: tuple[AttachmentFileErrorData, ...]
 		"""
 
-		Errors = []
-		AttachmentsDirectory = self.directory
+		errors: list[AttachmentFileErrorData] = []
 
-		for FreeFile in self.__Data["free"]:
+		for free_file in self.__free:
+			file_path: "Path" = self.__note_attachments_directory / free_file
 
-			FilePath = AttachmentsDirectory / FreeFile
-			if not FilePath.exists(): Errors.append(ValidationError(None, FreeFile))
+			if not file_path.exists():
+				errors.append(AttachmentFileErrorData(None, free_file))
 
-		for CurrentSlot in self.__Slots.values():
-			if CurrentSlot.file and not CurrentSlot.is_exists(): Errors.append(ValidationError(CurrentSlot.name, CurrentSlot.file))
+		for slot in self.__slots.values():
+			if slot.file and not slot.is_exists():
+				errors.append(AttachmentFileErrorData(slot.name, slot.file))
 
-		return tuple(Errors)
+		return tuple(errors)

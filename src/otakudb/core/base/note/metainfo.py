@@ -1,83 +1,132 @@
 from typing import TYPE_CHECKING, Sequence
 
-from dublib.functions.data import deep_copy, string, to_sequence
+from dublib.functions.data import deep_copy, to_sequence
+from dublib.functions.data.dictionary import deep_merge
+from dublib.functions.data.string import remove_recurring_substrings
 from dublib.validators import types
 
 from otakudb.core import exceptions
 
 if TYPE_CHECKING:
+	from ..manifest.sections.metainfo_rules import MetainfoRules
 	from . import BaseNote
 
-class Metainfo:
-	"""Оператор метаданных."""
+type SupportedTypes = float | int | str
+
+class Metainfo[N: "BaseNote" = "BaseNote"]:
+	"""Metainfo operator."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
+	# >>>>> PROPERTIES <<<<< #
 	#==========================================================================================#
 
 	@property
 	def fields(self) -> tuple[str, ...]:
 		"""Последовательность имён доступных полей метаданных."""
 
-		return tuple(self.__Data.keys())
+		return tuple(self.__data.keys())
 	
 	@property
 	def has_values(self) -> bool:
-		"""Состояние: заполнено ли хотя бы одно поле метаданных."""
+		"""Condition: is at least one field filled."""
 
-		Values = self.__Data.values()
+		values = self.__data.values()
 
-		return any(Values) if Values else False
+		return any(values) if values else False
 
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ ВАЛИДАЦИИ <<<<< #
+	# >>>>> PRIVATE METHODS <<<<< #
 	#==========================================================================================#
 
-	def __CheckValueTyping(self, field: str, value: float | int | list | str | None):
+	def __parse_value(self, value: Sequence | SupportedTypes, separator: str | None = ";") -> tuple[SupportedTypes, ...]:
 		"""
-		Проверяет, имеет ли значение корректный тип.
+		Parse field value.
 
-		:param field: Имя поля метаданных.
-		:type field: str
-		:param value: Значение.
-		:type value: value: float | int | list | str | None
-		:raises MetainfoFieldEnlistingDenied: Использование списков в поле метаданных запрещено.
-		"""
-		
-		value = to_sequence(value, target_type = list)
-		FieldParameters = self.__Note.table.manifest.metainfo_rules.get_field_parameters(field)
-		
-		if not FieldParameters.allow_list:
-			if len(value) > 1: raise exceptions.note.metainfo.MetainfoFieldEnlistingDeniedError(field)
-
-		if FieldParameters.types:
-			for Element in value:
-				ElementType = type(Element)
-				if ElementType not in FieldParameters.types: raise exceptions.note.metainfo.MetainfoFieldIncorrectTypingError(field, ElementType, FieldParameters.types)
-
-	def __NormalizeString(self, value: str, separator: str | None = ";") -> str | list[str]:
-		"""
-		Удаляет из строки повторяющиеся пробелы и разбивает её по вхождению символа `;`.
-
-		:param value: Обрабатываемое значение.
-		:type value: str
-		:param separator: Разделитель подстрок, используемый для формирования из строки набора значений по вхождению символа.
+		:param value: Field value.
+		:type value: Sequence | SupportedTypes
+		:param separator: By this separator strings will be splitted.
 		:type separator: str | None
-		:return: Результат обработки.
-		:rtype: str | list[str, ...]
+		:return: Parsed field values.
+		:rtype: tuple[SupportedTypes, ...]
 		"""
 
-		Value = string.remove_recurring_substrings(value, " ")
-		Value = Value.strip()
-		if separator and separator in Value: Value = [Element.strip() for Element in Value.split(separator)]
+		if isinstance(value, float | int):
+			return (value,)
 
-		return Value
+		value_sequence: list = []
+
+		if isinstance(value, str):
+			value = remove_recurring_substrings(value, " ")
+			value = value.strip()
+
+			if separator:
+				value_sequence = [part.strip() for part in value.split(separator)]
+
+			else:
+				if types.Number.validate(value):
+					value = types.Number.convert(value)
+
+				return (value,)
+
+		if not value_sequence:
+			value_sequence = list(value)
+
+		parsed_value_sequence: tuple[float | int | str, ...] = ()
+		
+		for index in range(len(value_sequence)):
+			parsed_value_sequence += self.__parse_value(value_sequence[index], separator = None)
+		
+		return parsed_value_sequence
+		
+	def __validate_value(self, field_name: str, value: tuple[SupportedTypes, ...]):
+		"""
+		Validate value with field parameters. If field is free checking will be skipped.
+
+		:param field_name: Field name.
+		:type field_name: str
+		:param value: Field value.
+		:type value: tuple[SupportedTypes, ...]
+		:raises MetainfoEnlistingDeniedError: Enlisting denied for matainfo field.
+		:raises MetainfoTypingError: Metainfo field typing error.
+		"""
+
+		if self.is_free_field(field_name):
+			return
+
+		parameters = self.__rules.get_field_parameters(field_name)
+
+		if not parameters.allow_list and len(value) > 1:
+			raise exceptions.note.metainfo.MetainfoEnlistingDeniedError(field_name)
+
+		if parameters.types:
+			for element in value:
+				element_type: type[SupportedTypes] = type(element)
+
+				if element_type not in parameters.types:
+					raise exceptions.note.metainfo.MetainfoTypingError(field_name, element_type, parameters.types)
+
+	def __set_value(self, field_name: str, parsed_value: tuple[SupportedTypes, ...]):
+		"""
+		Set value into internal dictionary.
+
+		:param field_name: Field name.
+		:type field_name: str
+		:param parsed_value: Field parsed value.
+		:type parsed_value: tuple[SupportedTypes, ...]
+		"""
+
+		if len(parsed_value) == 1:
+			self.__data[field_name] = parsed_value[0]
+		else:
+			self.__data[field_name] = parsed_value
+
+		self.__note.save()
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, note: "BaseNote", data: dict[str, float | int | list | str | None]):
+	def __init__(self, note: N, data: dict[str, SupportedTypes | list[SupportedTypes] | None]):
 		"""
 		Оператор метаданных.
 
@@ -87,166 +136,145 @@ class Metainfo:
 		:type data: dict[str, float | int | list | str | None]
 		"""
 
-		self.__Note = note
-		self.__Data: dict[str, float | int | list | str | None] = data.copy()
+		self.__rules: "MetainfoRules" = note.table.manifest.metainfo_rules
 
-		self.__MetainfoRules = self.__Note.table.manifest.metainfo_rules
+		self.__note: N = note
+		self.__data: dict[str, SupportedTypes | tuple[SupportedTypes, ...] | None] = deep_merge(
+			base = dict.fromkeys(self.__rules.fields_names, None),
+			content = data,
+			sequences_type = tuple
+		)
 
-	def __getitem__(self, field: str) -> float | int | list | str | None:
+	def is_free_field(self, field_name: str) -> bool:
 		"""
-		Возвращает значение поля метаданных.
+		Check if field is free.
 
-		:param field: Имя поля.
-		:type field: str
-		:return: Значение поля метаданых.
-		:rtype: float | int | list | str | None
-		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
-		"""
-
-		return self.get_field_value(field)
-
-	def clear_field(self, field: str):
-		"""
-		Очищает поле метаданных и удаляет его ключ из записи.
-
-		:param field: Имя поля.
-		:type field: str
-		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
+		:param field_name: Field name.
+		:type field_name: str
+		:return: Return `True` if field name not found in described by manifest fields.
+		:rtype: bool
 		"""
 
-		if field not in self.__MetainfoRules.fields_names:
-			raise exceptions.note.metainfo.MetainfoFieldNotDescribedError(field)
+		return field_name not in self.__rules.fields_names
 
-		try:
-			del self.__Data[field]
-			self.__Note.save()
-
-		except KeyError: pass
-
-	def get_field_value(self, field: str) -> float | int | list | str | None:
+	def clear_field(self, field_name: str):
 		"""
-		Возвращает значение поля метаданных.
+		Clear metainfo field value. If field is free also remove field key.
 
-		:param field: Имя поля.
-		:type field: str
-		:return: Значение поля метаданых.
-		:rtype: float | int | list | str | None
-		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
+		:param field_name: Field name.
+		:type field_name: str
 		"""
-		
-		if field not in self.__MetainfoRules.fields_names: raise exceptions.note.metainfo.MetainfoFieldNotDescribedError(field)
 
-		return self.__Data.get(field)
+		if field_name in self.__data:
+			
+			if self.is_free_field(field_name):
+				del self.__data[field_name]
+			else:
+				self.__data[field_name] = None
 
-	def set_field_value(self, field: str, value: float | int | list | str | None):
+		self.__note.save()
+
+	def get_field_value(self, field_name: str) -> SupportedTypes | tuple[SupportedTypes, ...] | None:
 		"""
-		Задаёт значение поля метаданных.
+		Get metainfo field value.
 
-		:param field: Имя поля.
-		:type field: str
-		:param value: Значение. При передаче `None` поле удаляется.
-		:type value: float | int | list | str | None
-		:raises MetainfoBlocked: Поле метаданных не описано и свободный режим отключён.
+		:param field_name: Field name.
+		:type field_name: str
+		:return: Field value.
+		:rtype: SupportedTypes | tuple[SupportedTypes, ...] | None
+		:raises FreeMetainfoFieldsDeniedError: Free metainfo fields denied.
+		:raises MetainfoFieldNotFoundError: Metainfo field not found.
+		"""
+
+		if self.is_free_field(field_name):
+
+			if not self.__rules.is_free_allowed:
+				raise exceptions.note.metainfo.FreeMetainfoFieldsDeniedError()
+
+			if field_name not in self.__data:
+				raise exceptions.note.metainfo.MetainfoFieldNotFoundError(field_name)
+
+		return self.__data[field_name]
+
+	def set_field_value(self, field_name: str, value: Sequence[SupportedTypes] | SupportedTypes | None):
+		"""
+		Set field value.
+
+		:param field_name: Field name.
+		:type field_name: str
+		:param value: Field value. If value is `None` field will be cleared.
+		:type value: Sequence[SupportedTypes] | SupportedTypes | None
+		:raises MetainfoBlockedError: Поле метаданных не описано и свободный режим отключён.
 		:raises ValueError: Кортежи могут содержать только строки.
 		"""
 
-		if not self.__MetainfoRules.is_free_allowed and field not in self.__MetainfoRules.fields_names: raise exceptions.note.metainfo.MetainfoBlockedError()
+		is_free_metainfo: bool = field_name not in self.__rules.fields_names
+
+		if not self.__rules.is_free_allowed and is_free_metainfo:
+			raise exceptions.note.metainfo.FreeMetainfoFieldsDeniedError()
 
 		if value is None:
-			self.clear_field(field)
+			self.clear_field(field_name)
 			return
 		
-		if type(value) is str:
-			value = value.strip()
-			if types.Number.validate(value): value = types.Number.convert(value)
-		
-		if type(value) in (int, float):
-			self.__CheckValueTyping(field, value)
-			self.__Data[field] = value
-			self.__Note.save()
-			return
-		
-		if type(value) is str:
-			value = self.__NormalizeString(value)
-		
-		value = list(set(to_sequence(value)))
-		for Element in value:
-			if type(Element) is not str: raise ValueError("Lists can contains only strings.")
-			self.__CheckValueTyping(field, Element)
-
-		if len(value) == 1: value = value[0]
-		self.__Data[field] = value
-		self.__Note.save()
-
-	def append_to_field(self, field: str, value: str | Sequence[str], separator: str | None = ";"):
-		"""
-		Добавляет строку или список строк в поле, содержащее строку, список строк или являющееся пустым.
-
-		:param field: Имя поля.
-		:type field: str
-		:param value: Одна строка или список.
-		:type value: str | tuple[str, ...]
-		:param separator: Разделитель подстрок, используемый для формирования из строки списка значений по вхождению символа.
-		:type separator: str | None
-		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
-		:raises ValueError: Неверный тип значения.
-		"""
-
-		value = to_sequence(value, target_type = list)
-		if len(value) == 1: value = value[0]
-
-		if type(value) is str:
-			value = self.__NormalizeString(value, separator)
-			value = to_sequence(value, target_type = list)
-		else:
-			raise ValueError("Value isn't str or tuple type.")
-
-		FieldValue = self.get_field_value(field)
-
-		if FieldValue is None: FieldValue = []
-		elif type(FieldValue) is str: FieldValue = [FieldValue]
-		else: raise ValueError(f"Field \"{field}\" has non-string and non-sequence value.")
-
-		self.set_field_value(field, FieldValue + value)
-
-	def remove_from_field(self, field: str, value: str | Sequence[str], separator: str | None = ";"):
-		"""
-		Удаляет строку или набор строк из поля, содержащего строку или набор строк.
-
-		:param field: Имя поля.
-		:type field: str
-		:param value: Одна строка или набор.
-		:type value: str | Sequence[str]
-		:param separator: Разделитель подстрок, используемый для формирования из строки набора значений по вхождению символа.
-		:type separator: str | None
-		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
-		:raises ValueError: Неверный тип значения.
-		"""
-
-		if type(value) is str:
-			value = self.__NormalizeString(value, separator)
-			value = to_sequence(value)
-		elif type(value) is not list:
-			raise ValueError("Value isn't str or list type.")
-
-		FieldValue = self.get_field_value(field)
-
-		if type(FieldValue) is str:
-			FieldValue = [FieldValue]
-		else:
-			raise ValueError(f"Field \"{field}\" has non-string and non-sequence value.")
-
-		for Element in set(value): FieldValue.remove(Element)
-		self.set_field_value(field, FieldValue)
+		parsed_value: tuple[float | int | str, ...] = self.__parse_value(value)
+		self.__validate_value(field_name, parsed_value)
+		self.__set_value(field_name, parsed_value)
 
 	def to_dict(self, copy: bool = True) -> dict:
 		"""
-		Возвращает словарное представление метаданных.
+		Returns a dictionary representation of object.
 
-		:param copy: Указывает, нужно ли вернуть копию внутреннего словаря или оригинал.
+		:param copy: Make deep copy of internal data dictionary.
 		:type copy: bool
-		:return: Словарное представление метаданных.
+		:return: Dictionary representation of object.
 		:rtype: dict
 		"""
 
-		return deep_copy(self.__Data) if copy else self.__Data
+		return deep_copy(self.__data) if copy else self.__data
+
+	#==========================================================================================#
+	# >>>>> PUBLIC FIELDS SEQUENCES MANIPULATION METHODS <<<<< #
+	#==========================================================================================#
+
+	def append_to_field(self, field_name: str, value: SupportedTypes | Sequence[SupportedTypes], separator: str | None = ";"):
+		"""
+		Append value(s) to field.
+
+		:param field_name: Field name.
+		:type field_name: str
+		:param value: Value.
+		:type value: SupportedTypes | Sequence[SupportedTypes]
+		:param separator: By this separator strings will be splitted.
+		:type separator: str | None
+		"""
+
+		current_value: SupportedTypes | tuple[SupportedTypes, ...] | None = self.get_field_value(field_name)
+		current_value_tuple: tuple[SupportedTypes, ...] = to_sequence(current_value) if current_value else ()
+		parsed_value: tuple[SupportedTypes, ...] = self.__parse_value(value, separator)
+		result_value: tuple[SupportedTypes, ...] = current_value_tuple + parsed_value
+		self.__validate_value(field_name, result_value)
+		self.__set_value(field_name, parsed_value)
+
+	def remove_from_field(self, field_name: str, value: SupportedTypes | Sequence[SupportedTypes], separator: str | None = ";"):
+		"""
+		Remove value(s) from field.
+
+		:param field_name: Field name.
+		:type field_name: str
+		:param value: Value.
+		:type value: SupportedTypes | Sequence[SupportedTypes]
+		:param separator: By this separator strings will be splitted.
+		:type separator: str | None
+		"""
+
+		current_value: SupportedTypes | tuple[SupportedTypes, ...] | None = self.get_field_value(field_name)
+		current_value_list: list[SupportedTypes] = to_sequence(current_value, target_type = list) if current_value else []
+		parsed_value: tuple[SupportedTypes, ...] = self.__parse_value(value, separator)
+
+		for element in parsed_value:
+			if element in current_value_list:
+				index: int = current_value_list.index(element)
+				current_value_list.pop(index)
+
+		self.__set_value(field_name, tuple(current_value_list))

@@ -1,8 +1,7 @@
-import os
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 from dublib.functions.data import deep_copy
+from dublib.functions.data.dictionary import deep_merge
 from dublib.functions.filesystem import json
 
 from .attachments import Attachments
@@ -10,11 +9,13 @@ from .enums import CallbacksTypes
 from .metainfo import Metainfo
 
 if TYPE_CHECKING:
-	from otakudb.core.base.table import BaseTable
-	from otakudb.core.base.table.connector.bonds import NoteBonds
-	from otakudb.core.session.driver import Driver
+	from pathlib import Path
 
-class BaseNote:
+	from ...session.driver import Driver
+	from ..table import BaseTable
+	from ..table.connector.bonds import NoteBonds
+
+class BaseNote[T: "BaseTable"]:
 	"""Базовая запись."""
 
 	#==========================================================================================#
@@ -22,43 +23,43 @@ class BaseNote:
 	#==========================================================================================#
 
 	@property
-	def attachments(self) -> Attachments:
+	def attachments(self) -> Attachments[Self]:
 		"""Оператор вложений."""
 
-		return self._Attachments
+		return self._attachments
 	
 	@property
-	def bonds(self) -> "NoteBonds":
+	def bonds(self) -> "NoteBonds[Self]":
 		"""Связи записи."""
 
-		return self._Table.connector.bonds.get_note_bonds(self._ID)
+		return self._table.connector.bonds.get_note_bonds(self._note_id)
 
 	@property
 	def full_path(self) -> Path:
 		"""Полный путь к файлу записи."""
 
-		return self._Table.full_path / f"{self._ID}.json"
+		return self._table.full_path / f"{self._note_id}.json"
 
 	@property
 	def id(self) -> int:
 		"""ID записи."""
 
-		return self._ID
+		return self._note_id
 
 	@property
-	def metainfo(self) -> Metainfo:
+	def metainfo(self) -> Metainfo[Self]:
 		"""Оператор метаданных."""
 
-		return self._Metainfo
+		return self._metainfo
 
 	@property
 	def name(self) -> str | None:
 		"""Название записи."""
 
-		return self._Data.get("name")
+		return self._data.get("name")
 	
 	@property
-	def searchable_strings(self) -> list[str]:
+	def searchable_strings(self) -> tuple[str, ...]:
 		"""Список строк, которые индексируются для поисковых запросов."""
 
 		return self._export_searchable_strings()
@@ -67,7 +68,7 @@ class BaseNote:
 	def table(self) -> "BaseTable":
 		"""Таблица, к которой относится запись."""
 
-		return self._Table
+		return self._table
 
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
@@ -76,16 +77,11 @@ class BaseNote:
 	def _load_data(self):
 		"""Считывает данные записи или создаёт локальный файл при отсутствии такового."""
 
-		NoteFullPath = self.full_path
+		self._data |= self._export_empty_note()
+		note_full_path: Path = self.full_path
 
-		self._Data: dict = {
-			"name": None,
-			"metainfo": {},
-			"attachments": dict.fromkeys(self._Table.manifest.attachments.slots_names, None)
-		} | self._export_empty_note()
-
-		if NoteFullPath.exists():
-			self._Data = self._Data | json.read(NoteFullPath)
+		if note_full_path.exists():
+			self._data = deep_merge(self._data, json.read(note_full_path), uniqueness = True)
 			self._parse_containers()
 
 		else:
@@ -95,14 +91,14 @@ class BaseNote:
 	def _parse_containers(self):
 		"""Парсит контейнерные типы данных."""
 
-		self._Metainfo = Metainfo(self, self._Data.get("metainfo", {}))
-		self._Attachments = Attachments(self, self._Data.get("attachments", {}))
+		self._metainfo: Metainfo[Self] = Metainfo(self, self._data.get("metainfo", {}))
+		self._attachments: Attachments[Self] = Attachments(self, self._data.get("attachments", {}))
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ОБРАБОТЧИКИ CALLBACK-ВЫЗОВОВ <<<<< #
 	#==========================================================================================#	
 
-	def _callback_slave_note_saved(self, slave_note: "BaseNote"):
+	def _callback_slave_note_saved(self, slave_note: Self):
 		"""
 		Обработчик вызова: привязанные запись выполнила сохранение.
 
@@ -131,11 +127,21 @@ class BaseNote:
 
 		pass
 
-	def _post_local_bind(self, note: "BaseNote"):
+	def _post_binding(self, note: Self):
 		"""
-		Метод, выполняющийся после привязки локальной записи.
+		Метод, выполняющийся после создания связи.
 
 		:param note: Привязанная запись.
+		:type note: BaseNote
+		"""
+
+		pass
+
+	def _post_hyperlinking(self, note: "BaseNote"):
+		"""
+		Метод, выполняющийся после создания гиперссылки.
+
+		:param note: Запись, на которую создана гиперссылка.
 		:type note: BaseNote
 		"""
 
@@ -157,53 +163,62 @@ class BaseNote:
 
 		return {}
 
-	def _export_searchable_strings(self) -> list[str]:
+	def _export_searchable_strings(self) -> tuple[str, ...]:
 		"""
 		Список индексируемых для поисковых запросов строк.
 
-		:return: Список строк, которые индексируются для поисковых запросов.
-		:rtype: list[str]
+		:return: Последовательность строк, которые индексируются для поисковых запросов.
+		:rtype: Sequence[str]
 		"""
 
-		Strings: list[str] = []
+		strings: list[str] = []
 
-		if self.name: Strings.append(self.name)
+		if self.name:
+			strings.append(self.name)
 
-		for Key in ("localized_name", "another_name", "another_names"):
-			NameObject: list[str] | str | None = self._Data.get(Key)
-			if isinstance(NameObject, list): Strings += NameObject
-			elif NameObject: Strings.append(NameObject)
+		for key in ("localized_name", "another_name", "another_names"):
+			strings_container: list[str] | str | None = self._data.get(key)
+			if isinstance(strings_container, list): strings += strings_container
+			elif strings_container: strings.append(strings_container)
 
-		return Strings
+		return tuple(strings)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, driver: "Driver", table: "BaseTable", note_id: int):
+	def __init__(self, driver: "Driver", table: T, note_id: int):
 		"""
 		Базовая запись.
 
+		:param driver: Драйвер хранилища.
+		:type driver: Driver
 		:param table: Таблица.
 		:type table: BaseTable
 		:param note_id: ID записи.
 		:type note_id: int
-		:raises ValueError: Обязательный ключ отсутствует в файле записи.
 		"""
 
-		self._Driver: "Driver" = driver
-		self._Table = table
-		self._ID: int = note_id
+		self._driver: "Driver" = driver
+		self._table: T = table
+		self._note_id: int = note_id
+
+		self._data: dict = {
+			"name": None,
+			"metainfo": {},
+			"attachments": dict.fromkeys(self._table.manifest.attachments.slots_names, None)
+		}
 		
 		self._load_data()
 		self.sort()
 		self._parse_containers()
+		
 		self._post_init()
 
 	def delete(self):
 		"""Удаляет запись."""
 
-		self._Table.delete_note(self._ID)
+		self._table.delete_note(self._note_id)
 
 	def rename(self, name: str | None):
 		"""
@@ -213,8 +228,8 @@ class BaseNote:
 		:type name: str | None
 		"""
 
-		if type(name) is str: name = name.strip()
-		self._Data["name"] = name
+		if isinstance(name, str): name = name.strip()
+		self._data["name"] = name
 		self.save()
 
 	def run_callback(self, callback_type: CallbacksTypes, *args, **kwargs):
@@ -229,17 +244,17 @@ class BaseNote:
 
 		match callback_type:
 			case CallbacksTypes.AttachmentsChanged: self._callback_attachments_changed(*args, **kwargs)
-			case CallbacksTypes.SlaveNoteSaved: self._callback_slave_note_saved(*args, **kwargs)
+			case CallbacksTypes.SlaveSaved: self._callback_slave_note_saved(*args, **kwargs)
 
 	def save(self):
 		"""Сохраняет данные записи в локальный файл JSON."""
 
-		IsNoteFileExists = self.full_path.exists()
-
+		is_file_creation: bool = not self.full_path.exists()
 		json.write(self.full_path, self.to_dict(copy = False), atomic = True)
 
-		if IsNoteFileExists:
-			for Master in self.bonds.masters: Master.run_callback(CallbacksTypes.SlaveNoteSaved, self)
+		if is_file_creation:
+			for Master in self.bonds.masters:
+				Master.run_callback(CallbacksTypes.SlaveSaved, self)
 
 	def set_id(self, note_id: int):
 		"""
@@ -249,12 +264,13 @@ class BaseNote:
 		:type note_id: int
 		"""
 
-		OldPath = self.full_path
-		NewPath = OldPath.parent / f"{note_id}.json"
-		os.rename(OldPath, NewPath)
-		self._Attachments.move(note_id)
-		self._Table.connector.bonds.update_note_id(self._ID, note_id)
-		self._ID = note_id
+		old_path: "Path" = self.full_path
+		new_path: "Path" = old_path.parent / f"{note_id}.json"
+		old_path.rename(new_path)
+
+		self._attachments.move(note_id)
+		self._table.connector.bonds.update_note_id(self._note_id, note_id)
+		self._note_id = note_id
 
 	def sort(self):
 		"""
@@ -263,9 +279,9 @@ class BaseNote:
 		Важные ключи _name_, _matainfo_, _attachments_ помещаются в начало.
 		"""
 
-		ImportantKeys = ("name", "matainfo", "attachments")
+		important_keys: tuple[str, ...] = ("name", "matainfo", "attachments")
 			
-		def NoteKeysSorter(item: tuple[str, Any]) -> tuple[Literal[0, 1], int, str]:
+		def note_keys_sorter(item: tuple[str, Any]) -> tuple[Literal[0, 1], int, str]:
 			"""
 			Генератор кортежей сортировки словарного ключей записи.
 
@@ -275,12 +291,13 @@ class BaseNote:
 			:rtype: tuple[Literal[0, 1], int, str]
 			"""
 
-			Key = item[0]
-			if Key in ImportantKeys: return (0, ImportantKeys.index(Key), "")
+			key: str = item[0]
+			if key in important_keys:
+				return (0, important_keys.index(key), "")
 
-			return (1, 0, Key.lower())
+			return (1, 0, key.lower())
 
-		self._Data = dict(sorted(self._Data.items(), key = NoteKeysSorter))
+		self._data = dict(sorted(self._data.items(), key = note_keys_sorter))
 
 	def to_dict(self, copy: bool = True, sort: bool = False) -> dict:
 		"""
@@ -295,8 +312,8 @@ class BaseNote:
 		"""
 
 		self._pre_dict_formatter()
-		self._Data["metainfo"] = self._Metainfo.to_dict(copy)
-		self._Data["attachments"] = self._Attachments.to_dict()
+		self._data["metainfo"] = self._metainfo.to_dict(copy)
+		self._data["attachments"] = self._attachments.to_dict()
 		if sort: self.sort()
 
-		return deep_copy(self._Data) if copy else self._Data
+		return deep_copy(self._data) if copy else self._data

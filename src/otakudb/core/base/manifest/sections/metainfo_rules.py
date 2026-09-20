@@ -215,11 +215,11 @@ class MetainfoRules(BaseSection):
 		:type field: str
 		:return: Параметры поля.
 		:rtype: MetainfoFieldParameters
-		:raises MetainfoFieldNotDescribed: Данные поля не найдены.
+		:raises MetainfoFieldNotFoundError: Данные поля не найдены.
 		"""
 
 		if field not in self.__fields:
-			raise exceptions.note.metainfo.MetainfoFieldNotDescribedError(field)
+			raise exceptions.note.metainfo.MetainfoFieldNotFoundError(field)
 
 		return self.__fields[field]
 
@@ -229,10 +229,10 @@ class MetainfoRules(BaseSection):
 
 		:param field: Имя поля.
 		:type field: str
-		:raises MetainfoFieldNotDescribed: Поле метаданных не описано.
+		:raises MetainfoFieldNotFoundError: Поле метаданных не описано.
 		"""
 
 		if field not in self.__fields:
-			raise exceptions.note.metainfo.MetainfoFieldNotDescribedError(field)
+			raise exceptions.note.metainfo.MetainfoFieldNotFoundError(field)
 
 		del self.__fields[field]
