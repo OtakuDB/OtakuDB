@@ -1,23 +1,24 @@
 from typing import TYPE_CHECKING, Self
 
+from pydantic import BaseModel, TypeAdapter
+
 from dublib.functions.filesystem import json
 
 from ... import exceptions
 from .sections.attachments import AttachmentsSection
 from .sections.common import CommonSection
 from .sections.connections import ConnectionsSection
-from .sections.custom import CustomSection
 from .sections.interfaces_options import InterfacesOptions
 from .sections.metainfo_rules import MetainfoRules
 
 if TYPE_CHECKING:
 	from pathlib import Path
 
-class Manifest:
+class Manifest[C: "BaseModel"]:
 	"""Манифест таблицы."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
+	# >>>>> PROPERTIES <<<<< #
 	#==========================================================================================#
 
 	@property
@@ -40,7 +41,7 @@ class Manifest:
 		return self.__table_type
 	
 	#==========================================================================================#
-	# >>>>> СЕКЦИИ <<<<< #
+	# >>>>> SECTIONS <<<<< #
 	#==========================================================================================#
 
 	@property
@@ -62,8 +63,11 @@ class Manifest:
 		return self.__connections
 
 	@property
-	def custom(self) -> CustomSection:
-		"""Дополнительные опции."""
+	def custom(self) -> C:
+		"""Custom table settings."""
+
+		if self.__custom is None:
+			raise exceptions.table.ManifestError("Custom settings required, but untyped.")
 
 		return self.__custom
 
@@ -80,10 +84,10 @@ class Manifest:
 		return self.__interfaces_options
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, directory: "Path", table_type: str | None = None):
+	def __init__(self, directory: "Path", table_type: str | None = None, custom_model: type[C] | None = None):
 		"""
 		Манифест таблицы.
 
@@ -91,16 +95,20 @@ class Manifest:
 		:type directory: PathLike
 		:param table_type: Тип таблицы.
 		:type table_type: str | None
+		:param custom_model: Custom table settings [pydantic](https://github.com/pydantic/PYDANTIC) typing model.
+		:type custom_model: type[BaseModel] | None
 		"""
 
 		self.__directory: "Path" = directory
 
 		self.__manifest_path: "Path" = self.__directory / "manifest.json"
 		self.__table_type: str | None = table_type
-		
+
+		self.__custom_model: type[C] | None = custom_model
+		self.__custom: C | None = None 
+
 		self.__attachments = AttachmentsSection(self)
 		self.__common = CommonSection(self)
-		self.__custom = CustomSection(self)
 		self.__connections = ConnectionsSection(self)
 		self.__metainfo_rules = MetainfoRules(self)
 		self.__interfaces_options = InterfacesOptions(self)
@@ -134,9 +142,11 @@ class Manifest:
 		self.__attachments.parse(data.get("attachments", {}))
 		self.__common.parse(data.get("common", {}))
 		self.__connections.parse(data.get("connections", {}))
-		self.__custom.parse(data.get("custom", {}))
 		self.__metainfo_rules.parse(data.get("metainfo_rules", {}))
 		self.__interfaces_options.parse(data.get("interfaces_options", {}))
+
+		if self.__custom_model:
+			self.__custom = TypeAdapter(self.__custom_model).validate_python(data.get("custom", {}))
 
 		return self
 
@@ -158,7 +168,7 @@ class Manifest:
 			"attachments": self.__attachments.to_dict(),
 			"common": self.__common.to_dict(),
 			"connections": self.__connections.to_dict(),
-			"custom": self.__custom.to_dict(),
+			"custom": self.__custom.model_dump() if self.__custom else {},
 			"metainfo_rules": self.__metainfo_rules.to_dict(),
 			"interfaces_options": self.__interfaces_options.to_dict()
 		}

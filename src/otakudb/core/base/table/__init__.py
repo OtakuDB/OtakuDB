@@ -4,6 +4,8 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+from pydantic import BaseModel
+
 from ... import exceptions
 from .connector import Connector
 
@@ -13,11 +15,11 @@ if TYPE_CHECKING:
 	from ..manifest import Manifest
 	from ..note import BaseNote
 
-class BaseTable[N: "BaseNote"]:
+class BaseTable[N: "BaseNote", C: "BaseModel"]:
 	"""Базовая таблица."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
+	# >>>>> PROPERTIES <<<<< #
 	#==========================================================================================#
 
 	@property
@@ -33,7 +35,7 @@ class BaseTable[N: "BaseNote"]:
 		return self._descriptor.full_path
 
 	@property
-	def manifest(self) -> "Manifest":
+	def manifest(self) -> "Manifest[C]":
 		"""Манифест таблицы."""
 
 		return self._descriptor.manifest
@@ -163,7 +165,7 @@ class BaseTable[N: "BaseNote"]:
 		self._notes[new_id] = FirstNote
 
 	#==========================================================================================#
-	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> PROTECTED METHODS <<<<< #
 	#==========================================================================================#	
 
 	def _generate_new_note_id(self) -> int:
@@ -211,8 +213,8 @@ class BaseTable[N: "BaseNote"]:
 		)
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#	
+	# >>>>> OVERRIDABLE METHODS <<<<< #
+	#==========================================================================================#
 
 	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта таблицы."""
@@ -225,7 +227,7 @@ class BaseTable[N: "BaseNote"]:
 		pass
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 	
 	def __init__(self, driver: "Driver", descriptor: "TableDescriptor"):

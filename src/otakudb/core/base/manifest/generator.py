@@ -1,16 +1,18 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel
+
 from . import Manifest
 
 if TYPE_CHECKING:
 	from pathlib import Path
 
-class ManifestGenerator(ABC):
+class ManifestGenerator[C: "BaseModel"](ABC):
 	"""Генератор манифеста."""
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> OVERRIDABLE METHODS <<<<< #
 	#==========================================================================================#
 
 	@abstractmethod
@@ -28,8 +30,19 @@ class ManifestGenerator(ABC):
 
 		return manifest
 
+	@abstractmethod
+	def _export_custom_settings_model(self) -> type[C]:
+		"""
+		Export custom settings typing [pydantic](https://github.com/pydantic/PYDANTIC) model.
+
+		:return: Custom settings typing model.
+		:rtype: type[BaseModel]
+		"""
+
+		pass
+
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
 	def __init__(self, directory: "Path", table_type: str):
@@ -45,7 +58,7 @@ class ManifestGenerator(ABC):
 		self.__directory: "Path" = directory
 		self.__table_type: str = table_type
 
-	def generate(self) -> Manifest:
+	def generate(self) -> Manifest[C]:
 		"""
 		Генерирует пустой манифест.
 
@@ -53,7 +66,7 @@ class ManifestGenerator(ABC):
 		:rtype: Manifest
 		"""
 		
-		manifest = Manifest(self.__directory, self.__table_type)
+		manifest = Manifest(self.__directory, self.__table_type, self._export_custom_settings_model())
 		manifest = self._edit_manifest(manifest)
 		manifest.save()
 
