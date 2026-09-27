@@ -83,7 +83,7 @@ class MetainfoRules(BaseSection):
 		return 2
 
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> PRIBATE METHODS <<<<< #
 	#==========================================================================================#
 
 	def __parse_fields_parameters(self, data: dict[str, dict]) -> dict[str, MetainfoFieldParameters]:

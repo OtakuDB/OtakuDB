@@ -1,27 +1,35 @@
+[build-system]
+requires = ["uv-build>=0.12.18,<0.13.0"]
+build-backend = "uv_build"
+
 [project]
 name = "otakudb"
 version = "0.3.0"
 dependencies = [
 	"questionary",
 	"dulwich>=1.2.6",
-	"dublib==0.31.0"
+	"dublib==0.31.1"
 ]
 
 [project.optional-dependencies]
 dev = ["ruff", "ty"]
 
+[project.scripts]
+otakudb = "otakudb:main"
+
 [tool.ruff.lint]
-select = ["A", "ARG", "C", "E", "F", "I", "N818"]
+select = ["A", "ARG", "C", "COM", "E", "F", "I", "N818"]
 ignore = ["E701", "E501"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 1
-sections = {"dublib" = ["dublib"]}
+sections = {"dublib" = ["dublib"], otakudb = ["otakudb"]}
 section-order = [
 	"future",
 	"standard-library",
 	"third-party",
 	"dublib",
+	"otakudb",
 	"first-party",
 	"local-folder"
 ]

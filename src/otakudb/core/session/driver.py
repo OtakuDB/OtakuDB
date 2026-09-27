@@ -42,50 +42,6 @@ class Driver:
 		return tuple(info.name for info in pkgutil.iter_modules(tables.__path__))
 
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __free_box(self, virtual_path: Path):
-		"""
-		Выгружает контейнер.
-
-		:param virtual_path: Виртуальный путь к контейнеру.
-		:type virtual_path: Path
-		:raises BoxAlreadyInitializedError: Контейнер не инициализирован.
-		"""
-
-		box_virtual_path: str = virtual_path.as_posix()
-
-		if not self.is_box_initialized(virtual_path):
-			raise exceptions.session.box.BoxNotInitializedError(virtual_path)
-
-		del self.__boxes[box_virtual_path]
-
-	def __init_box(self, parent_box: Box | RootBox, name: str) -> Box:
-		"""
-		Инициализирует существующий контейнер.
-
-		:param parent_box: Родительский контейнер.
-		:type parent_box: Box | RootBox
-		:param name: Имя контейнера.
-		:type name: str
-		:return: Контейнер.
-		:rtype: Box
-		:raises BoxAlreadyInitializedError: Контейнер уже инициализирован.
-		"""
-
-		virtual_path: Path = parent_box.virtual_path / name
-		box_virtual_path: str = virtual_path.as_posix()
-
-		if self.is_box_initialized(virtual_path):
-			raise exceptions.session.box.BoxAlreadyInitializedError(virtual_path)
-
-		box = Box(self, parent_box, name)
-		self.__boxes[box_virtual_path] = box
-
-		return box
-
-	#==========================================================================================#
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
@@ -99,8 +55,8 @@ class Driver:
 		
 		self.__storage_path: Path = storage_path
 
-		self.__root_box: RootBox = RootBox(self)
 		self.__boxes: dict[str, Box] = {}
+		self.__root_box: RootBox = RootBox(self)
 		
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С КОНТЕЙНЕРАМИ <<<<< #
@@ -126,7 +82,7 @@ class Driver:
 		else:
 			new_box_full_path.mkdir()
 
-		new_box = self.__init_box(parent_box, name)
+		new_box = self.init_box(parent_box, name)
 		parent_box.add_item(new_box)
 
 		return new_box
@@ -148,7 +104,7 @@ class Driver:
 		target_box_virtual_path = parent_box.virtual_path / name
 		target_box = self.get_box(target_box_virtual_path)
 		parent_box.pop_item(name)
-		self.__free_box(target_box_virtual_path)
+		self.free_box(target_box_virtual_path)
 
 		if purge:
 			shutil.rmtree(target_box.full_path)
@@ -159,18 +115,32 @@ class Driver:
 			else:
 				target_box.full_path.rmdir()
 
-	def get_box(self, virtual_path: Path, auto_init: bool = False) -> Box:
+	def free_box(self, virtual_path: Path):
 		"""
-		Возвращает инициализированный контейнер.
+		Unload box from memory.
 
-		:param virtual_path: Вирутальный путь к контейнеру.
+		:param virtual_path: Virtual path to box.
 		:type virtual_path: Path
-		:param auto_init: Указывает, следует ли инициализировать контейнер, если он существует.
-		:type auto_init: bool
-		:return: Контейнер.
+		:raises BoxAlreadyInitializedError: Box not initialized.
+		"""
+
+		box_virtual_path: str = virtual_path.as_posix()
+
+		if not self.is_box_initialized(virtual_path):
+			raise exceptions.session.box.BoxNotInitializedError(virtual_path)
+
+		del self.__boxes[box_virtual_path]
+
+	def get_box(self, virtual_path: Path) -> Box:
+		"""
+		Return initialized box.
+
+		:param virtual_path: Virtual path to box.
+		:type virtual_path: Path
+		:return: Box.
 		:rtype: Box
-		:raises BoxNotInitializedError: Контейнер не инициализирован.
-		:raises ItemNotFoundError: Контейнер не найден.
+		:raises BoxNotInitializedError: Box not initialized.
+		:raises ItemNotFoundError: Box not found.
 		"""
 
 		if not self.is_item_exists(virtual_path):
@@ -179,12 +149,31 @@ class Driver:
 		if self.is_box_initialized(virtual_path):
 			return self.__boxes[virtual_path.as_posix()] 
 
-		if auto_init:
-			parent_box = self.get_box(virtual_path.parent) if len(virtual_path.parts) > 1 else self.__root_box
-			self.__init_box(parent_box, virtual_path.name)
-			return self.__boxes[virtual_path.as_posix()] 
-
 		raise exceptions.session.box.BoxNotInitializedError(virtual_path)
+
+	def init_box(self, parent_box: Box | RootBox, name: str) -> Box:
+		"""
+		Initialize exists box.
+
+		:param parent_box: Parent box.
+		:type parent_box: Box | RootBox
+		:param name: Box name.
+		:type name: str
+		:return: Initialized box.
+		:rtype: Box
+		:raises BoxAlreadyInitializedError: Box already initialized.
+		"""
+
+		virtual_path: Path = parent_box.virtual_path / name
+		box_virtual_path: str = virtual_path.as_posix()
+
+		if self.is_box_initialized(virtual_path):
+			raise exceptions.session.box.BoxAlreadyInitializedError(virtual_path)
+
+		box = Box(self, parent_box, name)
+		self.__boxes[box_virtual_path] = box
+
+		return box
 
 	def is_box(self, virtual_path: Path) -> bool:
 		"""

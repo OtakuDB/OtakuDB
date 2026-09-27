@@ -42,6 +42,8 @@ class Session:
 
 		self.__navigator: Navigator | None = None
 
+		self.__data.load()
+
 	def mount(self, storage_path: str | PathLike[str]) -> Driver:
 		"""
 		Монтирует директорию как хранилище.

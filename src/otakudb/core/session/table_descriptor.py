@@ -5,11 +5,14 @@ from typing import TYPE_CHECKING
 from ...core.base.manifest import Manifest
 
 if TYPE_CHECKING:
+	from pydantic import BaseModel
+
+	from ..base.note import BaseNote
 	from ..base.table import BaseTable
 	from .box import Box, RootBox
 	from .driver import Driver
 
-class TableDescriptor:
+class TableDescriptor[N: "BaseNote", C: "BaseModel" = "BaseModel"]:
 	"""Дескриптор таблицы."""
 
 	#==========================================================================================#
@@ -23,7 +26,7 @@ class TableDescriptor:
 		return self.__full_path
 
 	@property
-	def manifest(self) -> Manifest:
+	def manifest(self) -> Manifest[C]:
 		"""Манифест таблицы."""
 
 		return self.__manifest
@@ -41,13 +44,13 @@ class TableDescriptor:
 		return self.__virtual_path
 
 	@property
-	def table(self) -> "BaseTable":
+	def table(self) -> "BaseTable[N, C]":
 		"""Таблица."""
 
 		return self.__table
 	
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> PRIBATE METHODS <<<<< #
 	#==========================================================================================#
 
 	def __ititialize_table(self):

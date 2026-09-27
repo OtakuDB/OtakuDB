@@ -1,22 +1,50 @@
 from pathlib import Path
 
-class RootUnboxingError(Exception):
-	"""Исключение: невозможно подняться из корневого каталога."""
-
-	def __init__(self):
-		"""Исключение: невозможно подняться из корневого каталога."""
-
-		super().__init__("Storage root can't be unboxed.")
-
-class UnableInboxNonBoxItemError(Exception):
-	"""Исключение: невозможно открыть объект, не являющийся контейнером."""
+class TableNotAtPathEndError(Exception):
+	"""Exception: table item not at path end."""
 
 	def __init__(self, virtual_path: Path):
 		"""
-		Исключение: невозможно открыть объект, не являющийся контейнером.
+		Exception: table item not at path end.
 
-		:param virtual_path: Виртуальный путь к объекту.
+		:param virtual_path: Virtual path to item.
+		:type virtual_path: Path
+		"""
+
+		# To-Do: make table name in path bold.
+
+		super().__init__(virtual_path.as_posix())
+
+class NotBoxError(Exception):
+	"""Exception: target item isn't box."""
+
+	def __init__(self, virtual_path: Path):
+		"""
+		Exception: target item isn't box.
+
+		:param virtual_path: Virtual path to item.
 		:type virtual_path: Path
 		"""
 
 		super().__init__(virtual_path.as_posix())
+
+class NotTableError(Exception):
+	"""Exception: target item isn't table."""
+
+	def __init__(self, virtual_path: Path):
+		"""
+		Exception: target item isn't table.
+
+		:param virtual_path: Virtual path to item.
+		:type virtual_path: Path
+		"""
+
+		super().__init__(virtual_path.as_posix())
+
+class RootUnboxingError(Exception):
+	"""Exception: unable out from storage root box."""
+
+	def __init__(self):
+		"""Exception: unable out from storage root box."""
+
+		super().__init__("Unable out from storage root box.")

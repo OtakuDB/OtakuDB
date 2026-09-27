@@ -1,0 +1,37 @@
+from dublib.cli.terminalyzer import ModelsGroup
+from dublib.validators import ValidableTypes
+
+from ..base.processor import BaseCLI
+from .handlers import BoxHandlers
+
+class BoxCLI(BaseCLI):
+	"""Box CLI processor."""
+
+	@property
+	def groups(self) -> tuple[ModelsGroup, ...]:
+		"""Commands models groups."""
+
+		return tuple(self._groups.values())
+
+	def __build_box_models_group(self):
+		"""Build box models group."""
+
+		box_group: ModelsGroup = self.create_models_group("Box")
+		
+		model = box_group.create_model("go", "Navigate by virtual path.")
+		position = model.create_position("PATH", "Virtual path.", important = True)
+		position.set_argument(ValidableTypes.Path)
+		model.register_handler(self.__handlers.go)
+
+		model = box_group.create_model("ls", "List box content.")
+		model.register_handler(self.__handlers.ls)
+
+	def _build_models(self):
+		"""Build models and register handlers."""
+
+		self.__build_box_models_group()
+
+	def _post_init(self):
+		"""Execute after instance initialization."""
+
+		self.__handlers: BoxHandlers = BoxHandlers(self._interface)

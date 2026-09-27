@@ -54,8 +54,6 @@ class RootBox:
 		
 		self._items: dict[str, Box | TableDescriptor] = {}
 
-		self.reload()
-
 	#==========================================================================================#
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
@@ -70,6 +68,7 @@ class RootBox:
 		"""
 
 		self._base_init(driver, Path())
+		self.reload()
 
 	def add_item(self, item: "Box | TableDescriptor"):
 		"""
@@ -159,14 +158,22 @@ class RootBox:
 	def reload(self):
 		"""Сканирует директорию контейнера и заново получает вложенные элементы."""
 
-		elements_names: tuple[str, ...] = tuple(Value.name for Value in os.scandir(self.full_path) if Value.is_dir())
+		elements_names: tuple[str, ...] = tuple(entry.name for entry in os.scandir(self.full_path) if entry.is_dir())
 		items: dict[str, "Box | TableDescriptor"] = {}
 
 		for name in elements_names:
 			element_virtual_path = self._virtual_path / name
 
 			if self._driver.is_box(element_virtual_path):
-				items[name] = self._driver.get_box(element_virtual_path, auto_init = True)
+				box: "Box | None" = None 
+
+				if self._driver.is_box_initialized(element_virtual_path):
+					box = self._driver.get_box(element_virtual_path)
+				else:
+					box = self._driver.init_box(self, element_virtual_path.name)
+
+				items[name] = box
+
 			else:
 				items[name] = TableDescriptor(self._driver, self, name)
 

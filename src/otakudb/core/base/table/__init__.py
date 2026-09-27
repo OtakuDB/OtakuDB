@@ -230,7 +230,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 	
-	def __init__(self, driver: "Driver", descriptor: "TableDescriptor"):
+	def __init__(self, driver: "Driver", descriptor: "TableDescriptor[N, C]"):
 		"""
 		Базовая таблица.
 
@@ -241,7 +241,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 		"""
 
 		self._driver: "Driver" = driver
-		self._descriptor: "TableDescriptor" = descriptor
+		self._descriptor: "TableDescriptor[N, C]" = descriptor
 
 		self._notes: dict[int, N] = {}
 		self._note_class: type[N] = self._get_note_class()

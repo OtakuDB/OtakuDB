@@ -167,7 +167,7 @@ class Attachments[N: "BaseNote" = "BaseNote"]:
 		return tuple(self.__slots.values())
 
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> PRIBATE METHODS <<<<< #
 	#==========================================================================================#
 
 	def __parse_slots(self, slota_data: dict[str, str | None]) -> dict[str, Slot]:

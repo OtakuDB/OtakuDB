@@ -2,7 +2,7 @@ from typing import Any
 
 from dublib.functions.data import deep_copy
 
-from ....interfaces.enums import Interfaces
+from .....interfaces.enums import Interfaces
 from ._base import BaseSection
 
 class InterfacesOptions(BaseSection):
