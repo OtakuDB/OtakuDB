@@ -31,6 +31,8 @@ class CommonTableHandlers(BaseHandlersCollection):
 		
 		if is_open:
 			self.navigator.open_note(note.id)
+		else:
+			self.printer.emit(f"Note #{note.id} created.")
 
 	def open(self, entity: "CommandEntity"):
 		"""

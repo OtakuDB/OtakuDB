@@ -1,10 +1,12 @@
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING, NoReturn, cast
 
 from ....core import exceptions
 from ..enums import InteractionLevels
 from ..exceptions import ObjectUnavailableError
 
 if TYPE_CHECKING:
+	from pydantic import BaseModel
+
 	from ....core.base.note import BaseNote
 	from ....core.base.table import BaseTable
 	from ....core.session import Session
@@ -13,7 +15,7 @@ if TYPE_CHECKING:
 	from ..shell import Interface
 	from ..shell.printer import Printer
 
-class BaseHandlersCollection:
+class BaseHandlersCollection[T: "BaseTable" = "BaseTable[BaseNote, BaseModel]", N: "BaseNote" = "BaseNote"]:
 	"""Base handlers collection."""
 
 	@property
@@ -37,7 +39,7 @@ class BaseHandlersCollection:
 		return self._session.navigator or self._raise_unmounted_error()
 
 	@property
-	def note(self) -> "BaseNote":
+	def note(self) -> N:
 		"""
 		Current note.
 		
@@ -47,7 +49,7 @@ class BaseHandlersCollection:
 		if not self.navigator.current_note:
 			raise ObjectUnavailableError(InteractionLevels.Note)
 
-		return self.navigator.current_note
+		return cast(N, self.navigator.current_note)
 
 	@property
 	def printer(self) -> "Printer":
@@ -56,7 +58,7 @@ class BaseHandlersCollection:
 		return self._interface.printer
 
 	@property
-	def table(self) -> "BaseTable":
+	def table(self) -> T:
 		"""
 		Current table.
 		
@@ -66,7 +68,7 @@ class BaseHandlersCollection:
 		if not self.navigator.current_table:
 			raise ObjectUnavailableError(InteractionLevels.Table)
 
-		return self.navigator.current_table.table
+		return cast(T, self.navigator.current_table.table)
 
 	def _raise_unmounted_error(self) -> NoReturn:
 		"""

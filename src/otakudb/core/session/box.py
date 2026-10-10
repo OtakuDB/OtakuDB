@@ -158,7 +158,7 @@ class RootBox:
 
 	def get_table(self, name: str) -> TableDescriptor:
 		"""
-		Return table desctiptor by name.
+		Return table descriptor by name.
 
 		:param name: Table name.
 		:type name: str
