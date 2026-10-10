@@ -121,6 +121,24 @@ class RootBox:
 
 		self._driver.delete_table(self, name)
 
+	def get_box(self, name: str) -> "Box":
+		"""
+		Return box by name.
+
+		:param name: Box name.
+		:type name: str
+		:return: Box.
+		:rtype: Box
+		:raises NotBoxError: Target item isn't box.
+		"""
+
+		item = self.get_item(name)
+
+		if isinstance(item, TableDescriptor):
+			raise exceptions.session.box.NotBoxError(self.virtual_path / name)
+
+		return item
+
 	def get_item(self, name: str) -> "Box | TableDescriptor":
 		"""
 		Возвращает элемент по имени.
@@ -137,6 +155,24 @@ class RootBox:
 			raise exceptions.session.driver.ItemNotFoundError(virtual_path)
 
 		return self._items[name]
+
+	def get_table(self, name: str) -> TableDescriptor:
+		"""
+		Return table desctiptor by name.
+
+		:param name: Table name.
+		:type name: str
+		:return: Table descriptor.
+		:rtype: TableDescriptor
+		:raises NotTableError: Target item isn't table.
+		"""
+
+		item = self.get_item(name)
+
+		if not isinstance(item, TableDescriptor):
+			raise exceptions.session.box.NotTableError(self.virtual_path / name)
+
+		return item
 
 	def pop_item(self, name: str) -> "Box | TableDescriptor":
 		"""

@@ -23,8 +23,20 @@ class BoxCLI(BaseCLI):
 		position.set_argument(ValidableTypes.Path)
 		model.register_handler(self.__handlers.go)
 
+		model = box_group.create_model("mkdir", "Create box.")
+		position = model.create_position("NAME", "Box name.", important = True)
+		position.set_argument()
+		model.base.add_flag("-o", description = "Open new box after creation.")
+		model.register_handler(self.__handlers.mkdir)
+
 		model = box_group.create_model("ls", "List box content.")
 		model.register_handler(self.__handlers.ls)
+
+		model = box_group.create_model("rmdir", "Delete box. By default only for empty boxes.")
+		position = model.create_position("NAME", "Box name.", important = True)
+		position.set_argument()
+		model.base.add_flag("-p", description = "Purge all data in box if exists.")
+		model.register_handler(self.__handlers.rmdir)
 
 		model = box_group.create_model("types", "Print available tables types.")
 		model.register_handler(self.__handlers.types)

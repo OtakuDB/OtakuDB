@@ -14,7 +14,7 @@ class BoxHandlers(BaseHandlersCollection):
 
 	def go(self, entity: "CommandEntity"):
 		"""
-		Navigate by virtual path.
+		Command handler: **go**.
 
 		:param entity: Command entity.
 		:type entity: CommandEntity
@@ -23,9 +23,25 @@ class BoxHandlers(BaseHandlersCollection):
 		virtual_path: Path = entity.get_position_value("PATH", expected_type = Path, important = True)
 		self.navigator.navigate(virtual_path)
 
+	def mkdir(self, entity: "CommandEntity"):
+		"""
+		Command handler: **mkdir**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		name: str = entity.get_position_value("NAME", expected_type = str, important = True)
+		is_open: bool = entity.check_flag("-o")
+
+		box = self.navigator.current_box.create_box(name)
+
+		if is_open:
+			self.navigator.navigate(box.virtual_path)
+
 	def ls(self, entity: "CommandEntity"):  # noqa: ARG002
 		"""
-		List box items.
+		Command handler: **ls**.
 
 		:param entity: Command entity.
 		:type entity: CommandEntity
@@ -46,14 +62,26 @@ class BoxHandlers(BaseHandlersCollection):
 		for box in boxes: self.printer.emit(f"📁 {box.name}")
 		for descriptor in descriptors: self.printer.emit(f"📦 {descriptor.name}")
 
+	def rmdir(self, entity: "CommandEntity"):
+		"""
+		Command handler: **rmdir**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		name: str = entity.get_position_value("NAME", expected_type = str, important = True)
+		is_purge: bool = entity.check_flag("-p")
+
+		box = self.navigator.current_box.get_box(name)
+		box.delete(is_purge)
+
 	def types(self, entity: "CommandEntity"): # noqa: ARG002
 		"""
 		Command handler: **types**.
 
 		:param entity: Command entity.
 		:type entity: CommandEntity
-		:param session: Interaction session.
-		:type session: Session
 		"""
 
 		tables_types: tuple[str, ...] = self.driver.available_tables_types
