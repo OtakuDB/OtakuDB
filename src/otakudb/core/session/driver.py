@@ -37,7 +37,7 @@ class Driver:
 
 	@property
 	def available_tables_types(self) -> tuple[str, ...]:
-		"""Последовательность названий доступных типов таблиц."""
+		"""Available tables types."""
 
 		return tuple(info.name for info in pkgutil.iter_modules(tables.__path__))
 

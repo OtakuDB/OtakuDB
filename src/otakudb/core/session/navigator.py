@@ -118,7 +118,6 @@ class Navigator:
 			if part == "..":
 				self.unbox()
 				continue
-
 			if self.__driver.is_box(self.__current_box.virtual_path / part):
 				self.inbox(part)
 

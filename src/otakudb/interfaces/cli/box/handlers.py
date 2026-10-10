@@ -39,6 +39,23 @@ class BoxHandlers(BaseHandlersCollection):
 		if is_open:
 			self.navigator.navigate(box.virtual_path)
 
+	def new(self, entity: "CommandEntity"):
+		"""
+		Command handler: **new**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		table_type: str = entity.get_position_value("TYPE", expected_type = str, important = True)
+		name: str = entity.get_position_value("NAME", expected_type = str) or table_type
+		is_open: bool = entity.check_flag("-o")
+
+		table = self.navigator.current_box.create_table(name, table_type)
+
+		if is_open:
+			self.navigator.navigate(table.virtual_path)
+
 	def ls(self, entity: "CommandEntity"):  # noqa: ARG002
 		"""
 		Command handler: **ls**.

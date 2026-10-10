@@ -26,8 +26,16 @@ class BoxCLI(BaseCLI):
 		model = box_group.create_model("mkdir", "Create box.")
 		position = model.create_position("NAME", "Box name.", important = True)
 		position.set_argument()
-		model.base.add_flag("-o", description = "Open new box after creation.")
+		model.base.add_flag("-o", description = "Open box after creation.")
 		model.register_handler(self.__handlers.mkdir)
+
+		model = box_group.create_model("new", "Create table.")
+		position = model.create_position("TYPE", "Table type.", important = True)
+		position.set_argument()
+		position = model.create_position("NAME", "Table name. Type used instead if name missing.")
+		position.set_argument()
+		model.base.add_flag("-o", description = "Open table after creation.")
+		model.register_handler(self.__handlers.new)
 
 		model = box_group.create_model("ls", "List box content.")
 		model.register_handler(self.__handlers.ls)

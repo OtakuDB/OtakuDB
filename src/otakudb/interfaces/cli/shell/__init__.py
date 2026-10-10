@@ -35,7 +35,16 @@ class Interface:
 	def level(self) -> InteractionLevels:
 		"""Current interaction level."""
 
-		return self.__level
+		if not self.__session.navigator:
+			return InteractionLevels.Driver
+
+		if self.__session.navigator.current_note:
+			return InteractionLevels.Note
+
+		if self.__session.navigator.current_table:
+			return InteractionLevels.Table
+
+		return InteractionLevels.Box
 
 	@property
 	def printer(self) -> Printer:
@@ -81,7 +90,7 @@ class Interface:
 
 		groups: tuple[ModelsGroup, ...] = (self.__global_group,)
 
-		match self.__level:
+		match self.level:
 			case InteractionLevels.Box: groups += self.__box_cli.groups
 
 		return groups
@@ -157,7 +166,6 @@ class Interface:
 		self.__helper: Helper = Helper()
 
 		self.__handlers: DriverHandlers = DriverHandlers(self)
-		self.__level: InteractionLevels = InteractionLevels.Driver
 		self.__prompt_generator: PromptGenerator = PromptGenerator(self.__session)
 		
 		self.__global_group_name: str = "Global"
