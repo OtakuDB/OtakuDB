@@ -5,9 +5,22 @@ from dublib.cli.terminalyzer import ModelsGroup
 
 if TYPE_CHECKING:
 	from ..shell import Interface
+	from .handlers import BaseHandlersCollection
 
-class BaseCLI(ABC):
+class BaseCLI[H: "BaseHandlersCollection"](ABC):
 	"""Base CLI processor."""
+
+	@property
+	def groups(self) -> tuple[ModelsGroup, ...]:
+		"""Commands models groups."""
+
+		return tuple(self._groups.values())
+
+	@property
+	def handlers(self) -> H:
+		"""Handlers collection."""
+
+		return self._handlers
 
 	@abstractmethod
 	def _build_models(self):
@@ -15,6 +28,17 @@ class BaseCLI(ABC):
 
 		pass
 		
+	@abstractmethod
+	def _export_handlers(self) -> type[H]:
+		"""
+		Export handlers collection.
+
+		:return: Handlers collection.
+		:rtype: type[H]
+		"""
+
+		pass
+
 	def _post_init(self):
 		"""Execute after instance initialization."""
 
@@ -31,6 +55,7 @@ class BaseCLI(ABC):
 		self._interface: Interface = interface
 
 		self._groups: dict[str, ModelsGroup] = {}
+		self._handlers: H = self._export_handlers()(self._interface)
 
 		self._post_init()
 		self._build_models()

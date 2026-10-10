@@ -1,0 +1,29 @@
+from typing import override
+
+from dublib.cli.terminalyzer import ModelsGroup
+
+from ...base.processor import BaseCLI
+from .handlers import CommonNoteHandlers
+
+class CommonNoteCLI(BaseCLI[CommonNoteHandlers]):
+	"""Common note CLI processor."""
+
+	@override
+	def _build_models(self):
+		"""Build models and register handlers."""
+
+		common_group: ModelsGroup = self.create_models_group("Common")
+
+		model = common_group.create_model("close", "Close table.")
+		model.register_handler(self.handlers.close)
+
+	@override
+	def _export_handlers(self) -> type[CommonNoteHandlers]:
+		"""
+		Export handlers collection.
+
+		:return: Handlers collection.
+		:rtype: type[CommonNoteHandlers]
+		"""
+
+		return CommonNoteHandlers

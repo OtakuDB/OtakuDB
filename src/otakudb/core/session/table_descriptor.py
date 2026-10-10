@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 	from .box import Box, RootBox
 	from .driver import Driver
 
-class TableDescriptor[N: "BaseNote", C: "BaseModel" = "BaseModel"]:
+class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
 	"""Дескриптор таблицы."""
 
 	#==========================================================================================#

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 	from ..manifest import Manifest
 	from ..note import BaseNote
 
-class BaseTable[N: "BaseNote", C: "BaseModel" = "BaseModel"]:
+class BaseTable[N: "BaseNote", C: "BaseModel"]:
 	"""Базовая таблица."""
 
 	#==========================================================================================#

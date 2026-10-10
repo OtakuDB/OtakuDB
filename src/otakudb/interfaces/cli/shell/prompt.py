@@ -6,6 +6,7 @@ from ....core.session.box import Box, RootBox
 from ....core.session.table_descriptor import TableDescriptor
 
 if TYPE_CHECKING:
+	from ....core.base.note import BaseNote
 	from ....core.session import Session
 
 class PromptGenerator:
@@ -17,12 +18,30 @@ class PromptGenerator:
 
 		storage: str = self.__get_storage_name()
 		virtual_path: str = self.__get_virtual_path()
-		note: str = ""
+		note: str = self.__get_note_id()
 
 		path_separator: str = self.__path_separator if virtual_path else ""
-		note_separator: str = self.__note_separator if note else "" # type: ignore
+		note_separator: str = self.__note_separator if note else ""
 
-		return f"{storage}{path_separator}{virtual_path}{note_separator}{self.__indicator}"
+		return f"{storage}{path_separator}{virtual_path}{note_separator}{note}{self.__indicator}"
+
+	def __get_note_id(self) -> str:
+		"""
+		Return styled note ID.
+
+		:return: Styled note ID.
+		:rtype: str
+		"""
+
+		if self.__session.navigator is None:
+			return ""
+		
+		current_note: "BaseNote | None" = self.__session.navigator.current_note
+
+		if current_note:
+			return self.__bold_cyan.get_styled_text(str(current_note.id))
+
+		return ""
 
 	def __get_storage_name(self) -> str:
 		"""
@@ -70,6 +89,7 @@ class PromptGenerator:
 
 		self.__bold_green: TextStyler = TextStyler(decorations = codes.Decorations.Bold, text_color = codes.Colors.Green)
 		self.__bold_magenta: TextStyler = TextStyler(decorations = codes.Decorations.Bold, text_color = codes.Colors.Magenta)
+		self.__bold_cyan: TextStyler = TextStyler(decorations = codes.Decorations.Bold, text_color = codes.Colors.Cyan)
 
 		self.__indicator: str = FastStyler(" > ").decorate.bold
 		self.__path_separator: str = FastStyler(":").decorate.bold

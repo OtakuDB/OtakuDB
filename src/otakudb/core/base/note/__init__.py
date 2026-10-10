@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 	from ..table import BaseTable
 	from ..table.connector.bonds import NoteBonds
 
-class BaseNote[T: "BaseTable", C: "BaseModel" = "BaseModel"]:
+class BaseNote[T: "BaseTable", C: "BaseModel"]:
 	"""Базовая запись."""
 
 	#==========================================================================================#
@@ -67,7 +67,7 @@ class BaseNote[T: "BaseTable", C: "BaseModel" = "BaseModel"]:
 		return self._export_searchable_strings()
 
 	@property
-	def table(self) -> "BaseTable[Self, C]":
+	def table(self) -> "BaseTable":
 		"""Таблица, к которой относится запись."""
 
 		return self._table
@@ -93,8 +93,8 @@ class BaseNote[T: "BaseTable", C: "BaseModel" = "BaseModel"]:
 	def _parse_containers(self):
 		"""Парсит контейнерные типы данных."""
 
-		self._metainfo: Metainfo[Self] = Metainfo(self, self._data.get("metainfo", {}))
-		self._attachments: Attachments[Self] = Attachments(self, self._data.get("attachments", {}))
+		self._metainfo: Metainfo = Metainfo(self, self._data.get("metainfo", {}))
+		self._attachments: Attachments = Attachments(self, self._data.get("attachments", {}))
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ОБРАБОТЧИКИ CALLBACK-ВЫЗОВОВ <<<<< #
@@ -254,7 +254,7 @@ class BaseNote[T: "BaseTable", C: "BaseModel" = "BaseModel"]:
 		is_file_creation: bool = not self.full_path.exists()
 		json.write(self.full_path, self.to_dict(copy = False), atomic = True)
 
-		if is_file_creation:
+		if not is_file_creation:
 			for Master in self.bonds.masters:
 				Master.run_callback(CallbacksTypes.SlaveSaved, self)
 

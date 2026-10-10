@@ -1,13 +1,13 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ....core.session.box import Box, RootBox
-from ..base.handlers import BaseHandlersCollection
+from .....core.session.box import Box, RootBox
+from ...base.handlers import BaseHandlersCollection
 
 if TYPE_CHECKING:
 	from dublib.cli.terminalyzer.parser.entities import CommandEntity
 
-	from ....core.session.table_descriptor import TableDescriptor
+	from .....core.session.table_descriptor import TableDescriptor
 
 class BoxHandlers(BaseHandlersCollection):
 	"""Box commands handlers."""

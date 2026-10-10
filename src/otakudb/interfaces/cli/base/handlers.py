@@ -1,8 +1,12 @@
 from typing import TYPE_CHECKING, NoReturn
 
 from ....core import exceptions
+from ..enums import InteractionLevels
+from ..exceptions import ObjectUnavailableError
 
 if TYPE_CHECKING:
+	from ....core.base.note import BaseNote
+	from ....core.base.table import BaseTable
 	from ....core.session import Session
 	from ....core.session.driver import Driver
 	from ....core.session.navigator import Navigator
@@ -33,10 +37,36 @@ class BaseHandlersCollection:
 		return self._session.navigator or self._raise_unmounted_error()
 
 	@property
+	def note(self) -> "BaseNote":
+		"""
+		Current note.
+		
+		:raises ObjectUnavailableError: Note unavailable.
+		"""
+
+		if not self.navigator.current_note:
+			raise ObjectUnavailableError(InteractionLevels.Note)
+
+		return self.navigator.current_note
+
+	@property
 	def printer(self) -> "Printer":
 		"""Output operator."""
 
 		return self._interface.printer
+
+	@property
+	def table(self) -> "BaseTable":
+		"""
+		Current table.
+		
+		:raises ObjectUnavailableError: Table unavailable.
+		"""
+
+		if not self.navigator.current_table:
+			raise ObjectUnavailableError(InteractionLevels.Table)
+
+		return self.navigator.current_table.table
 
 	def _raise_unmounted_error(self) -> NoReturn:
 		"""

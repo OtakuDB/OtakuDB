@@ -6,6 +6,8 @@ from .box import Box, RootBox
 from .table_descriptor import TableDescriptor
 
 if TYPE_CHECKING:
+	from pydantic import BaseModel
+	
 	from ..base.note import BaseNote
 	from .driver import Driver
 
@@ -61,7 +63,7 @@ class Navigator:
 		self.__driver = driver
 
 		self.__current_box: Box | RootBox = self.__driver.root_box
-		self.__current_table: TableDescriptor["BaseNote"] | None = None
+		self.__current_table: TableDescriptor["BaseNote", "BaseModel"] | None = None
 		self.__current_note: "BaseNote | None" = None
 
 	def close(self):

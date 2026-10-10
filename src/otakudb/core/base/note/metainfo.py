@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 type SupportedTypes = float | int | str
 
-class Metainfo[N: "BaseNote" = "BaseNote"]:
+class Metainfo[N: "BaseNote"]:
 	"""Metainfo operator."""
 
 	#==========================================================================================#

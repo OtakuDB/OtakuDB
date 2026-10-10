@@ -1,13 +1,16 @@
+import importlib
 import shlex
 import sys
-from typing import TYPE_CHECKING
+from types import ModuleType
+from typing import TYPE_CHECKING, Literal
 
 from dublib.cli.terminalyzer import ModelsGroup, Terminalyzer
 from dublib.cli.terminalyzer.helper import Helper
 from dublib.functions.system import clear
 from dublib.validators import ValidableTypes
 
-from ..box import BoxCLI
+from .. import common
+from ..base.processor import BaseCLI
 from ..enums import InteractionLevels
 from .handlers import DriverHandlers
 from .printer import Printer
@@ -91,7 +94,15 @@ class Interface:
 		groups: tuple[ModelsGroup, ...] = (self.__global_group,)
 
 		match self.level:
-			case InteractionLevels.Box: groups += self.__box_cli.groups
+
+			case InteractionLevels.Box:
+				groups += self.__box_cli.groups
+
+			case InteractionLevels.Table:
+				groups += self.__common_table_cli.groups + self.__import_commands_groups(InteractionLevels.Table)
+				
+			case InteractionLevels.Note:
+				groups += self.__common_note_cli.groups + self.__import_commands_groups(InteractionLevels.Note)
 
 		return groups
 
@@ -125,26 +136,34 @@ class Interface:
 
 		return group
 
-	# def __import_cli_module(self, table_type: str, level: InteractionLevels) -> ModuleType | None:
-	# 	"""
-	# 	Импортирует модуль CLI целевой таблицы.
+	def __import_commands_groups(self, interaction_level: Literal[InteractionLevels.Note, InteractionLevels.Table]) -> tuple[ModelsGroup, ...]:
+		"""
+		Import note or table commands groups.
 
-	# 	:param table_type: Тип таблицы.
-	# 	:type table_type: str
-	# 	:return: Модуль CLI таблицы.
-	# 	:rtype: ModuleType | None
-	# 	"""
+		:param interaction_level: Interaction level.
+		:type interaction_level: Literal[InteractionLevels.Note, InteractionLevels.Table]
+		:return: Note or table commands groups.
+		:rtype: tuple[ModelsGroup, ...]
+		:raises TypeError: Table CLI has incorrect type.
+		"""
 
-	# 	module: ModuleType | None = None
+		if not self.__session.navigator or not self.__session.navigator.current_table:
+			return ()
 
-	# 	try:
-	# 		module = importlib.import_module(f"otakudb.tables.{table_type}.interfaces.cli")
-	# 		module.TableCLI
-	# 		module.NoteCLI
-	# 	except ImportError: PrintCritical(f"Table \"{table_type}\" doesn't support CLI.")
-	# 	except AttributeError: PrintCritical(f"Table \"{table_type}\" doesn't provide all CLI interpretators.")
+		table_type: str = self.__session.navigator.current_table.manifest.table_type
+		module_path: str = f"otakudb.tables.{table_type}.interfaces.cli.{interaction_level.value}"
+		
+		try:
+			module: ModuleType = importlib.import_module(module_path)
+			cli_processor: type[BaseCLI] = module.TableCLI
 
-	# 	return module
+		except (ImportError, AttributeError):
+			return ()
+
+		if not issubclass(cli_processor, BaseCLI):
+			raise TypeError("Table CLI has incorrect type.")
+
+		return cli_processor(self).groups
 
 	#==========================================================================================#
 	# >>>>> PUBLIC METHODS <<<<< #
@@ -171,7 +190,9 @@ class Interface:
 		self.__global_group_name: str = "Global"
 		self.__global_group: ModelsGroup = self.__generate_global_group(self.__global_group_name)
 
-		self.__box_cli: BoxCLI = BoxCLI(self)
+		self.__box_cli: common.BoxCLI = common.BoxCLI(self)
+		self.__common_table_cli: common.TableCLI = common.TableCLI(self)
+		self.__common_note_cli: common.NoteCLI = common.NoteCLI(self)
 
 		clear()
 

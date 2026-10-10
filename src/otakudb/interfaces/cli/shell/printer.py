@@ -30,8 +30,8 @@ class Printer:
 		"""
 
 		if parse_html: text = get_styled_text_from_html(text)
-		MessageText = generate_message(text, message_type, origin)
-		print(MessageText, end = "\n" if end_line else "", flush = flush)
+		styled_text: str = generate_message(text, message_type, origin)
+		print(styled_text, end = "\n" if end_line else "", flush = flush)
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ВЫВОДА БАЗОВЫХ ТИПОВ СООБЩЕНИЙ <<<<< #
