@@ -142,7 +142,7 @@ class Metainfo[N: "BaseNote" = "BaseNote"]:
 		self.__data: dict[str, SupportedTypes | tuple[SupportedTypes, ...] | None] = deep_merge(
 			base = dict.fromkeys(self.__rules.fields_names, None),
 			content = data,
-			sequences_type = tuple
+			sequences_type = tuple,
 		)
 
 	def is_free_field(self, field_name: str) -> bool:

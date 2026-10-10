@@ -162,7 +162,7 @@ class Interface:
 			if lines:
 				models_groups: tuple[ModelsGroup, ...] = self.__get_level_command_groups()
 				self.__terminalyzer.set_models_groups(models_groups)
-				entity: "CommandEntity | None" = self.__terminalyzer.parse_parameters(lines)
+				entity: "CommandEntity | None" = self.__terminalyzer.parse_command(lines)
 
 				if entity is None:
 					print("Command not found.")

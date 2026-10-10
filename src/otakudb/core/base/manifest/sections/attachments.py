@@ -85,7 +85,7 @@ class AttachmentsSection(BaseSection):
 
 		return {
 			"rule": self.__rule,
-			"slots": {slot.name: slot.description for slot in self.__slots.values()}
+			"slots": {slot.name: slot.description for slot in self.__slots.values()},
 		}
 
 	#==========================================================================================#

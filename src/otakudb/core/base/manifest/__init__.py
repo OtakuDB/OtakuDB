@@ -170,5 +170,5 @@ class Manifest[C: "BaseModel"]:
 			"connections": self.__connections.to_dict(),
 			"custom": self.__custom.model_dump() if self.__custom else {},
 			"metainfo_rules": self.__metainfo_rules.to_dict(),
-			"interfaces_options": self.__interfaces_options.to_dict()
+			"interfaces_options": self.__interfaces_options.to_dict(),
 		}

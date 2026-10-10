@@ -271,7 +271,7 @@ class Attachments[N: "BaseNote" = "BaseNote"]:
 
 		return {
 			"slots": {name: slot.file for name, slot in self.__slots.items()},
-			"free": self.__free
+			"free": self.__free,
 		}
 
 	def unattach(self, filename: str):

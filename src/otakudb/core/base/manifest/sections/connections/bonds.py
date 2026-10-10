@@ -25,7 +25,7 @@ class BondParameters:
 
 		return {
 			"description": self.description,
-			"count": self.count
+			"count": self.count,
 		}
 
 #==========================================================================================#

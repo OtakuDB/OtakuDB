@@ -35,7 +35,7 @@ class MetainfoFieldParameters:
 			"types": ";".join(CurrentType.__name__ for CurrentType in self.types) if self.types else None,
 			"allow_list": self.allow_list,
 			"values": Values,
-			"description": self.description
+			"description": self.description,
 		}
 
 #==========================================================================================#
@@ -109,7 +109,7 @@ class MetainfoRules(BaseSection):
 				types = self.__parse_field_types(types) if types else None,
 				allow_list = is_allow_list,
 				values = to_sequence(values) if values else (),
-				description = description
+				description = description,
 			)
 
 		return fields_parameters
@@ -169,7 +169,7 @@ class MetainfoRules(BaseSection):
 
 		return {
 			"allow_free": self.__is_free_allowed,
-			"fields": {field.name: field.to_dict() for field in self.__fields.values()}
+			"fields": {field.name: field.to_dict() for field in self.__fields.values()},
 		}
 
 	#==========================================================================================#
@@ -182,7 +182,7 @@ class MetainfoRules(BaseSection):
 			types: type[float | int | str] | Sequence[type[float | int | str]] | None = None,
 			allow_list: bool = False,
 			values: Sequence[int | float | str] | None = None,
-			description: str | None = None
+			description: str | None = None,
 		):
 		"""
 		Создаёт параметры поля метаданных.
@@ -204,7 +204,7 @@ class MetainfoRules(BaseSection):
 			types = to_sequence(types) if types else None,
 			allow_list = allow_list,
 			values = tuple(values) if values else None,
-			description = description
+			description = description,
 		)
 
 	def get_field_parameters(self, field: str) -> MetainfoFieldParameters:

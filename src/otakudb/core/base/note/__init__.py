@@ -206,7 +206,7 @@ class BaseNote[T: "BaseTable"]:
 		self._data: dict = {
 			"name": None,
 			"metainfo": {},
-			"attachments": dict.fromkeys(self._table.manifest.attachments.slots_names, None)
+			"attachments": dict.fromkeys(self._table.manifest.attachments.slots_names, None),
 		}
 		
 		self._load_data()

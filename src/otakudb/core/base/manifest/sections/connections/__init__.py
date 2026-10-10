@@ -52,5 +52,5 @@ class ConnectionsSection(BaseSection):
 
 		return {
 			"bonds": self.__bonds.to_dict(),
-			"hyperlinks": self.__hyperlinks.to_dict()
+			"hyperlinks": self.__hyperlinks.to_dict(),
 		}

@@ -41,7 +41,7 @@ class CommonSection(BaseSection):
 		"""
 
 		return {
-			"recycle_id": self.__recycle_id
+			"recycle_id": self.__recycle_id,
 		}
 
 	#==========================================================================================#
