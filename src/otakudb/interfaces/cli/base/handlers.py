@@ -5,8 +5,6 @@ from ..enums import InteractionLevels
 from ..exceptions import ObjectUnavailableError
 
 if TYPE_CHECKING:
-	from pydantic import BaseModel
-
 	from ....core.base.note import BaseNote
 	from ....core.base.table import BaseTable
 	from ....core.session import Session
@@ -15,7 +13,7 @@ if TYPE_CHECKING:
 	from ..shell import Interface
 	from ..shell.printer import Printer
 
-class BaseHandlersCollection[T: "BaseTable" = "BaseTable[BaseNote, BaseModel]", N: "BaseNote" = "BaseNote"]:
+class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 	"""Base handlers collection."""
 
 	@property

@@ -13,19 +13,22 @@ class CommonTableCLI(BaseCLI[CommonTableHandlers]):
 	def _build_models(self):
 		"""Build models and register handlers."""
 
-		common_group: ModelsGroup = self.create_models_group("Common")
+		table_group: ModelsGroup = self.create_models_group("Table")
 
-		model = common_group.create_model("close", "Close table.")
+		model = table_group.create_model("close", "Close table.")
 		model.register_handler(self.handlers.close)
 
-		model = common_group.create_model("new", "Create note.")
+		model = table_group.create_model("new", "Create note.")
 		model.base.add_flag("-o", description = "Open note after creation.")
 		model.register_handler(self.handlers.new)
 
-		model = common_group.create_model("open", "Open note.")
+		model = table_group.create_model("open", "Open note.")
 		position = model.create_position("TARGET", "Note ID.", important = True)
 		position.set_argument(ValidableTypes.UnsignedInteger)
 		model.register_handler(self.handlers.open)
+
+		model = table_group.create_model("view", "View table notes.")
+		model.register_handler(self.handlers.view)
 
 	@override
 	def _export_handlers(self) -> type[CommonTableHandlers]:

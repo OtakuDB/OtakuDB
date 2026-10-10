@@ -16,5 +16,8 @@ class TableViewOptionsModel(BaseModel):
 	"""Table view options model."""
 
 	autoclear: bool = True
-	columns: dict[str, ColumnOptions]
+	columns: dict[str, ColumnOptions] = {
+		"ID": ColumnOptions(True, None),
+		"Name": ColumnOptions(True, None),
+	}
 	custom: dict[str, Any] = {}

@@ -3,9 +3,14 @@ from typing import TYPE_CHECKING
 from ...base.handlers import BaseHandlersCollection
 
 if TYPE_CHECKING:
+	from pydantic import BaseModel as BaseModel
+
 	from dublib.cli.terminalyzer.parser.entities import CommandEntity
 
-class CommonNoteHandlers(BaseHandlersCollection):
+	from .....core.base.note import BaseNote as BaseNote
+	from .....core.base.table import BaseTable as BaseTable
+
+class CommonNoteHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]", "BaseNote"]):
 	"""Common note commands handlers."""
 
 	def close(self, entity: "CommandEntity"):  # noqa: ARG002

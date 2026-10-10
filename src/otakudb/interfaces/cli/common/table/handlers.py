@@ -1,11 +1,17 @@
 from typing import TYPE_CHECKING
 
 from ...base.handlers import BaseHandlersCollection
+from ...base.viewers.table import BaseTableViewer
 
 if TYPE_CHECKING:
+	from pydantic import BaseModel as BaseModel
+
 	from dublib.cli.terminalyzer.parser.entities import CommandEntity
 
-class CommonTableHandlers(BaseHandlersCollection):
+	from .....core.base.note import BaseNote as BaseNote
+	from .....core.base.table import BaseTable as BaseTable
+
+class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]", "BaseNote"]):
 	"""Common table commands handlers."""
 
 	def close(self, entity: "CommandEntity"):  # noqa: ARG002
@@ -45,3 +51,13 @@ class CommonTableHandlers(BaseHandlersCollection):
 		note_id: int = entity.get_position_value("TARGET", expected_type = int, important = True)
 
 		self.navigator.open_note(note_id)
+
+	def view(self, entity: "CommandEntity"):  # noqa: ARG002
+		"""
+		Command handler: **view**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		BaseTableViewer(self._interface, self.table).view()

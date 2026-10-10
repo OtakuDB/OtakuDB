@@ -9,9 +9,12 @@ from dublib.cli.terminalyzer.helper import Helper
 from dublib.functions.system import clear
 from dublib.validators import ValidableTypes
 
+from ....core import exceptions
 from .. import common
 from ..base.processor import BaseCLI
 from ..enums import InteractionLevels
+from ..exceptions import ObjectUnavailableError
+from ..options import TableInterfaceOptions
 from .handlers import DriverHandlers
 from .printer import Printer
 from .prompt import PromptGenerator
@@ -72,6 +75,24 @@ class Interface:
 		"""Interaction session."""
 
 		return self.__session
+
+	@property
+	def table_interface_options(self) -> TableInterfaceOptions:
+		"""
+		Current table interface options.
+
+		:raises StorageUnmountedError: Storage unmounted.
+		"""
+
+		if not self.__session.navigator:
+			raise exceptions.session.StorageUnmountedError()
+
+		if not self.__session.navigator.current_table:
+			raise ObjectUnavailableError(InteractionLevels.Table)
+
+		options = self.__session.navigator.current_table.manifest.interfaces_options
+
+		return TableInterfaceOptions(options)
 
 	@property
 	def terminalyzer(self) -> Terminalyzer:
