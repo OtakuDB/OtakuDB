@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 	from ....core.session.driver import Driver
 	from ....core.session.navigator import Navigator
 	from ..shell import Interface
+	from ..shell.printer import Printer
 
 class BaseHandlersCollection:
 	"""Base handlers collection."""
@@ -30,6 +31,12 @@ class BaseHandlersCollection:
 		"""
 
 		return self._session.navigator or self._raise_unmounted_error()
+
+	@property
+	def printer(self) -> "Printer":
+		"""Output operator."""
+
+		return self._interface.printer
 
 	def _raise_unmounted_error(self) -> NoReturn:
 		"""

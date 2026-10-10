@@ -42,6 +42,24 @@ class BoxHandlers(BaseHandlersCollection):
 		boxes = sorted(boxes, key = lambda box: box.name)
 		descriptors = sorted(descriptors, key = lambda descriptor: descriptor.name)
 		
-		if current_box.virtual_path != Path(): print("↩️  ..")
-		for box in boxes: print("📁", box.name)
-		for descriptor in descriptors: print("📦", descriptor.name)
+		if current_box.virtual_path != Path(): self.printer.emit("↩️  ..")
+		for box in boxes: self.printer.emit(f"📁 {box.name}")
+		for descriptor in descriptors: self.printer.emit(f"📦 {descriptor.name}")
+
+	def types(self, entity: "CommandEntity"): # noqa: ARG002
+		"""
+		Command handler: **types**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		:param session: Interaction session.
+		:type session: Session
+		"""
+
+		tables_types: tuple[str, ...] = self.driver.available_tables_types
+
+		if tables_types:
+			self.printer.emit(", ".join(tables_types))
+
+		else:
+			self.printer.emit("No available tables types.")

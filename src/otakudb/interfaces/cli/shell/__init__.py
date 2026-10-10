@@ -3,12 +3,14 @@ import sys
 from typing import TYPE_CHECKING
 
 from dublib.cli.terminalyzer import ModelsGroup, Terminalyzer
+from dublib.cli.terminalyzer.helper import Helper
 from dublib.functions.system import clear
 from dublib.validators import ValidableTypes
 
 from ..box import BoxCLI
 from ..enums import InteractionLevels
 from .handlers import DriverHandlers
+from .printer import Printer
 from .prompt import PromptGenerator
 
 if TYPE_CHECKING:
@@ -24,16 +26,22 @@ class Interface:
 	#==========================================================================================#
 
 	@property
+	def helper(self) -> Helper:
+		"""Commands info generator."""
+
+		return self.__helper
+
+	@property
 	def level(self) -> InteractionLevels:
 		"""Current interaction level."""
 
 		return self.__level
 
 	@property
-	def reserved_groups(self) -> tuple[str, ...]:
-		"""Reserved groups names."""
+	def printer(self) -> Printer:
+		"""Output operator."""
 
-		return (self.__global_group_name,)
+		return self.__printer
 
 	@property
 	def prompt(self) -> str:
@@ -42,10 +50,22 @@ class Interface:
 		return self.__prompt_generator.prompt
 
 	@property
+	def reserved_groups(self) -> tuple[str, ...]:
+		"""Reserved groups names."""
+
+		return (self.__global_group_name,)
+
+	@property
 	def session(self) -> "Session":
 		"""Interaction session."""
 
 		return self.__session
+
+	@property
+	def terminalyzer(self) -> Terminalyzer:
+		"""Commands processor."""
+
+		return self.__terminalyzer
 
 	#==========================================================================================#
 	# >>>>> PRIVATE METHODS <<<<< #
@@ -84,13 +104,17 @@ class Interface:
 		model = group.create_model("exit", "Exit from OtakuDB CLI.")
 		model.register_handler(self.__handlers.exit)
 
+		model = group.create_model("help", "Show commands list. Add command to more info.")
+		model.base.add_argument()
+		model.base.add_argument()
+		model.register_handler(self.__handlers.help)
+
 		model = group.create_model("mount", "Mount storage directory.")
 		position = model.create_position("STORAGE", "Path to storage directory.", important = True)
 		position.set_argument(ValidableTypes.ValidPath)
 		model.register_handler(self.__handlers.mount)
 
 		return group
-
 
 	# def __import_cli_module(self, table_type: str, level: InteractionLevels) -> ModuleType | None:
 	# 	"""
@@ -127,7 +151,11 @@ class Interface:
 		
 		self.__session: Session = session
 
+		self.__printer: Printer = Printer()
+
 		self.__terminalyzer: Terminalyzer = Terminalyzer()
+		self.__helper: Helper = Helper()
+
 		self.__handlers: DriverHandlers = DriverHandlers(self)
 		self.__level: InteractionLevels = InteractionLevels.Driver
 		self.__prompt_generator: PromptGenerator = PromptGenerator(self.__session)
@@ -165,4 +193,4 @@ class Interface:
 				entity: "CommandEntity | None" = self.__terminalyzer.parse_command(lines)
 
 				if entity is None:
-					print("Command not found.")
+					self.printer.error("Command not found.")

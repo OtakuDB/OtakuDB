@@ -26,6 +26,9 @@ class BoxCLI(BaseCLI):
 		model = box_group.create_model("ls", "List box content.")
 		model.register_handler(self.__handlers.ls)
 
+		model = box_group.create_model("types", "Print available tables types.")
+		model.register_handler(self.__handlers.types)
+
 	def _build_models(self):
 		"""Build models and register handlers."""
 
