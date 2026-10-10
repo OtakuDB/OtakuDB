@@ -176,7 +176,7 @@ class Attachments[N: "BaseNote" = "BaseNote"]:
 
 		:param slota_data: Raw slots data dictionary.
 		:type slota_data: dict[str, str  |  None]
-		:return: Dictionary in wich key is slot name and value is slot info.
+		:return: Dictionary in which key is slot name and value is slot info.
 		:rtype: dict[str, Slot]
 		"""
 

@@ -7,7 +7,7 @@ from dublib.functions.system import clear
 from dublib.validators import ValidableTypes
 
 from ..box import BoxCLI
-from ..enums import InterractionLevels
+from ..enums import InteractionLevels
 from .handlers import DriverHandlers
 from .prompt import PromptGenerator
 
@@ -24,7 +24,7 @@ class Interface:
 	#==========================================================================================#
 
 	@property
-	def level(self) -> InterractionLevels:
+	def level(self) -> InteractionLevels:
 		"""Current interaction level."""
 
 		return self.__level
@@ -62,7 +62,7 @@ class Interface:
 		groups: tuple[ModelsGroup, ...] = (self.__global_group,)
 
 		match self.__level:
-			case InterractionLevels.Box: groups += self.__box_cli.groups
+			case InteractionLevels.Box: groups += self.__box_cli.groups
 
 		return groups
 
@@ -92,7 +92,7 @@ class Interface:
 		return group
 
 
-	# def __import_cli_module(self, table_type: str, level: InterractionLevels) -> ModuleType | None:
+	# def __import_cli_module(self, table_type: str, level: InteractionLevels) -> ModuleType | None:
 	# 	"""
 	# 	Импортирует модуль CLI целевой таблицы.
 
@@ -129,7 +129,7 @@ class Interface:
 
 		self.__terminalyzer: Terminalyzer = Terminalyzer()
 		self.__handlers: DriverHandlers = DriverHandlers(self)
-		self.__level: InterractionLevels = InterractionLevels.Driver
+		self.__level: InteractionLevels = InteractionLevels.Driver
 		self.__prompt_generator: PromptGenerator = PromptGenerator(self.__session)
 		
 		self.__global_group_name: str = "Global"
@@ -141,7 +141,7 @@ class Interface:
 
 		if self.__session.data.last_mounted_storage:
 			driver = self.__session.mount(self.__session.data.last_mounted_storage)
-			self.__level = InterractionLevels.Box
+			self.__level = InteractionLevels.Box
 			print(f"Mounted: \"{driver.storage_path}\".")
 
 	def run(self):

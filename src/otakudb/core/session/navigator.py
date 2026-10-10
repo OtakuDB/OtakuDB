@@ -102,7 +102,7 @@ class Navigator:
 		"""
 		Navigate by virtual path.
 
-		:param virtual_path: Virtual path with POSIX standart support.
+		:param virtual_path: Virtual path with POSIX standard support.
 		:type virtual_path: Path
 		:return: Target item.
 		:rtype: Box | RootBox | TableDescriptor

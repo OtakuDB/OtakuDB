@@ -44,7 +44,7 @@ class Metainfo[N: "BaseNote" = "BaseNote"]:
 
 		:param value: Field value.
 		:type value: Sequence | SupportedTypes
-		:param separator: By this separator strings will be splitted.
+		:param separator: By this separator strings will be split.
 		:type separator: str | None
 		:return: Parsed field values.
 		:rtype: tuple[SupportedTypes, ...]
@@ -245,7 +245,7 @@ class Metainfo[N: "BaseNote" = "BaseNote"]:
 		:type field_name: str
 		:param value: Value.
 		:type value: SupportedTypes | Sequence[SupportedTypes]
-		:param separator: By this separator strings will be splitted.
+		:param separator: By this separator strings will be split.
 		:type separator: str | None
 		"""
 
@@ -264,7 +264,7 @@ class Metainfo[N: "BaseNote" = "BaseNote"]:
 		:type field_name: str
 		:param value: Value.
 		:type value: SupportedTypes | Sequence[SupportedTypes]
-		:param separator: By this separator strings will be splitted.
+		:param separator: By this separator strings will be split.
 		:type separator: str | None
 		"""
 

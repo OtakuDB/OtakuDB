@@ -20,7 +20,7 @@ class PromptGenerator:
 		note: str = ""
 
 		path_separator: str = self.__path_separator if virtual_path else ""
-		note_separator: str = self.__note_separator if note else ""
+		note_separator: str = self.__note_separator if note else "" # type: ignore
 
 		return f"{storage}{path_separator}{virtual_path}{note_separator}{self.__indicator}"
 

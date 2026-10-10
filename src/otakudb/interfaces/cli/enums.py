@@ -1,7 +1,7 @@
 from enum import Enum
 
-class InterractionLevels(Enum):
-	"""Interraction levels enumeration."""
+class InteractionLevels(Enum):
+	"""Interaction levels enumeration."""
 	
 	Driver = None
 	Box = "box"

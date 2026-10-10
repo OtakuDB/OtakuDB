@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff", "ty"]
+dev = ["ruff", "ty", "typos"]
 
 [project.scripts]
 otakudb = "otakudb:main"

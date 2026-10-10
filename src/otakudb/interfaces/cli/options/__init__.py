@@ -20,7 +20,7 @@ class TableInterfaceOptions:
 
 	@property
 	def columns(self) -> dict[str, ColumnOptions]:
-		"""Dictionary in wich key is column name and value is options."""
+		"""Dictionary in which key is column name and value is options."""
 
 		return self.__options.columns
 
