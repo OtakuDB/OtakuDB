@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 
 from ...base.handlers import BaseHandlersCollection
-from ...base.viewers.table import BaseTableViewer
 
 if TYPE_CHECKING:
 	from pydantic import BaseModel as BaseModel
@@ -60,4 +59,5 @@ class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]
 		:type entity: CommandEntity
 		"""
 
-		BaseTableViewer(self._interface, self.table).view()
+		viewer = self.interface.load_table_viewer()
+		viewer.view()

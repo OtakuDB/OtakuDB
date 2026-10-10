@@ -100,14 +100,14 @@ class Note(BaseNote["Table", "CustomSettingsModel"]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ТРИГГЕРНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _PreDictFormatter(self):
+	def _pre_dict_formatter(self):
 		"""Метод, выполняющийся перед конвертированием записи в словарь (фактически, перед её сохранением)."""
 
 		# При создании файла динамический атрибут со словарём частей ещё не создан.
 		try: self._data["parts"] = tuple(CurrentPart.to_dict() for CurrentPart in self.__Parts)
 		except AttributeError: pass
 
-	def _PostInitMethod(self):
+	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self.__Parts: list[Part] = self.__ParseParts() 
@@ -116,7 +116,7 @@ class Note(BaseNote["Table", "CustomSettingsModel"]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#	
 
-	def _GetEmptyNote(self) -> dict[str, Any]:
+	def _get_empty_note(self) -> dict[str, Any]:
 		"""
 		Возвращает пустую структуру записи.
 

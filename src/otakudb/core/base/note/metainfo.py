@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 	from ..manifest.sections.metainfo_rules import MetainfoRules
 	from . import BaseNote
 
-type SupportedTypes = float | int | str
+type SUPPORTED_TYPES = float | int | str
 
 class Metainfo[N: "BaseNote"]:
 	"""Metainfo operator."""
@@ -38,16 +38,16 @@ class Metainfo[N: "BaseNote"]:
 	# >>>>> PRIVATE METHODS <<<<< #
 	#==========================================================================================#
 
-	def __parse_value(self, value: Sequence | SupportedTypes, separator: str | None = ";") -> tuple[SupportedTypes, ...]:
+	def __parse_value(self, value: Sequence | SUPPORTED_TYPES, separator: str | None = ";") -> tuple[SUPPORTED_TYPES, ...]:
 		"""
 		Parse field value.
 
 		:param value: Field value.
-		:type value: Sequence | SupportedTypes
+		:type value: Sequence | SUPPORTED_TYPES
 		:param separator: By this separator strings will be split.
 		:type separator: str | None
 		:return: Parsed field values.
-		:rtype: tuple[SupportedTypes, ...]
+		:rtype: tuple[SUPPORTED_TYPES, ...]
 		"""
 
 		if isinstance(value, float | int):
@@ -78,14 +78,14 @@ class Metainfo[N: "BaseNote"]:
 		
 		return parsed_value_sequence
 		
-	def __validate_value(self, field_name: str, value: tuple[SupportedTypes, ...]):
+	def __validate_value(self, field_name: str, value: tuple[SUPPORTED_TYPES, ...]):
 		"""
 		Validate value with field parameters. If field is free checking will be skipped.
 
 		:param field_name: Field name.
 		:type field_name: str
 		:param value: Field value.
-		:type value: tuple[SupportedTypes, ...]
+		:type value: tuple[SUPPORTED_TYPES, ...]
 		:raises MetainfoEnlistingDeniedError: Enlisting denied for matainfo field.
 		:raises MetainfoTypingError: Metainfo field typing error.
 		"""
@@ -100,19 +100,19 @@ class Metainfo[N: "BaseNote"]:
 
 		if parameters.types:
 			for element in value:
-				element_type: type[SupportedTypes] = type(element)
+				element_type: type[SUPPORTED_TYPES] = type(element)
 
 				if element_type not in parameters.types:
 					raise exceptions.note.metainfo.MetainfoTypingError(field_name, element_type, parameters.types)
 
-	def __set_value(self, field_name: str, parsed_value: tuple[SupportedTypes, ...]):
+	def __set_value(self, field_name: str, parsed_value: tuple[SUPPORTED_TYPES, ...]):
 		"""
 		Set value into internal dictionary.
 
 		:param field_name: Field name.
 		:type field_name: str
 		:param parsed_value: Field parsed value.
-		:type parsed_value: tuple[SupportedTypes, ...]
+		:type parsed_value: tuple[SUPPORTED_TYPES, ...]
 		"""
 
 		if len(parsed_value) == 1:
@@ -126,7 +126,7 @@ class Metainfo[N: "BaseNote"]:
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, note: N, data: dict[str, SupportedTypes | list[SupportedTypes] | None]):
+	def __init__(self, note: N, data: dict[str, SUPPORTED_TYPES | list[SUPPORTED_TYPES] | None]):
 		"""
 		Оператор метаданных.
 
@@ -139,7 +139,7 @@ class Metainfo[N: "BaseNote"]:
 		self.__rules: "MetainfoRules" = note.table.manifest.metainfo_rules
 
 		self.__note: N = note
-		self.__data: dict[str, SupportedTypes | tuple[SupportedTypes, ...] | None] = deep_merge(
+		self.__data: dict[str, SUPPORTED_TYPES | tuple[SUPPORTED_TYPES, ...] | None] = deep_merge(
 			base = dict.fromkeys(self.__rules.fields_names, None),
 			content = data,
 			sequences_type = tuple,
@@ -174,14 +174,14 @@ class Metainfo[N: "BaseNote"]:
 
 		self.__note.save()
 
-	def get_field_value(self, field_name: str) -> SupportedTypes | tuple[SupportedTypes, ...] | None:
+	def get_field_value(self, field_name: str) -> SUPPORTED_TYPES | tuple[SUPPORTED_TYPES, ...] | None:
 		"""
 		Get metainfo field value.
 
 		:param field_name: Field name.
 		:type field_name: str
 		:return: Field value.
-		:rtype: SupportedTypes | tuple[SupportedTypes, ...] | None
+		:rtype: SUPPORTED_TYPES | tuple[SUPPORTED_TYPES, ...] | None
 		:raises FreeMetainfoFieldsDeniedError: Free metainfo fields denied.
 		:raises MetainfoFieldNotFoundError: Metainfo field not found.
 		"""
@@ -196,14 +196,14 @@ class Metainfo[N: "BaseNote"]:
 
 		return self.__data[field_name]
 
-	def set_field_value(self, field_name: str, value: Sequence[SupportedTypes] | SupportedTypes | None):
+	def set_field_value(self, field_name: str, value: Sequence[SUPPORTED_TYPES] | SUPPORTED_TYPES | None):
 		"""
 		Set field value.
 
 		:param field_name: Field name.
 		:type field_name: str
 		:param value: Field value. If value is `None` field will be cleared.
-		:type value: Sequence[SupportedTypes] | SupportedTypes | None
+		:type value: Sequence[SUPPORTED_TYPES] | SUPPORTED_TYPES | None
 		:raises MetainfoBlockedError: Поле метаданных не описано и свободный режим отключён.
 		:raises ValueError: Кортежи могут содержать только строки.
 		"""
@@ -237,40 +237,40 @@ class Metainfo[N: "BaseNote"]:
 	# >>>>> PUBLIC FIELDS SEQUENCES MANIPULATION METHODS <<<<< #
 	#==========================================================================================#
 
-	def append_to_field(self, field_name: str, value: SupportedTypes | Sequence[SupportedTypes], separator: str | None = ";"):
+	def append_to_field(self, field_name: str, value: SUPPORTED_TYPES | Sequence[SUPPORTED_TYPES], separator: str | None = ";"):
 		"""
 		Append value(s) to field.
 
 		:param field_name: Field name.
 		:type field_name: str
 		:param value: Value.
-		:type value: SupportedTypes | Sequence[SupportedTypes]
+		:type value: SUPPORTED_TYPES | Sequence[SUPPORTED_TYPES]
 		:param separator: By this separator strings will be split.
 		:type separator: str | None
 		"""
 
-		current_value: SupportedTypes | tuple[SupportedTypes, ...] | None = self.get_field_value(field_name)
-		current_value_tuple: tuple[SupportedTypes, ...] = to_sequence(current_value) if current_value else ()
-		parsed_value: tuple[SupportedTypes, ...] = self.__parse_value(value, separator)
-		result_value: tuple[SupportedTypes, ...] = current_value_tuple + parsed_value
+		current_value: SUPPORTED_TYPES | tuple[SUPPORTED_TYPES, ...] | None = self.get_field_value(field_name)
+		current_value_tuple: tuple[SUPPORTED_TYPES, ...] = to_sequence(current_value) if current_value else ()
+		parsed_value: tuple[SUPPORTED_TYPES, ...] = self.__parse_value(value, separator)
+		result_value: tuple[SUPPORTED_TYPES, ...] = current_value_tuple + parsed_value
 		self.__validate_value(field_name, result_value)
 		self.__set_value(field_name, parsed_value)
 
-	def remove_from_field(self, field_name: str, value: SupportedTypes | Sequence[SupportedTypes], separator: str | None = ";"):
+	def remove_from_field(self, field_name: str, value: SUPPORTED_TYPES | Sequence[SUPPORTED_TYPES], separator: str | None = ";"):
 		"""
 		Remove value(s) from field.
 
 		:param field_name: Field name.
 		:type field_name: str
 		:param value: Value.
-		:type value: SupportedTypes | Sequence[SupportedTypes]
+		:type value: SUPPORTED_TYPES | Sequence[SUPPORTED_TYPES]
 		:param separator: By this separator strings will be split.
 		:type separator: str | None
 		"""
 
-		current_value: SupportedTypes | tuple[SupportedTypes, ...] | None = self.get_field_value(field_name)
-		current_value_list: list[SupportedTypes] = to_sequence(current_value, target_type = list) if current_value else []
-		parsed_value: tuple[SupportedTypes, ...] = self.__parse_value(value, separator)
+		current_value: SUPPORTED_TYPES | tuple[SUPPORTED_TYPES, ...] | None = self.get_field_value(field_name)
+		current_value_list: list[SUPPORTED_TYPES] = to_sequence(current_value, target_type = list) if current_value else []
+		parsed_value: tuple[SUPPORTED_TYPES, ...] = self.__parse_value(value, separator)
 
 		for element in parsed_value:
 			if element in current_value_list:

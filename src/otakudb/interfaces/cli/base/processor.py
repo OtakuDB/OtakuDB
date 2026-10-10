@@ -22,6 +22,12 @@ class BaseCLI[H: "BaseHandlersCollection"](ABC):
 
 		return self._handlers
 
+	@property
+	def interface(self) -> "Interface":
+		"""Interface processor."""
+
+		return self._interface
+
 	@abstractmethod
 	def _build_models(self):
 		"""Build models and register handlers."""

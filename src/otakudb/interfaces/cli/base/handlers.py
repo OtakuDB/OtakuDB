@@ -27,6 +27,12 @@ class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 		return self._session.driver or self._raise_unmounted_error()
 
 	@property
+	def interface(self) -> "Interface":
+		"""Interface processor."""
+
+		return self._interface
+
+	@property
 	def navigator(self) -> "Navigator":
 		"""
 		Navigation operator.

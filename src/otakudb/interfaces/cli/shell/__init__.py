@@ -12,6 +12,7 @@ from dublib.validators import ValidableTypes
 from ....core import exceptions
 from .. import common
 from ..base.processor import BaseCLI
+from ..base.viewers.table import BaseTableViewer
 from ..enums import InteractionLevels
 from ..exceptions import ObjectUnavailableError
 from ..options import TableInterfaceOptions
@@ -176,15 +177,15 @@ class Interface:
 		
 		try:
 			module: ModuleType = importlib.import_module(module_path)
-			cli_processor: type[BaseCLI] = module.TableCLI
+			TableCLI: type[BaseCLI] = module.TableCLI
 
 		except (ImportError, AttributeError):
 			return ()
 
-		if not issubclass(cli_processor, BaseCLI):
+		if not issubclass(TableCLI, BaseCLI):
 			raise TypeError("Table CLI has incorrect type.")
 
-		return cli_processor(self).groups
+		return TableCLI(self).groups
 
 	#==========================================================================================#
 	# >>>>> PUBLIC METHODS <<<<< #
@@ -221,6 +222,32 @@ class Interface:
 			driver = self.__session.mount(self.__session.data.last_mounted_storage)
 			self.__level = InteractionLevels.Box
 			print(f"Mounted: \"{driver.storage_path}\".")
+
+	def load_table_viewer(self) -> BaseTableViewer:
+		"""
+		Load custom or default table viewer.
+
+		:return: Table viewer.
+		:rtype: BaseTableViewer
+		:raises ObjectUnavailableError: Object unavailable.
+		"""
+		if not self.__session.navigator or not self.__session.navigator.current_table:
+			raise ObjectUnavailableError(InteractionLevels.Table)
+
+		table_type: str = self.__session.navigator.current_table.manifest.table_type
+		module_path: str = f"otakudb.tables.{table_type}.interfaces.cli.table.viewer"
+		
+		try:
+			module: ModuleType = importlib.import_module(module_path)
+			TableViewer: type[BaseTableViewer] = module.TableViewer
+
+		except (ImportError, AttributeError):
+			return BaseTableViewer(self, self.__session.navigator.current_table.table)
+
+		if not issubclass(TableViewer, BaseTableViewer):
+			raise TypeError("Table viewer has incorrect type.")
+
+		return TableViewer(self, self.__session.navigator.current_table.table)
 
 	def run(self):
 		"""Run CLI processing."""

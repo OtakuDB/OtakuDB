@@ -6,12 +6,13 @@ from dublib.cli.text_styler import FastStyler
 
 if TYPE_CHECKING:
 	from .....core.base.note import BaseNote
+	from .....core.base.note.metainfo import SUPPORTED_TYPES
 	from .....core.base.table import BaseTable
 	from ...options import ColumnOptions
 	from ...shell import Interface
 	from ...shell.printer import Printer
 
-_ALLOWED_TYPES = float | int | str | None
+ALLOWED_TYPES = float | int | str | None
 
 class BaseTableViewer[T: "BaseTable", N: "BaseNote"]:
 	"""Base table viewer."""
@@ -36,12 +37,45 @@ class BaseTableViewer[T: "BaseTable", N: "BaseNote"]:
 	# >>>>> PROTECTED METHODS <<<<< #
 	#==========================================================================================#
 
-	def _print_table(self, data: dict[str, list[_ALLOWED_TYPES]], options: dict[str, "ColumnOptions"], sort_by = "ID"):
+	# To-Do: run on _print_table() side?
+	def _get_metainfo(self, note: N, field: str) -> str | None:
+		"""
+		Generate metainfo value representation as string.
+
+		:param note: Note
+		:type note: BaseNote
+		:param field: Metainfo field name.
+		:type field: str
+		:return: Metainfo value as string.
+		:rtype: str | None
+		"""
+
+		value: SUPPORTED_TYPES | tuple[SUPPORTED_TYPES, ...] | None = note.metainfo.get_field_value(field)
+
+		if value is None:
+			value = ""
+
+		elif isinstance(value, tuple):
+			values_count: int = len(value)
+			value = str(value[0])
+
+			other_count: int = values_count - 1
+			other_label: str = f" (and {other_count} other)"
+
+			if other_count:
+				value += other_label
+
+		else: 
+			value = str(value)
+
+		return value
+
+	def _print_table(self, data: dict[str, list[ALLOWED_TYPES]], options: dict[str, "ColumnOptions"], sort_by = "ID"):
 		"""
 		Build and print notes table.
 
 		:param data: Columns data dictionary in which key is column name and value is cell value.
-		:type data: dict[str, list[_ALLOWED_TYPES]]
+		:type data: dict[str, list[ALLOWED_TYPES]]
 		:param options: Columns options.
 		:type options: dict[str, ColumnOptions]
 		:param sort_by: Column name to sorting.
@@ -57,11 +91,11 @@ class BaseTableViewer[T: "BaseTable", N: "BaseNote"]:
 			if not current_options.is_enabled:
 				continue
 
-			values: list[_ALLOWED_TYPES] = data[column]
+			values: list[ALLOWED_TYPES] = data[column]
 
 			if current_options.max_width:
 				for index in range(len(values)):
-					value: _ALLOWED_TYPES = values[index]
+					value: ALLOWED_TYPES = values[index]
 
 					if value is None: value = ""
 					else: value = str(value)
@@ -102,14 +136,14 @@ class BaseTableViewer[T: "BaseTable", N: "BaseNote"]:
 	# >>>>> OVERRIDABLE METHODS <<<<< #
 	#==========================================================================================#
 
-	def _fill_row(self, row_data: dict[str, float | int | str | None], note: N):
+	def _fill_row(self, row_data: dict[str, ALLOWED_TYPES], note: N):
 		"""
 		Fill table row by data dictionary editing.
 
 		:param row_data: Table row data dictionary in which key is column name and value is cell value.
-		:type row_data: dict[str, float  |  int  |  str  |  None]
+		:type row_data: dict[str, ALLOWED_TYPES]
 		:param note: Note.
-		:type note: N
+		:type note: BaseNote
 		"""
 
 		row_data["ID"] = note.id
@@ -178,14 +212,14 @@ class BaseTableViewer[T: "BaseTable", N: "BaseNote"]:
 			notes = tuple(reversed(notes))
 
 		columns_options: dict[str, ColumnOptions] = self._interface.table_interface_options.columns
-		columns_data: dict[str, list[_ALLOWED_TYPES]] = {column: [] for column in columns_options.keys()}
+		columns_data: dict[str, list[ALLOWED_TYPES]] = {column: [] for column in columns_options.keys()}
 
 		for note in notes:
-			row_data: dict[str, _ALLOWED_TYPES] = dict.fromkeys(columns_options.keys())
+			row_data: dict[str, ALLOWED_TYPES] = dict.fromkeys(columns_options.keys())
 			self._fill_row(row_data, note)
 			
 			for column in columns_data.keys():
-				value: _ALLOWED_TYPES = row_data.get(column)
+				value: ALLOWED_TYPES = row_data.get(column)
 				if value is None: value = ""
 				columns_data[column].append(value)
 
