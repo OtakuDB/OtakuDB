@@ -4,6 +4,7 @@ import sys
 from types import ModuleType
 from typing import TYPE_CHECKING, Literal
 
+from dublib.cli import readline as readline
 from dublib.cli.terminalyzer import ModelsGroup, Terminalyzer
 from dublib.cli.terminalyzer.helper import Helper
 from dublib.functions.system import clear

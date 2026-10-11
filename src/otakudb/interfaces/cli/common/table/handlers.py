@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, Literal
 
+import questionary
+
 from ...base.handlers import BaseHandlersCollection
 
 if TYPE_CHECKING:
@@ -41,6 +43,57 @@ class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]
 		"""
 
 		self.navigator.close()
+
+	def column(self, entity: "CommandEntity"):
+		"""
+		Command handler: **column**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		column: str = entity.get_position_value("COLUMN", expected_type = str, important = True)
+		table_interface_options = self.interface.options.table
+		options = table_interface_options.columns.get(column)
+
+		if not options:
+			self.printer.error("Options for column not found.")
+			return
+
+		if entity.check_flag("-e"):
+			options.is_enabled = True
+		elif entity.check_flag("-d"):
+			options.is_enabled = False
+		elif entity.check_key("--max-width"):
+			max_width: int | None = entity.get_key_value("--max-width", expected_type = int) or None
+			options.max_width = max_width
+
+		table_interface_options.save()
+
+	def columns(self, entity: "CommandEntity"):  # noqa: ARG002
+		"""
+		Command handler: **columns**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		table_interface_options = self.interface.options.table
+		columns_options = table_interface_options.columns
+
+		enabled_columns = questionary.checkbox(
+			message = "Choose displayed columns:",
+			choices = tuple(questionary.Choice(name, checked = options.is_enabled) for name, options in columns_options.items()),
+			instruction = "Navigate by <Up>, <Down> keys, switch by <Space>, save by <Enter>.",
+		).ask()
+
+		if enabled_columns is None:
+			return
+
+		for column in columns_options.keys():
+			columns_options[column].is_enabled = column in enabled_columns
+
+		table_interface_options.save()
 
 	def delete(self, entity: "CommandEntity"):  # noqa: ARG002
 		"""

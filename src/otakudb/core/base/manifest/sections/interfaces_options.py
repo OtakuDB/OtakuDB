@@ -57,7 +57,7 @@ class InterfacesOptions(BaseSection):
 
 	def set_options(self, interface: Interfaces, options: dict[str, Any]):
 		"""
-		Задаёт словарь параметров интерфейса.
+		Задаёт словарь параметров интерфейса и сохраняет манифест.
 
 		:param interface: Интерфейс.
 		:type interface: Interfaces
@@ -66,3 +66,4 @@ class InterfacesOptions(BaseSection):
 		"""
 
 		self.__data[interface.value] = options
+		self._manifest.save()

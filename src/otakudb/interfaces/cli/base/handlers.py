@@ -83,6 +83,21 @@ class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 
 		raise exceptions.session.StorageUnmountedError()
 
+	def _unstar[V](self, value: V) -> V | None:
+		"""
+		Transform string with only one character `*` to `None`.
+
+		:param value: Value.
+		:type value: V
+		:return: Value or `None`.
+		:rtype: V | None
+		"""
+
+		if value == "*":
+			return None
+
+		return value
+
 	def __init__(self, interface: "Interface"):
 		"""
 		Base handlers collection.
