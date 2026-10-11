@@ -9,9 +9,10 @@ from dublib.cli.terminalyzer.helper import Helper
 from dublib.functions.system import clear
 from dublib.validators import ValidableTypes
 
+from ....core import exceptions
 from .. import common
+from ..base import viewers
 from ..base.processor import BaseCLI
-from ..base.viewers.table import BaseTableViewer
 from ..enums import InteractionLevels
 from ..exceptions import ObjectUnavailableError
 from ..options import CommonInterfaceOptions, InterfaceOptions, TableInterfaceOptions
@@ -217,10 +218,9 @@ class Interface:
 
 		if self.__session.data.last_mounted_storage:
 			driver = self.__session.mount(self.__session.data.last_mounted_storage)
-			self.__level = InteractionLevels.Box
-			print(f"Mounted: \"{driver.storage_path}\".")
+			self.printer.emit(f"Mounted: \"{driver.storage_path}\".")
 
-	def load_table_viewer(self) -> BaseTableViewer:
+	def load_table_viewer(self) -> viewers.BaseTableViewer:
 		"""
 		Load custom or default table viewer.
 
@@ -228,6 +228,7 @@ class Interface:
 		:rtype: BaseTableViewer
 		:raises ObjectUnavailableError: Object unavailable.
 		"""
+
 		if not self.__session.navigator or not self.__session.navigator.current_table:
 			raise ObjectUnavailableError(InteractionLevels.Table)
 
@@ -236,15 +237,49 @@ class Interface:
 
 		try:
 			module: ModuleType = importlib.import_module(module_path)
-			TableViewer: type[BaseTableViewer] = module.TableViewer
+			TableViewer: type[viewers.BaseTableViewer] = module.TableViewer
 
 		except (ImportError, AttributeError):
-			return BaseTableViewer(self, self.__session.navigator.current_table.table)
+			return viewers.BaseTableViewer(self, self.__session.navigator.current_table.table)
 
-		if not issubclass(TableViewer, BaseTableViewer):
+		if not issubclass(TableViewer, viewers.BaseTableViewer):
 			raise TypeError("Table viewer has incorrect type.")
 
 		return TableViewer(self, self.__session.navigator.current_table.table)
+
+	def load_note_viewer(self) -> viewers.BaseNoteViewer:
+		"""
+		Load custom or default note viewer.
+
+		:return: Note viewer.
+		:rtype: BaseNoteViewer
+		:raises ObjectUnavailableError: Object unavailable.
+		:raises StorageUnmountedError: Storage unmounted.
+		"""
+
+		if not self.__session.navigator:
+			raise exceptions.session.StorageUnmountedError()
+
+		if not self.__session.navigator.current_table:
+			raise ObjectUnavailableError(InteractionLevels.Table)
+
+		if not self.__session.navigator.current_note:
+			raise ObjectUnavailableError(InteractionLevels.Note)
+
+		table_type: str = self.__session.navigator.current_table.manifest.table_type
+		module_path: str = f"otakudb.tables.{table_type}.interfaces.cli.note.viewer"
+
+		try:
+			module: ModuleType = importlib.import_module(module_path)
+			NoteViewer: type[viewers.BaseNoteViewer] = module.TableViewer
+
+		except (ImportError, AttributeError):
+			return viewers.BaseNoteViewer(self, self.__session.navigator.current_note)
+
+		if not issubclass(NoteViewer, viewers.BaseNoteViewer):
+			raise TypeError("Table viewer has incorrect type.")
+
+		return NoteViewer(self, self.__session.navigator.current_table.table)
 
 	def run(self):
 		"""Run CLI processing."""

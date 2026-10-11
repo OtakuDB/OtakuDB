@@ -17,6 +17,9 @@ class CommonNoteCLI(BaseCLI[CommonNoteHandlers]):
 		model = note_group.create_model("close", "Close note.")
 		model.register_handler(self.handlers.close)
 
+		model = note_group.create_model("view", "View note.")
+		model.register_handler(self.handlers.view)
+
 	@override
 	def _export_handlers(self) -> type[CommonNoteHandlers]:
 		"""

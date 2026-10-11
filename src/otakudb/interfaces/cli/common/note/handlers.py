@@ -22,3 +22,14 @@ class CommonNoteHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]"
 		"""
 
 		self.navigator.close()
+
+	def view(self, entity: "CommandEntity"):  # noqa: ARG002
+		"""
+		Command handler: **view**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		viewer = self.interface.load_note_viewer()
+		viewer.view()
