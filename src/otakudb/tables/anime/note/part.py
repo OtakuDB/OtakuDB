@@ -23,7 +23,7 @@ class Part:
 		"""Название части."""
 
 		return self.__Data.get("name")
-	
+
 	@property
 	def number(self) -> int | None:
 		"""Номер части (не путать с индексом)."""
@@ -65,7 +65,7 @@ class Part:
 		"""Тип части."""
 
 		return PartsTypes(self.__Data["type"])
-	
+
 	@property
 	def viewed(self) -> int:
 		"""Состояние просмотра: -2 – анонсировано, -1 – не планируется, 0 – не просмотрено, 1 и более – количество просмотренных элементов."""
@@ -88,7 +88,7 @@ class Part:
 		#==========================================================================================#
 		if data["type"] == "special": data["type"] = PartsTypes.Specials.value
 		if data["type"] == PartsTypes.Film.value and "series" in data: del data["series"]
-		
+
 		if data.get("skipped"): data["viewed"] = -1
 		if data.get("watched"): data["viewed"] = data.get("series") or 1
 		if data.get("mark"): data["viewed"] = data.get("mark")

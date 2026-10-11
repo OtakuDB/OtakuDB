@@ -27,7 +27,7 @@ class Slot:
 		"""Имя файла."""
 
 		return self.__file
-	
+
 	@property
 	def full_path(self) -> Path | None:
 		"""Полный путь к файлу."""
@@ -69,16 +69,16 @@ class Slot:
 
 		:param file: Путь к файлу.
 		:type file: Path
-		:param copy: Указывает, нужно ли скопировать файл или переместить. 
+		:param copy: Указывает, нужно ли скопировать файл или переместить.
 		:type copy: bool
 		:raises AttachmentSlotAlreadyFilled: Слот уже содержит файл.
 		:raises AttachmentsDenied: Вложение запрещено.
 		:raises AttachmentSlotNotDescribed: Слот вложения не описан.
 		"""
-		
+
 		match self.__note.table.manifest.attachments.rule:
 			case 0: raise exceptions.note.attachments.AttachmentsDeniedError(False)
-		
+
 		if self.__file:
 			raise exceptions.note.attachments.AttachmentSlotAlreadyFilledError(self.__name)
 
@@ -88,7 +88,7 @@ class Slot:
 
 		if copy: shutil.copy(file, attachment_path)
 		else: os.replace(file, attachment_path)
-		
+
 		self.__note.save()
 		self.__note.run_callback(CallbacksTypes.AttachmentsChanged)
 
@@ -216,7 +216,7 @@ class Attachments[N: "BaseNote"]:
 		:type copy: bool
 		:raises AttachmentsDeniedError: Attachments denied.
 		"""
-		
+
 		rule: int = self.__note.table.manifest.attachments.rule
 
 		if rule < 2:
@@ -228,7 +228,7 @@ class Attachments[N: "BaseNote"]:
 
 		if copy: shutil.copy(file, attachment_path)
 		else: os.replace(file, attachment_path)
-		
+
 		self.__note.save()
 		self.__note.run_callback(CallbacksTypes.AttachmentsChanged)
 

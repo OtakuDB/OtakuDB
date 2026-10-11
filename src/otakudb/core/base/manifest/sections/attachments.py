@@ -30,7 +30,7 @@ class AttachmentsSection(BaseSection):
 	def rule(self) -> int:
 		"""
 		Правило использования вложений.
-		
+
 		* 0 – запрещены все всложения;
 		* 1 – разрешены только слоты;
 		* 2 – разрешены все вложения.
@@ -43,7 +43,7 @@ class AttachmentsSection(BaseSection):
 		"""Последовательность определений слотов."""
 
 		return tuple(self.__slots.values())
-	
+
 	@property
 	def slots_names(self) -> tuple[str, ...]:
 		"""Последовательность имён слотов."""
@@ -137,7 +137,7 @@ class AttachmentsSection(BaseSection):
 	def set_attachments_rule(self, rule: Literal[0, 1, 2]):
 		"""
 		Задаёт правило использования вложений.
-		
+
 		* 0 – запрещены все всложения;
 		* 1 – разрешены только слоты;
 		* 2 – разрешены все вложения.
@@ -151,6 +151,6 @@ class AttachmentsSection(BaseSection):
 
 		if rule not in (0, 1, 2):
 			raise ValueError("Rule must be between 0 and 2.")
-			
+
 		self.__rule = rule
 

@@ -26,13 +26,13 @@ class RootBox:
 		"""Последовательность содержащихся в контейнере элементов."""
 
 		return tuple(self._items.values())
-	
+
 	@property
 	def virtual_path(self) -> Path:
 		"""Виртуальный путь к контейнеру."""
 
 		return self._virtual_path
-	
+
 	#==========================================================================================#
 	# >>>>> PROTECTED METHODS <<<<< #
 	#==========================================================================================#
@@ -51,7 +51,7 @@ class RootBox:
 		self._driver: "Driver" = driver
 		self._virtual_path: Path = virtual_path
 		self._full_path: Path = self._driver.storage_path / self._virtual_path
-		
+
 		self._items: dict[str, Box | TableDescriptor] = {}
 
 	#==========================================================================================#
@@ -201,7 +201,7 @@ class RootBox:
 			element_virtual_path = self._virtual_path / name
 
 			if self._driver.is_box(element_virtual_path):
-				box: "Box | None" = None 
+				box: "Box | None" = None
 
 				if self._driver.is_box_initialized(element_virtual_path):
 					box = self._driver.get_box(element_virtual_path)
@@ -258,7 +258,7 @@ class Box(RootBox):
 	def delete(self, purge: bool = False):
 		"""
 		Удаляет контейнер и всё его содержимое.
-		
+
 		:param purge: Указывает, нужно ли удалить содержимое контейнера, если он не пуст.
 		:type purge: bool
 		"""

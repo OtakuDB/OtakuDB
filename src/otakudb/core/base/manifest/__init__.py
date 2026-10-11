@@ -39,7 +39,7 @@ class Manifest[C: "BaseModel"]:
 			raise exceptions.table.ManifestError("Table type undefined.")
 
 		return self.__table_type
-	
+
 	#==========================================================================================#
 	# >>>>> SECTIONS <<<<< #
 	#==========================================================================================#
@@ -105,7 +105,7 @@ class Manifest[C: "BaseModel"]:
 		self.__table_type: str | None = table_type
 
 		self.__custom_model: type[C] | None = custom_model
-		self.__custom: C | None = None 
+		self.__custom: C | None = None
 
 		self.__attachments = AttachmentsSection(self)
 		self.__common = CommonSection(self)

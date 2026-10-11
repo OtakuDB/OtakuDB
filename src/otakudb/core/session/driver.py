@@ -48,16 +48,16 @@ class Driver:
 	def __init__(self, storage_path: Path):
 		"""
 		Драйвер хранилища.
-		
+
 		:param storage_path: Путь к директории хранилища.
 		:type storage_path: Path
 		"""
-		
+
 		self.__storage_path: Path = storage_path
 
 		self.__boxes: dict[str, Box] = {}
 		self.__root_box: RootBox = RootBox(self)
-		
+
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С КОНТЕЙНЕРАМИ <<<<< #
 	#==========================================================================================#
@@ -76,7 +76,7 @@ class Driver:
 		"""
 
 		new_box_full_path: Path = parent_box.full_path / name
-		
+
 		if new_box_full_path.exists():
 			raise exceptions.session.driver.ItemAlreadyExistsError(new_box_full_path)
 		else:
@@ -109,7 +109,7 @@ class Driver:
 		if purge:
 			shutil.rmtree(target_box.full_path)
 
-		else: 
+		else:
 			if target_box.items:
 				raise exceptions.session.box.BoxNotEmptyError(target_box_virtual_path)
 			else:
@@ -147,7 +147,7 @@ class Driver:
 			raise exceptions.session.driver.ItemNotFoundError(virtual_path)
 
 		if self.is_box_initialized(virtual_path):
-			return self.__boxes[virtual_path.as_posix()] 
+			return self.__boxes[virtual_path.as_posix()]
 
 		raise exceptions.session.box.BoxNotInitializedError(virtual_path)
 
@@ -188,7 +188,7 @@ class Driver:
 		full_manifest_path: Path = self.__storage_path / virtual_path / "manifest.json"
 
 		return not full_manifest_path.exists()
-	
+
 	def is_box_initialized(self, virtual_path: Path) -> bool:
 		"""
 		Проверяет, инициализирован ли контейнер.
@@ -237,13 +237,13 @@ class Driver:
 
 		if table_type not in self.available_tables_types:
 			raise exceptions.session.driver.TableTypeNotFoundError(table_type)
-		
+
 		table_virtual_path: Path = box.virtual_path / name
 		table_full_path: Path = self.__storage_path / table_virtual_path
 
 		if table_full_path.exists():
 			raise exceptions.session.driver.ItemAlreadyExistsError(table_virtual_path)
-		
+
 		table_full_path.mkdir()
 
 		manifest_generator_module = importlib.import_module(f"otakudb.tables.{table_type}.manifest")
@@ -251,7 +251,7 @@ class Driver:
 		manifest = manifest_generator.generate()
 
 		descriptor = TableDescriptor(self, box, name, manifest)
-		box.add_item(descriptor) 
+		box.add_item(descriptor)
 
 		return descriptor
 

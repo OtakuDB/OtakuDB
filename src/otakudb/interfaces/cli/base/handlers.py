@@ -46,7 +46,7 @@ class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 	def note(self) -> N:
 		"""
 		Current note.
-		
+
 		:raises ObjectUnavailableError: Note unavailable.
 		"""
 
@@ -65,7 +65,7 @@ class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 	def table(self) -> T:
 		"""
 		Current table.
-		
+
 		:raises ObjectUnavailableError: Table unavailable.
 		"""
 
@@ -90,7 +90,7 @@ class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 		:param interface: Interface processor.
 		:type interface: Session
 		"""
-		
+
 		self._interface: Interface = interface
 
 		self._session: Session = self._interface.session

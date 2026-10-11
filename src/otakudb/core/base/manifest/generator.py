@@ -65,7 +65,7 @@ class ManifestGenerator[C: "BaseModel"](ABC):
 		:return: Манифест.
 		:rtype: Manifest
 		"""
-		
+
 		manifest = Manifest(self.__directory, self.__table_type, self._export_custom_settings_model())
 		manifest = self._edit_manifest(manifest)
 		manifest.save()

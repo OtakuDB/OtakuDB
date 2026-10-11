@@ -9,13 +9,12 @@ from dublib.cli.terminalyzer.helper import Helper
 from dublib.functions.system import clear
 from dublib.validators import ValidableTypes
 
-from ....core import exceptions
 from .. import common
 from ..base.processor import BaseCLI
 from ..base.viewers.table import BaseTableViewer
 from ..enums import InteractionLevels
 from ..exceptions import ObjectUnavailableError
-from ..options import TableInterfaceOptions
+from ..options import CommonInterfaceOptions, InterfaceOptions, TableInterfaceOptions
 from .handlers import DriverHandlers
 from .printer import Printer
 from .prompt import PromptGenerator
@@ -24,7 +23,7 @@ if TYPE_CHECKING:
 	from dublib.cli.terminalyzer.parser.entities import CommandEntity
 
 	from ....core.session import Session
-	
+
 class Interface:
 	"""Interface processor."""
 
@@ -62,7 +61,7 @@ class Interface:
 	@property
 	def prompt(self) -> str:
 		"""CLI prompt."""
-		
+
 		return self.__prompt_generator.prompt
 
 	@property
@@ -78,22 +77,19 @@ class Interface:
 		return self.__session
 
 	@property
-	def table_interface_options(self) -> TableInterfaceOptions:
-		"""
-		Current table interface options.
+	def options(self) -> InterfaceOptions:
+		"""Interface options."""
 
-		:raises StorageUnmountedError: Storage unmounted.
-		"""
-
-		if not self.__session.navigator:
-			raise exceptions.session.StorageUnmountedError()
-
-		if not self.__session.navigator.current_table:
+		if not self.__session.navigator or not self.__session.navigator.current_table:
 			raise ObjectUnavailableError(InteractionLevels.Table)
 
-		options = self.__session.navigator.current_table.manifest.interfaces_options
+		table_options_data = self.__session.navigator.current_table.manifest.interfaces_options
+		table_options = TableInterfaceOptions(table_options_data)
 
-		return TableInterfaceOptions(options)
+		return InterfaceOptions(
+			common = self.__common_interface_options,
+			table = table_options,
+		)
 
 	@property
 	def terminalyzer(self) -> Terminalyzer:
@@ -122,7 +118,7 @@ class Interface:
 
 			case InteractionLevels.Table:
 				groups += self.__common_table_cli.groups + self.__import_commands_groups(InteractionLevels.Table)
-				
+
 			case InteractionLevels.Note:
 				groups += self.__common_note_cli.groups + self.__import_commands_groups(InteractionLevels.Note)
 
@@ -174,7 +170,7 @@ class Interface:
 
 		table_type: str = self.__session.navigator.current_table.manifest.table_type
 		module_path: str = f"otakudb.tables.{table_type}.interfaces.cli.{interaction_level.value}"
-		
+
 		try:
 			module: ModuleType = importlib.import_module(module_path)
 			TableCLI: type[BaseCLI] = module.TableCLI
@@ -198,17 +194,18 @@ class Interface:
 		:param session: Interaction session.
 		:type session: Session
 		"""
-		
+
 		self.__session: Session = session
 
 		self.__printer: Printer = Printer()
+		self.__common_interface_options: CommonInterfaceOptions = CommonInterfaceOptions(self.__session.data)
 
 		self.__terminalyzer: Terminalyzer = Terminalyzer()
 		self.__helper: Helper = Helper()
 
 		self.__handlers: DriverHandlers = DriverHandlers(self)
 		self.__prompt_generator: PromptGenerator = PromptGenerator(self.__session)
-		
+
 		self.__global_group_name: str = "Global"
 		self.__global_group: ModelsGroup = self.__generate_global_group(self.__global_group_name)
 
@@ -236,7 +233,7 @@ class Interface:
 
 		table_type: str = self.__session.navigator.current_table.manifest.table_type
 		module_path: str = f"otakudb.tables.{table_type}.interfaces.cli.table.viewer"
-		
+
 		try:
 			module: ModuleType = importlib.import_module(module_path)
 			TableViewer: type[BaseTableViewer] = module.TableViewer
@@ -257,7 +254,7 @@ class Interface:
 
 			try:
 				input_line = input(self.prompt)
-			except KeyboardInterrupt: 
+			except KeyboardInterrupt:
 				print("\nInterrupted by [Ctrl + C] keyboard shortcut.")
 				sys.exit()
 

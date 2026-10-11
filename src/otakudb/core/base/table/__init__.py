@@ -51,7 +51,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 		"""Список записей."""
 
 		return tuple(self._notes.values())
-	
+
 	@property
 	def notes_id(self) -> tuple[int, ...]:
 		"""Последовательность ID записей."""
@@ -114,7 +114,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 				buffer.append(current_note_id)
 				continue
 
-			if current_note_id - buffer[-1] != 1: break 
+			if current_note_id - buffer[-1] != 1: break
 			buffer.append(current_note_id)
 
 		affected_notes_id = list(reversed(buffer))
@@ -123,7 +123,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 			self.change_note_id(current_note_id, current_note_id + 1)
 
 		self.change_note_id(0, new_id)
-		
+
 	def _overwrite_note(self, note_id: int, new_id: int, is_target_note_exists: bool):
 		"""
 		Обрабатывает режим изменения ID записи: перезапись.
@@ -166,7 +166,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 
 	#==========================================================================================#
 	# >>>>> PROTECTED METHODS <<<<< #
-	#==========================================================================================#	
+	#==========================================================================================#
 
 	def _generate_new_note_id(self) -> int:
 		"""
@@ -229,7 +229,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 	#==========================================================================================#
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
-	
+
 	def __init__(self, driver: "Driver", descriptor: "TableDescriptor[N, C]"):
 		"""
 		Базовая таблица.
@@ -247,7 +247,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 		self._note_class: type[N] = self._get_note_class()
 
 		self._connector = Connector(self)
-		
+
 		self._post_init()
 
 	def delete(self):
@@ -257,7 +257,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 
 	def load_data(self):
 		"""Загружает данные таблицы."""
-		
+
 		self._notes = {note_id: self._note_class(self._driver, self, note_id) for note_id in self.notes_id}
 		self._post_load()
 
@@ -357,7 +357,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 			raise exceptions.table.NoteNotFoundError(note_id)
 
 		return self._notes[note_id]
-	
+
 	def is_note_exists(self, note_id: int, not_found_error: bool = False) -> bool:
 		"""
 		Проверяет, существует ли запись с указанным ID.

@@ -85,7 +85,7 @@ class BondsParameters(BaseSection):
 
 	#==========================================================================================#
 	# >>>>> PUBLIC METHODS <<<<< #
-	#==========================================================================================#	
+	#==========================================================================================#
 
 	def create_bond_parameters(self, bond_name: str, description: str | None = None, count: int | None = None):
 		"""
@@ -95,7 +95,7 @@ class BondsParameters(BaseSection):
 		:type bond_name: str
 		:param description: Описание связи.
 		:type description: str | None
-		:param count: Максимальное количество прикрепляемых записей. При `None` неограничено. 
+		:param count: Максимальное количество прикрепляемых записей. При `None` неограничено.
 		:type count: int | None
 		:raises BondAlreadyDescribedError: Связь уже описана.
 		"""

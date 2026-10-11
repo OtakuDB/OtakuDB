@@ -14,7 +14,7 @@ class BoxCLI(BaseCLI[BoxHandlers]):
 		"""Build models and register handlers."""
 
 		box_group: ModelsGroup = self.create_models_group("Box")
-		
+
 		model = box_group.create_model("go", "Navigate by virtual path.")
 		position = model.create_position("PATH", "Virtual path.", important = True)
 		position.set_argument(ValidableTypes.Path)

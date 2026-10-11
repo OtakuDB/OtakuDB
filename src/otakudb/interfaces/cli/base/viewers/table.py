@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 	from .....core.base.note import BaseNote
 	from .....core.base.note.metainfo import SUPPORTED_TYPES
 	from .....core.base.table import BaseTable
-	from ...options import ColumnOptions
+	from ...options.table import ColumnOptions
 	from ...shell import Interface
 	from ...shell.printer import Printer
 
@@ -65,7 +65,7 @@ class BaseTableViewer[T: "BaseTable", N: "BaseNote"]:
 			if other_count:
 				value += other_label
 
-		else: 
+		else:
 			value = str(value)
 
 		return value
@@ -126,9 +126,9 @@ class BaseTableViewer[T: "BaseTable", N: "BaseNote"]:
 		"""
 
 		search_query = search_query.lower()
-	
+
 		return tuple(
-			note for note in notes 
+			note for note in notes
 			if any(search_query in string.lower() for string in note.searchable_strings)
 		)
 
@@ -211,13 +211,13 @@ class BaseTableViewer[T: "BaseTable", N: "BaseNote"]:
 		if reverse:
 			notes = tuple(reversed(notes))
 
-		columns_options: dict[str, ColumnOptions] = self._interface.table_interface_options.columns
+		columns_options: dict[str, ColumnOptions] = self._interface.options.table.columns
 		columns_data: dict[str, list[ALLOWED_TYPES]] = {column: [] for column in columns_options.keys()}
 
 		for note in notes:
 			row_data: dict[str, ALLOWED_TYPES] = dict.fromkeys(columns_options.keys())
 			self._fill_row(row_data, note)
-			
+
 			for column in columns_data.keys():
 				value: ALLOWED_TYPES = row_data.get(column)
 				if value is None: value = ""

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["uv-build>=0.12.23,<0.13.0"]
+requires = ["uv-build>=0.13.0,<0.14.0"]
 build-backend = "uv_build"
 
 [project]
@@ -18,8 +18,8 @@ dev = ["ruff", "ty", "typos"]
 otakudb = "otakudb:main"
 
 [tool.ruff.lint]
-select = ["A", "ARG", "C", "COM", "E", "F", "I", "N818"]
-ignore = ["E701", "E501"]
+select = ["A", "ARG", "C", "COM", "E", "F", "I", "N818", "W"]
+ignore = ["E701", "E501", "W191"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 1

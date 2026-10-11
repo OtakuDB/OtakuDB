@@ -30,7 +30,7 @@ class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
 		"""Манифест таблицы."""
 
 		return self.__manifest
-	
+
 	@property
 	def name(self) -> str:
 		"""Имя таблицы."""
@@ -48,7 +48,7 @@ class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
 		"""Таблица."""
 
 		return self.__table
-	
+
 	#==========================================================================================#
 	# >>>>> PRIBATE METHODS <<<<< #
 	#==========================================================================================#
@@ -82,7 +82,7 @@ class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
 		self.__driver: "Driver" = driver
 		self.__box: "Box | RootBox" = box
 		self.__name: str = name
-		
+
 		self.__virtual_path: Path = self.__box.virtual_path / self.__name
 		self.__full_path = self.__driver.storage_path / self.__virtual_path
 
@@ -92,7 +92,7 @@ class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
 		self.__manifest = manifest or Manifest(self.__full_path).load()
 
 		self.__ititialize_table()
-	
+
 	def rename(self, name: str):
 		"""
 		Изменяет пути под новое название таблицы.

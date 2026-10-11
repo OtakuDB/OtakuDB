@@ -7,7 +7,7 @@ from .table_descriptor import TableDescriptor
 
 if TYPE_CHECKING:
 	from pydantic import BaseModel
-	
+
 	from ..base.note import BaseNote
 	from .driver import Driver
 
@@ -41,7 +41,7 @@ class Navigator:
 		"""Descriptor of current table."""
 
 		return self.__current_table
-	
+
 	@property
 	def root_box(self) -> RootBox:
 		"""Root box."""
@@ -68,7 +68,7 @@ class Navigator:
 
 	def close(self):
 		"""Close current item."""
-		
+
 		if self.__current_note:
 			self.__current_note = None
 			return
@@ -89,12 +89,12 @@ class Navigator:
 		:rtype: Box
 		:raises NotBoxError: Target item isn't box.
 		"""
-		
+
 		item = self.__current_box.get_item(box_name)
 
 		if not isinstance(item, Box):
 			raise exceptions.session.navigator.NotBoxError(item.virtual_path)
-		
+
 		item.reload()
 		self.__current_box = item
 
@@ -125,7 +125,7 @@ class Navigator:
 
 			elif part != navigable_parts[-1]:
 				raise exceptions.session.navigator.TableNotAtPathEndError(virtual_path)
-				
+
 			else:
 				self.__current_table = self.open_table(part)
 				return self.__current_table

@@ -52,7 +52,7 @@ class InterfacesOptions(BaseSection):
 		"""
 
 		value: dict[str, Any] | None = self.__data.get(interface.value)
-		
+
 		return deep_copy(value) if value else {}
 
 	def set_options(self, interface: Interfaces, options: dict[str, Any]):

@@ -35,7 +35,7 @@ class PromptGenerator:
 
 		if self.__session.navigator is None:
 			return ""
-		
+
 		current_note: "BaseNote | None" = self.__session.navigator.current_note
 
 		if current_note:

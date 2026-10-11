@@ -8,7 +8,7 @@ class ManifestError(Exception):
 		:param message: Сообщение об ошибке.
 		:type message: str
 		"""
-		
+
 		super().__init__(message)
 
 class NoteNotFoundError(Exception):
@@ -21,7 +21,7 @@ class NoteNotFoundError(Exception):
 		:param note_id: ID записи.
 		:type note_id: int
 		"""
-		
+
 		super().__init__(note_id)
 
 class OperationError(Exception):
@@ -34,5 +34,5 @@ class OperationError(Exception):
 		:param message: Сообщение об ошибке.
 		:type message: str
 		"""
-		
+
 		super().__init__(message)

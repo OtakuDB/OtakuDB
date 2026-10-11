@@ -54,7 +54,7 @@ class MetainfoRules(BaseSection):
 		"""Состояние: разрешены ли неопределённые в правилах поля метаданных."""
 
 		return self.__is_free_allowed
-	
+
 	@property
 	def fields_parameters(self) -> tuple[MetainfoFieldParameters, ...]:
 		"""Последовательность параметров полей метаданных."""
@@ -66,12 +66,12 @@ class MetainfoRules(BaseSection):
 		"""Последовательность имён описанных полей метаданных."""
 
 		return tuple(self.__fields.keys())
-	
+
 	@property
 	def rule(self) -> int:
 		"""
 		Правило использования метаданных.
-		
+
 		* 0 – запрещены все метаданные;
 		* 1 – разрешены только определённые поля метаданных;
 		* 2 – разрешены все метаданные.
@@ -79,7 +79,7 @@ class MetainfoRules(BaseSection):
 
 		if not all((self.__is_free_allowed, self.__fields)): return 0
 		elif not self.__is_free_allowed: return 1
-		
+
 		return 2
 
 	#==========================================================================================#
@@ -95,7 +95,7 @@ class MetainfoRules(BaseSection):
 		:return: Словарь параметров полей метаданных.
 		:rtype: dict[str, MetainfoFieldParameters]
 		"""
-		
+
 		fields_parameters: dict = {}
 
 		for name, parameters in data.items():
@@ -113,7 +113,7 @@ class MetainfoRules(BaseSection):
 			)
 
 		return fields_parameters
-	
+
 	def __parse_field_types(self, string: str) -> tuple[type[float | int | str], ...]:
 		"""
 		Парсит допустимые типы из строковых представлений.

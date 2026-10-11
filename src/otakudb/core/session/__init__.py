@@ -17,13 +17,13 @@ class Session:
 		"""Данные сессии."""
 
 		return self.__data
-	
+
 	@property
 	def driver(self) -> Driver | None:
 		"""Драйвер хранилища."""
 
 		return self.__driver
-	
+
 	@property
 	def navigator(self) -> Navigator | None:
 		"""Оператор навигации."""
@@ -60,5 +60,6 @@ class Session:
 		self.__driver = Driver(storage_path)
 		self.__navigator = Navigator(self.__driver)
 		self.__data.set_last_mounted_storage(storage_path)
-		
+		self.__data.save()
+
 		return self.__driver

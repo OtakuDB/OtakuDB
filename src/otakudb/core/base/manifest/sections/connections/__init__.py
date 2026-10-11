@@ -14,7 +14,7 @@ class ConnectionsSection(BaseSection):
 		"""Параметры соединений."""
 
 		return self.__bonds
-	
+
 	@property
 	def hyperlinks(self) -> HyperlinksParameters:
 		"""Параметры гиперссылок."""

@@ -74,7 +74,7 @@ class BoxHandlers(BaseHandlersCollection):
 
 		boxes = sorted(boxes, key = lambda box: box.name)
 		descriptors = sorted(descriptors, key = lambda descriptor: descriptor.name)
-		
+
 		if current_box.virtual_path != Path(): self.printer.emit("↩️  ..")
 		for box in boxes: self.printer.emit(f"📁 {box.name}")
 		for descriptor in descriptors: self.printer.emit(f"📦 {descriptor.name}")

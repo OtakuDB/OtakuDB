@@ -13,7 +13,7 @@ class Connector:
 		"""Оператор связей."""
 
 		return self.__bonds_operator
-	
+
 	@property
 	def hyperlinks(self) -> NoReturn:
 		"""Оператор гиперссылок."""

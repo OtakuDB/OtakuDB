@@ -47,7 +47,7 @@ class NoteBonds[N: "BaseNote"]:
 		"""Последовательность связей."""
 
 		return tuple(self.__create_read_only_bond(bond) for bond in self.__bonds.values())
-	
+
 	@property
 	def bonds_names(self) -> tuple[str, ...]:
 		"""Последовательность имён связей."""
@@ -129,7 +129,7 @@ class NoteBonds[N: "BaseNote"]:
 	def __init__(self, operator: "BondsOperator", note_id: int, data: dict[str, list[int]]):
 		"""
 		Связи записи.
-		
+
 		:param operator: Оператор связей.
 		:type operator: BondsOperator
 		:param note_id: ID записи.
@@ -214,7 +214,7 @@ class NoteBonds[N: "BaseNote"]:
 		:type slave_id: int
 		"""
 
-		self.__operator.unbind(self.__note_id, bond_name, slave_id)		
+		self.__operator.unbind(self.__note_id, bond_name, slave_id)
 
 	def update_slaves_id(self, old_slave_id: int, new_slave_id: int):
 		"""
@@ -256,7 +256,7 @@ class BondsOperator[N: "BaseNote"]:
 		"""
 		Добавляет данные о связи в кэш.
 
-		:param master_id: ID записи, к которой осуществляется привязка. 
+		:param master_id: ID записи, к которой осуществляется привязка.
 		:type master_id: int
 		:param slave_id: ID привязываемой записи.
 		:type slave_id: int
@@ -294,12 +294,12 @@ class BondsOperator[N: "BaseNote"]:
 
 					if master_id not in self.__cache[slave_id].masters:
 						self.__cache[slave_id].masters.append(master_id)
-	
+
 	def __remove_bond_from_cache(self, master_id: int, slave_id: int):
 		"""
 		Удаляет данные о связи из кэша.
 
-		:param master_id: ID записи, к которой осуществлена привязка. 
+		:param master_id: ID записи, к которой осуществлена привязка.
 		:type master_id: int
 		:param slave_id: ID привязанной записи.
 		:type slave_id: int
@@ -404,7 +404,7 @@ class BondsOperator[N: "BaseNote"]:
 		"""
 
 		masters: list[N] = []
-		
+
 		if slave_id in self.__cache:
 			for master_id in self.__cache[slave_id].masters:
 				masters.append(self.__table.get_note(master_id))
@@ -444,7 +444,7 @@ class BondsOperator[N: "BaseNote"]:
 			return False
 
 		return bool(self.__cache[slave_id].masters)
-	
+
 	def is_note_has_slaves(self, master_id: int) -> bool:
 		"""
 		Проверяет, есть ли у записи привязанные записи.

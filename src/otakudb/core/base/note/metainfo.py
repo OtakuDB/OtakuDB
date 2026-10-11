@@ -25,7 +25,7 @@ class Metainfo[N: "BaseNote"]:
 		"""Последовательность имён доступных полей метаданных."""
 
 		return tuple(self.__data.keys())
-	
+
 	@property
 	def has_values(self) -> bool:
 		"""Condition: is at least one field filled."""
@@ -72,12 +72,12 @@ class Metainfo[N: "BaseNote"]:
 			value_sequence = list(value)
 
 		parsed_value_sequence: tuple[float | int | str, ...] = ()
-		
+
 		for index in range(len(value_sequence)):
 			parsed_value_sequence += self.__parse_value(value_sequence[index], separator = None)
-		
+
 		return parsed_value_sequence
-		
+
 	def __validate_value(self, field_name: str, value: tuple[SUPPORTED_TYPES, ...]):
 		"""
 		Validate value with field parameters. If field is free checking will be skipped.
@@ -166,7 +166,7 @@ class Metainfo[N: "BaseNote"]:
 		"""
 
 		if field_name in self.__data:
-			
+
 			if self.is_free_field(field_name):
 				del self.__data[field_name]
 			else:
@@ -216,7 +216,7 @@ class Metainfo[N: "BaseNote"]:
 		if value is None:
 			self.clear_field(field_name)
 			return
-		
+
 		parsed_value: tuple[float | int | str, ...] = self.__parse_value(value)
 		self.__validate_value(field_name, parsed_value)
 		self.__set_value(field_name, parsed_value)

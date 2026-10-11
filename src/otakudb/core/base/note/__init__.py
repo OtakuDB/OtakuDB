@@ -29,7 +29,7 @@ class BaseNote[T: "BaseTable", C: "BaseModel"]:
 		"""Оператор вложений."""
 
 		return self._attachments
-	
+
 	@property
 	def bonds(self) -> "NoteBonds[Self]":
 		"""Связи записи."""
@@ -59,7 +59,7 @@ class BaseNote[T: "BaseTable", C: "BaseModel"]:
 		"""Название записи."""
 
 		return self._data.get("name")
-	
+
 	@property
 	def searchable_strings(self) -> tuple[str, ...]:
 		"""Список строк, которые индексируются для поисковых запросов."""
@@ -98,7 +98,7 @@ class BaseNote[T: "BaseTable", C: "BaseModel"]:
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ОБРАБОТЧИКИ CALLBACK-ВЫЗОВОВ <<<<< #
-	#==========================================================================================#	
+	#==========================================================================================#
 
 	def _callback_slave_note_saved(self, slave_note: Self):
 		"""
@@ -117,7 +117,7 @@ class BaseNote[T: "BaseTable", C: "BaseModel"]:
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ТРИГГЕРНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#	
+	#==========================================================================================#
 
 	def _pre_dict_formatter(self):
 		"""Метод, выполняющийся перед конвертированием записи в словарь (фактически, перед её сохранением)."""
@@ -151,7 +151,7 @@ class BaseNote[T: "BaseTable", C: "BaseModel"]:
 
 	#==========================================================================================#
 	# >>>>> OVERRIDABLE METHODS <<<<< #
-	#==========================================================================================#	
+	#==========================================================================================#
 
 	def _export_empty_note(self) -> dict[str, Any]:
 		"""
@@ -210,11 +210,11 @@ class BaseNote[T: "BaseTable", C: "BaseModel"]:
 			"metainfo": {},
 			"attachments": dict.fromkeys(self._table.manifest.attachments.slots_names, None),
 		}
-		
+
 		self._load_data()
 		self.sort()
 		self._parse_containers()
-		
+
 		self._post_init()
 
 	def delete(self):
@@ -277,12 +277,12 @@ class BaseNote[T: "BaseTable", C: "BaseModel"]:
 	def sort(self):
 		"""
 		Сортирует ключи записи в алфавитном порядке.
-		
+
 		Важные ключи _name_, _matainfo_, _attachments_ помещаются в начало.
 		"""
 
 		important_keys: tuple[str, ...] = ("name", "matainfo", "attachments")
-			
+
 		def note_keys_sorter(item: tuple[str, Any]) -> tuple[Literal[0, 1], int, str]:
 			"""
 			Генератор кортежей сортировки словарного ключей записи.

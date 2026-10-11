@@ -33,7 +33,7 @@ class BaseCLI[H: "BaseHandlersCollection"](ABC):
 		"""Build models and register handlers."""
 
 		pass
-		
+
 	@abstractmethod
 	def _export_handlers(self) -> type[H]:
 		"""
@@ -88,4 +88,4 @@ class BaseCLI[H: "BaseHandlersCollection"](ABC):
 		group: ModelsGroup = ModelsGroup(name, supergroup)
 		self._groups[name] = group
 
-		return group	
+		return group

@@ -33,7 +33,7 @@ class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]
 
 		is_open: bool = entity.check_flag("-o")
 		note = self.table.create_note()
-		
+
 		if is_open:
 			self.navigator.open_note(note.id)
 		else:

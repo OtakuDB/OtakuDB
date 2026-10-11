@@ -39,5 +39,5 @@ class TableTypeNotFoundError(Exception):
 		:param table_type: Тип таблицы.
 		:type table_type: str
 		"""
-		
+
 		super().__init__(table_type)

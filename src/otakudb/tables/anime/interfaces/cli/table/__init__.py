@@ -12,7 +12,7 @@ class TableCLI(BaseCLI[TableHandlers]):
 		"""Build models and register handlers."""
 
 		pass
-		
+
 	@override
 	def _export_handlers(self) -> type[TableHandlers]:
 		"""
