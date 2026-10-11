@@ -68,7 +68,7 @@ class SessionData:
 	def save(self):
 		"""Сохраняет данные в файл данных сессии."""
 
-		data: dict = self.__adapter.dump_python(self.__data)
+		data: dict = self.__adapter.dump_python(self.__data, mode = "json")
 		json.write(self.__file, data)
 
 	def set_global_interface_options(self, interface: Interfaces, options: dict[str, Any]):

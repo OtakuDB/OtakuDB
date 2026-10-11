@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import TypeAdapter
 
 from ....enums import Interfaces
-from .models import GlobalInterfaceOptionsModel
+from .models import CommonInterfaceOptionsModel
 
 if TYPE_CHECKING:
 	from .....core.session.data import SessionData
@@ -33,7 +33,7 @@ class CommonInterfaceOptions:
 
 	def __init__(self, data: "SessionData"):
 		"""
-		Global interface options.
+		Common interface options.
 
 		:param data: SessionData
 		:type data: SessionData
@@ -41,12 +41,12 @@ class CommonInterfaceOptions:
 
 		self.__session_data: SessionData = data
 
-		self.__adapter: TypeAdapter[GlobalInterfaceOptionsModel] = TypeAdapter(GlobalInterfaceOptionsModel)
+		self.__adapter: TypeAdapter[CommonInterfaceOptionsModel] = TypeAdapter(CommonInterfaceOptionsModel)
 		options: dict[str, Any] = self.__session_data.get_global_interface_options(Interfaces.CLI)
-		self.__options: GlobalInterfaceOptionsModel = self.__adapter.validate_python(options)
+		self.__options: CommonInterfaceOptionsModel = self.__adapter.validate_python(options)
 
 	def save(self):
 		"""Save interface options."""
 
-		options: dict = self.__adapter.dump_python(self.__options)
+		options: dict = self.__adapter.dump_python(self.__options, mode = "json")
 		self.__session_data.set_global_interface_options(Interfaces.CLI, options)

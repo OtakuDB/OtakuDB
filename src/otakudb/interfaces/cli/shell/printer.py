@@ -3,6 +3,7 @@ from typing import Literal, NoReturn, overload
 
 from dublib.cli.messages.generator import MessagesTypes, generate_message
 from dublib.cli.text_styler import get_styled_text_from_html
+from dublib.functions.system import clear
 
 class Printer:
 	"""Output operator."""
@@ -10,6 +11,11 @@ class Printer:
 	#==========================================================================================#
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
+
+	def clear(self):
+		"""Clear terminal output."""
+
+		clear()
 
 	def emit(self, text: str, message_type: MessagesTypes | None = None, origin: str | None = None, end_line: bool = True, flush: bool = False, parse_html: bool = True):
 		"""
@@ -34,7 +40,7 @@ class Printer:
 		print(styled_text, end = "\n" if end_line else "", flush = flush)
 
 	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ ВЫВОДА БАЗОВЫХ ТИПОВ СООБЩЕНИЙ <<<<< #
+	# >>>>> PUBLIC OUTPUT TEMPLATES <<<<< #
 	#==========================================================================================#
 
 	@overload

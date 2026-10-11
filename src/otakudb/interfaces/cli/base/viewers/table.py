@@ -195,6 +195,8 @@ class BaseTableViewer[T: "BaseTable", N: "BaseNote"]:
 		:type sort_by: str
 		"""
 
+		if self._interface.options.common.autoclear: self.printer.clear()
+
 		notes: tuple[N, ...] = self._table.notes
 
 		if not notes:
