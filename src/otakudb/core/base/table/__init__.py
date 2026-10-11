@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 	from ..manifest import BaseManifest
 	from ..note import BaseNote
 
-class BaseTable[N: "BaseNote", M: "BaseManifest"]:
+class BaseTable[N: "BaseNote", M: "BaseManifest" = "BaseManifest"]:
 	"""Базовая таблица."""
 
 	#==========================================================================================#

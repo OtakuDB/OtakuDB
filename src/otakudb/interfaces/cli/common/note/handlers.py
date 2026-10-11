@@ -5,11 +5,10 @@ from ...base.handlers import BaseHandlersCollection
 if TYPE_CHECKING:
 	from dublib.cli.terminalyzer.parser.entities import CommandEntity
 
-	from .....core.base.manifest import BaseManifest as BaseManifest
 	from .....core.base.note import BaseNote as BaseNote
 	from .....core.base.table import BaseTable as BaseTable
 
-class CommonNoteHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseManifest]", "BaseNote"]):
+class CommonNoteHandlers(BaseHandlersCollection["BaseTable", "BaseNote"]):
 	"""Common note commands handlers."""
 
 	def close(self, entity: "CommandEntity"):  # noqa: ARG002

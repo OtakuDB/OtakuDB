@@ -28,7 +28,7 @@ class BaseTableCLI[T: "BaseTable", H: "BaseHandlersCollection"](BaseCLI[H], ABC)
 	def _build_models(self):
 		"""Build models and register handlers."""
 
-		table_type: str = self.handlers.table.manifest.table_type
+		table_type: str = self.table.manifest.table_type
 		group: ModelsGroup = self._create_models_group(f"Table ({table_type})")
 		self._build_table_models(group)
 
