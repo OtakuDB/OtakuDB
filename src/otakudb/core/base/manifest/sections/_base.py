@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-	from .. import Manifest
+	from .. import BaseManifest
 
 class BaseSection(ABC):
 	"""Базовая секция манифеста."""
@@ -42,7 +42,7 @@ class BaseSection(ABC):
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, manifest: "Manifest"):
+	def __init__(self, manifest: "BaseManifest"):
 		"""
 		Базовая секция манифеста.
 
@@ -50,7 +50,7 @@ class BaseSection(ABC):
 		:type manifest: Manifest
 		"""
 
-		self._manifest: "Manifest" = manifest
+		self._manifest: "BaseManifest" = manifest
 
 		self._post_init()
 

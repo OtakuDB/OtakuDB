@@ -4,18 +4,16 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel
-
 from ... import exceptions
 from .connector import Connector
 
 if TYPE_CHECKING:
 	from ...session.driver import Driver
 	from ...session.table_descriptor import TableDescriptor
-	from ..manifest import Manifest
+	from ..manifest import BaseManifest
 	from ..note import BaseNote
 
-class BaseTable[N: "BaseNote", C: "BaseModel"]:
+class BaseTable[N: "BaseNote", M: "BaseManifest"]:
 	"""Базовая таблица."""
 
 	#==========================================================================================#
@@ -35,8 +33,8 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 		return self._descriptor.full_path
 
 	@property
-	def manifest(self) -> "Manifest[C]":
-		"""Манифест таблицы."""
+	def manifest(self) -> M:
+		"""Manifest."""
 
 		return self._descriptor.manifest
 
@@ -230,7 +228,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, driver: "Driver", descriptor: "TableDescriptor[N, C]"):
+	def __init__(self, driver: "Driver", descriptor: "TableDescriptor[N, M]"):
 		"""
 		Базовая таблица.
 
@@ -241,7 +239,7 @@ class BaseTable[N: "BaseNote", C: "BaseModel"]:
 		"""
 
 		self._driver: "Driver" = driver
-		self._descriptor: "TableDescriptor[N, C]" = descriptor
+		self._descriptor: "TableDescriptor[N, M]" = descriptor
 
 		self._notes: dict[int, N] = {}
 		self._note_class: type[N] = self._get_note_class()

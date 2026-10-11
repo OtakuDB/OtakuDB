@@ -2,7 +2,10 @@ import importlib
 import pkgutil
 import shutil
 from pathlib import Path
+from types import ModuleType
 from typing import TYPE_CHECKING
+
+from dublib.functions.filesystem import json
 
 from ... import tables
 from .. import exceptions
@@ -10,7 +13,7 @@ from .box import Box, RootBox
 from .table_descriptor import TableDescriptor
 
 if TYPE_CHECKING:
-	from ..base.manifest.generator import ManifestGenerator
+	from ..base.manifest import BaseManifest
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -42,6 +45,29 @@ class Driver:
 		return tuple(info.name for info in pkgutil.iter_modules(tables.__path__))
 
 	#==========================================================================================#
+	# >>>>> PRIVATE METHODS <<<<< #
+	#==========================================================================================#
+
+	def __initialize_manifest(self, directory: Path, table_type: str) -> "BaseManifest":
+		"""
+		Initialize manifest.
+
+		:param directory: Full path to table directory.
+		:type directory: Path
+		:param table_type: Table type.
+		:type table_type: str
+		:return: Manifest.
+		:rtype: BaseManifest
+		"""
+
+		module_path: str = f"otakudb.tables.{table_type}.manifest"
+
+		module: ModuleType = importlib.import_module(module_path)
+		Manifest: type[BaseManifest] = module.Manifest
+
+		return Manifest(directory)
+
+	#==========================================================================================#
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
@@ -59,7 +85,7 @@ class Driver:
 		self.__root_box: RootBox = RootBox(self)
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С КОНТЕЙНЕРАМИ <<<<< #
+	# >>>>> PUBLIC BOX INTERACTION METHODS <<<<< #
 	#==========================================================================================#
 
 	def create_box(self, parent_box: Box | RootBox, name: str) -> Box:
@@ -216,7 +242,7 @@ class Driver:
 		return full_path.exists()
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С ТАБЛИЦАМИ <<<<< #
+	# >>>>> PUBLIC TABLES INTERACTIONS METHODS <<<<< #
 	#==========================================================================================#
 
 	def create_table(self, box: Box | RootBox, name: str, table_type: str) -> TableDescriptor:
@@ -246,10 +272,8 @@ class Driver:
 
 		table_full_path.mkdir()
 
-		manifest_generator_module = importlib.import_module(f"otakudb.tables.{table_type}.manifest")
-		manifest_generator: "ManifestGenerator" = manifest_generator_module.Generator(table_full_path, table_type)
-		manifest = manifest_generator.generate()
-
+		manifest = self.__initialize_manifest(table_full_path, table_type)
+		manifest.save()
 		descriptor = TableDescriptor(self, box, name, manifest)
 		box.add_item(descriptor)
 
@@ -268,3 +292,24 @@ class Driver:
 
 		descriptor = box.pop_item(name)
 		shutil.rmtree(descriptor.full_path)
+
+	def load_manifest(self, directory: Path) -> "BaseManifest":
+		"""
+		Load manifest.
+
+		:param directory: Full path to table directory.
+		:type directory: Path
+		:param table_type: Table type.
+		:type table_type: str
+		:return: Manifest.
+		:rtype: BaseManifest
+		"""
+
+		manifest_path: Path = directory / "manifest.json"
+		manifest_data: dict = json.read(manifest_path)
+		table_type: str = manifest_data["type"]
+
+		manifest = self.__initialize_manifest(directory, table_type)
+		manifest.parse(manifest_data)
+
+		return manifest

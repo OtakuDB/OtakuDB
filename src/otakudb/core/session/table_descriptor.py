@@ -1,18 +1,16 @@
 import importlib
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-from ...core.base.manifest import Manifest
+from ...core.base.manifest import BaseManifest
 
 if TYPE_CHECKING:
-	from pydantic import BaseModel
-
 	from ..base.note import BaseNote
 	from ..base.table import BaseTable
 	from .box import Box, RootBox
 	from .driver import Driver
 
-class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
+class TableDescriptor[N: "BaseNote", M: "BaseManifest"]:
 	"""Дескриптор таблицы."""
 
 	#==========================================================================================#
@@ -26,7 +24,7 @@ class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
 		return self.__full_path
 
 	@property
-	def manifest(self) -> Manifest[C]:
+	def manifest(self) -> M:
 		"""Манифест таблицы."""
 
 		return self.__manifest
@@ -44,7 +42,7 @@ class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
 		return self.__virtual_path
 
 	@property
-	def table(self) -> "BaseTable[N, C]":
+	def table(self) -> "BaseTable[N, M]":
 		"""Таблица."""
 
 		return self.__table
@@ -64,7 +62,7 @@ class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, driver: "Driver", box: "Box | RootBox", name: str, manifest: Manifest | None = None):
+	def __init__(self, driver: "Driver", box: "Box | RootBox", name: str, manifest: M | None = None):
 		"""
 		Дескриптор таблицы.
 
@@ -75,7 +73,7 @@ class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
 		:param name: Имя таблицы.
 		:type name: str
 		:param manifest: Манифест таблицы. При отсутствии загружается автоматически.
-		:type manifest: Manifest | None
+		:type manifest: BaseManifest | None
 		:raises FileNotFoundError: Директория таблицы не найдена.
 		"""
 
@@ -89,7 +87,7 @@ class TableDescriptor[N: "BaseNote", C: "BaseModel"]:
 		if not self.__full_path.exists():
 			raise FileNotFoundError(self.__full_path)
 
-		self.__manifest = manifest or Manifest(self.__full_path).load()
+		self.__manifest: M = manifest or cast(M, self.__driver.load_manifest(self.__full_path))
 
 		self.__ititialize_table()
 

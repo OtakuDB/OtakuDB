@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 	from ..manifest import CustomSettingsModel as CustomSettingsModel
 	from ..table import Table as Table
 
-class Note(BaseNote["Table", "CustomSettingsModel"]):
+class Note(BaseNote["Table"]):
 	"""Запись о просмотре аниме."""
 
 	#==========================================================================================#
@@ -230,7 +230,7 @@ class Note(BaseNote["Table", "CustomSettingsModel"]):
 			self.save()
 			return
 
-		if estimation not in range(1, self.table.manifest.custom["max_estimation"] + 1): raise ValueError("Estimation not in correct range.")
+		if estimation not in range(1, self.table.manifest.custom.max_estimation + 1): raise ValueError("Estimation not in correct range.")
 
 		self._data["estimation"] = estimation
 		self.save()

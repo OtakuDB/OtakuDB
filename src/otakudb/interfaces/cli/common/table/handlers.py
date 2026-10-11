@@ -5,14 +5,13 @@ import questionary
 from ...base.handlers import BaseHandlersCollection
 
 if TYPE_CHECKING:
-	from pydantic import BaseModel as BaseModel
-
 	from dublib.cli.terminalyzer.parser.entities import CommandEntity
 
+	from .....core.base.manifest import BaseManifest as BaseManifest
 	from .....core.base.note import BaseNote as BaseNote
 	from .....core.base.table import BaseTable as BaseTable
 
-class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]", "BaseNote"]):
+class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseManifest]", "BaseNote"]):
 	"""Common table commands handlers."""
 
 	def chid(self, entity: "CommandEntity"):

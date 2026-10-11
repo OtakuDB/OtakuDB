@@ -11,13 +11,11 @@ from .metainfo import Metainfo
 if TYPE_CHECKING:
 	from pathlib import Path
 
-	from pydantic import BaseModel
-
 	from ...session.driver import Driver
 	from ..table import BaseTable
 	from ..table.connector.bonds import NoteBonds
 
-class BaseNote[T: "BaseTable", C: "BaseModel"]:
+class BaseNote[T: "BaseTable"]:
 	"""Базовая запись."""
 
 	#==========================================================================================#
@@ -67,7 +65,7 @@ class BaseNote[T: "BaseTable", C: "BaseModel"]:
 		return self._export_searchable_strings()
 
 	@property
-	def table(self) -> "BaseTable":
+	def table(self) -> T:
 		"""Таблица, к которой относится запись."""
 
 		return self._table

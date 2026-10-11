@@ -1,10 +1,10 @@
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Self
 
 from pydantic import BaseModel, TypeAdapter
 
 from dublib.functions.filesystem import json
 
-from ... import exceptions
 from .sections.attachments import AttachmentsSection
 from .sections.common import CommonSection
 from .sections.connections import ConnectionsSection
@@ -14,8 +14,8 @@ from .sections.metainfo_rules import MetainfoRules
 if TYPE_CHECKING:
 	from pathlib import Path
 
-class Manifest[C: "BaseModel"]:
-	"""Манифест таблицы."""
+class BaseManifest[C: "BaseModel"](ABC):
+	"""Base manifest."""
 
 	#==========================================================================================#
 	# >>>>> PROPERTIES <<<<< #
@@ -23,22 +23,21 @@ class Manifest[C: "BaseModel"]:
 
 	@property
 	def directory(self) -> "Path":
-		"""Путь к директории таблицы."""
+		"""Full path to table directory."""
 
-		return self.__directory
+		return self._directory
+
+	@property
+	def is_exists(self) -> bool:
+		"""Condition: is manifest file exists."""
+
+		return self._manifest_path.exists()
 
 	@property
 	def table_type(self) -> str:
-		"""
-		Тип таблицы.
+		"""Table type."""
 
-		:raises ManifestError: Тип таблицы не определён.
-		"""
-
-		if not self.__table_type:
-			raise exceptions.table.ManifestError("Table type undefined.")
-
-		return self.__table_type
+		return self._table_type
 
 	#==========================================================================================#
 	# >>>>> SECTIONS <<<<< #
@@ -46,80 +45,112 @@ class Manifest[C: "BaseModel"]:
 
 	@property
 	def attachments(self) -> AttachmentsSection:
-		"""Параметры вложений"""
+		"""Attachments options."""
 
-		return self.__attachments
+		return self._attachments
 
 	@property
 	def common(self) -> CommonSection:
-		"""Общие опции таблиц."""
+		"""Common options."""
 
-		return self.__common
+		return self._common
 
 	@property
 	def connections(self) -> ConnectionsSection:
-		"""Параметры соединений."""
+		"""Connections options."""
 
-		return self.__connections
+		return self._connections
 
 	@property
 	def custom(self) -> C:
-		"""Custom table settings."""
+		"""Custom settings."""
 
-		if self.__custom is None:
-			raise exceptions.table.ManifestError("Custom settings required, but untyped.")
-
-		return self.__custom
+		return self._custom
 
 	@property
 	def metainfo_rules(self) -> MetainfoRules:
-		"""Правила метаданных."""
+		"""Metainfo rules."""
 
-		return self.__metainfo_rules
+		return self._metainfo_rules
 
 	@property
 	def interfaces_options(self) -> InterfacesOptions:
-		"""Опции интерфейсов."""
+		"""Interfaces options."""
 
-		return self.__interfaces_options
+		return self._interfaces_options
+
+	#==========================================================================================#
+	# >>>>> PROTECTED METHODS <<<<< #
+	#==========================================================================================#
+
+	def _get_table_type(self) -> str:
+		"""
+		Get table type.
+
+		:return: Table type.
+		:rtype: str
+		"""
+
+		current_module: str = self.__class__.__module__
+		parts: list[str] = current_module.split(".")
+
+		return parts[-2]
+
+	#==========================================================================================#
+	# >>>>> OVERRIDABLE METHODS <<<<< #
+	#==========================================================================================#
+
+	@abstractmethod
+	def _edit(self):
+		"""Edit base manifest to generate table manifest."""
+
+		pass
+
+	@abstractmethod
+	def _export_custom_settings_model(self) -> type[C]:
+		"""
+		Export custom settings typing [pydantic](https://github.com/pydantic/PYDANTIC) model.
+
+		:return: Custom settings typing model.
+		:rtype: type[BaseModel]
+		"""
+
+		pass
 
 	#==========================================================================================#
 	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, directory: "Path", table_type: str | None = None, custom_model: type[C] | None = None):
+	def __init__(self, directory: "Path"):
 		"""
-		Манифест таблицы.
+		Base manifest.
 
-		:param directory: Полный путь к директории таблицы.
+		:param directory: Full path to table directory.
 		:type directory: PathLike
-		:param table_type: Тип таблицы.
-		:type table_type: str | None
-		:param custom_model: Custom table settings [pydantic](https://github.com/pydantic/PYDANTIC) typing model.
-		:type custom_model: type[BaseModel] | None
 		"""
 
-		self.__directory: "Path" = directory
+		self._directory: Path = directory
 
-		self.__manifest_path: "Path" = self.__directory / "manifest.json"
-		self.__table_type: str | None = table_type
+		self._manifest_path: Path = self._directory / "manifest.json"
+		self._table_type: str = self._get_table_type()
 
-		self.__custom_model: type[C] | None = custom_model
-		self.__custom: C | None = None
+		self._attachments = AttachmentsSection(self)
+		self._common = CommonSection(self)
+		self._connections = ConnectionsSection(self)
+		self._metainfo_rules = MetainfoRules(self)
+		self._interfaces_options = InterfacesOptions(self)
 
-		self.__attachments = AttachmentsSection(self)
-		self.__common = CommonSection(self)
-		self.__connections = ConnectionsSection(self)
-		self.__metainfo_rules = MetainfoRules(self)
-		self.__interfaces_options = InterfacesOptions(self)
+		self._custom_settings_model: type[C] = self._export_custom_settings_model()
+		self._custom_adapter: TypeAdapter[C] = TypeAdapter(self._custom_settings_model)
+		self._custom: C = self._custom_settings_model()
 
 	def change_directory(self, directory: "Path"):
 		"""
-		Задаёт полный путь к директории таблицы.
+		Set full path to table directory.
 
-		:param directory: Полный путь к директории таблицы.
+		:param directory: Full path to table directory.
 		:type directory: Path
-		:raises FileNotFoundError: Директория таблицы не найдена.
+		:raises FileNotFoundError: Directory not found.
 		"""
 
 		if not directory.exists():
@@ -129,46 +160,53 @@ class Manifest[C: "BaseModel"]:
 
 	def load(self) -> Self:
 		"""
-		Читает и парсит манифест.
+		Load manifest from file.
 
-		:return: Манифест.
+		:return: Manifest..
 		:rtype: Manifest
-		:raises FileNotFoundError: Выбрасывается при отсутствии файла манифеста.
+		:raises FileNotFoundError: Manifest file not found.
 		"""
 
-		data: dict = json.read(self.__manifest_path)
-		self.__table_type = data["type"]
-
-		self.__attachments.parse(data.get("attachments", {}))
-		self.__common.parse(data.get("common", {}))
-		self.__connections.parse(data.get("connections", {}))
-		self.__metainfo_rules.parse(data.get("metainfo_rules", {}))
-		self.__interfaces_options.parse(data.get("interfaces_options", {}))
-
-		if self.__custom_model:
-			self.__custom = TypeAdapter(self.__custom_model).validate_python(data.get("custom", {}))
+		data: dict = json.read(self._manifest_path)
+		self.parse(data)
 
 		return self
 
-	def save(self):
-		"""Сохраняет манифест."""
+	def parse(self, data: dict):
+		"""
+		Parse manifest data.
 
-		json.write(self.__manifest_path, self.to_dict(), atomic = True)
+		:param data: Manifest data dictionary.
+		:type data: dict
+		"""
+
+		self._attachments.parse(data.get("attachments", {}))
+		self._common.parse(data.get("common", {}))
+		self._connections.parse(data.get("connections", {}))
+		self._metainfo_rules.parse(data.get("metainfo_rules", {}))
+		self._interfaces_options.parse(data.get("interfaces_options", {}))
+
+		self._custom = self._custom_adapter.validate_python(data.get("custom", {}))
+
+	def save(self):
+		"""Save manifest."""
+
+		json.write(self._manifest_path, self.to_dict(), atomic = True)
 
 	def to_dict(self) -> dict:
 		"""
-		Возвращает словарное представление объекта.
+		Generate dictionary representation of the instance.
 
-		:return: Словарное представление объекта.
+		:return: Dictionary representation of the instance.
 		:rtype: dict
 		"""
 
 		return {
-			"type": self.__table_type,
-			"attachments": self.__attachments.to_dict(),
-			"common": self.__common.to_dict(),
-			"connections": self.__connections.to_dict(),
-			"custom": self.__custom.model_dump() if self.__custom else {},
-			"metainfo_rules": self.__metainfo_rules.to_dict(),
-			"interfaces_options": self.__interfaces_options.to_dict(),
+			"type": self._table_type,
+			"attachments": self._attachments.to_dict(),
+			"common": self._common.to_dict(),
+			"connections": self._connections.to_dict(),
+			"custom": self._custom_adapter.dump_python(self._custom, mode = "json"),
+			"metainfo_rules": self._metainfo_rules.to_dict(),
+			"interfaces_options": self._interfaces_options.to_dict(),
 		}

@@ -1,36 +1,29 @@
+from typing import override
+
 from pydantic import BaseModel
 
-from otakudb.core.base.manifest.generator import Manifest, ManifestGenerator
+from otakudb.core.base.manifest import BaseManifest
 
 class CustomSettingsModel(BaseModel):
 	"""Custom settings model."""
 
 	max_estimation: int = 10
 
-class Generator(ManifestGenerator[CustomSettingsModel]):
-	"""Генератор манифеста."""
+class Manifest(BaseManifest[CustomSettingsModel]):
+	"""Manifest."""
 
-	def _edit_manifest(self, manifest: Manifest) -> Manifest:
-		"""
-		Переопределите данный метод для редактирования стандартного манифеста.
+	@override
+	def _edit(self):
+		"""Edit base manifest to generate table manifest."""
 
-		После завершения редактирования сохранение происходит автоматически.
-
-		:param manifest: Редактируемый манифест.
-		:type manifest: Manifest
-		:return: Отредактированный манифест.
-		:rtype: Manifest
-		"""
-
-		manifest.metainfo_rules.create_field_parameters(
+		self.metainfo_rules.create_field_parameters(
 			field = "base",
 			types = str,
 			values = ("game", "manga", "novel", "original", "ranobe"),
 			description = "Base for anime.",
 		)
 
-		return manifest
-
+	@override
 	def _export_custom_settings_model(self) -> type[CustomSettingsModel]:
 		"""
 		Export custom settings typing [pydantic](https://github.com/pydantic/PYDANTIC) model.
