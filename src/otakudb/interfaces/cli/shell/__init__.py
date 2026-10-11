@@ -272,7 +272,7 @@ class Interface:
 
 		try:
 			module: ModuleType = importlib.import_module(module_path)
-			NoteViewer: type[viewers.BaseNoteViewer] = module.TableViewer
+			NoteViewer: type[viewers.BaseNoteViewer] = module.NoteViewer
 
 		except (ImportError, AttributeError):
 			return viewers.BaseNoteViewer(self, self.__session.navigator.current_note)
@@ -280,7 +280,7 @@ class Interface:
 		if not issubclass(NoteViewer, viewers.BaseNoteViewer):
 			raise TypeError("Table viewer has incorrect type.")
 
-		return NoteViewer(self, self.__session.navigator.current_table.table)
+		return NoteViewer(self, self.__session.navigator.current_note)
 
 	def run(self):
 		"""Run CLI processing."""

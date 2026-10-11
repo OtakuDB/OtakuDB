@@ -141,8 +141,8 @@ class NoteBonds[N: "BaseNote"]:
 		self.__operator: "BondsOperator" = operator
 		self.__note_id: int = note_id
 
-		self.__bonds: dict[str, Bond] = self.__parse_data(data)
 		self.__table = operator.table
+		self.__bonds: dict[str, Bond] = self.__parse_data(data)
 
 	def bind(self, bond_name: str, slave_id: int):
 		"""

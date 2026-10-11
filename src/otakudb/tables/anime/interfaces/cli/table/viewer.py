@@ -13,10 +13,6 @@ if TYPE_CHECKING:
 class TableViewer(BaseTableViewer["Table", "Note"]):
 	"""Table viewer."""
 
-	#==========================================================================================#
-	# >>>>> OVERRIDABLE METHODS <<<<< #
-	#==========================================================================================#
-
 	def _fill_row(self, row_data: dict[str, ALLOWED_TYPES], note: "Note"):
 		"""
 		Fill table row by data dictionary editing.

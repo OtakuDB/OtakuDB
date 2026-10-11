@@ -24,7 +24,7 @@ class NoteCLI(BaseNoteCLI["Table", "Note", NoteHandlers]):
 		position = model.create_position("ALT_NAME", "Alternative name.", important = True)
 		position.set_argument()
 		model.base.add_flag("-r", description = "Remove another name if exists.")
-		#
+		model.register_handler(self.handlers.altname)
 
 		model = group.create_model("base", "Set anime base.")
 		bases: str = ", ".join(element.value for element in Bases)
@@ -36,10 +36,10 @@ class NoteCLI(BaseNoteCLI["Table", "Note", NoteHandlers]):
 		position = model.create_position("INDEX", "Part index.", important = True)
 		position.set_argument(ValidableTypes.Integer)
 		model.base.add_flag("-y", description = "Automatically confirms deletion.")
-		# group.create_modelsList.append(Com)
+		model.register_handler(self.handlers.delpart)
 
 		model = group.create_model("drop", "Switch drop status")
-		# group.create_modelsList.append(Com)
+		model.register_handler(self.handlers.drop)
 
 		model = group.create_model("editpart", "Edit part data.")
 		position = model.create_position("INDEX", "Part index.", important = True)
@@ -53,20 +53,20 @@ class NoteCLI(BaseNoteCLI["Table", "Note", NoteHandlers]):
 		model.base.add_key("--name", description = "Name of part. Put * to clear.")
 		model.base.add_key("--number", value_type = ValidableTypes.Number, description = "Number of part. Not index! Put 0 to clear.")
 		model.base.add_key("--series", value_type = ValidableTypes.Integer, description = "Series count. Put 0 to clear.")
-		# group.create_modelsList.append(Com)
+		model.register_handler(self.handlers.editpart)
 
 		model = group.create_model("estimate", "Set estimation.")
 		MaxEstimation = self.note.table.manifest.custom.max_estimation
 		position = model.create_position("ESTIMATION", f"Estimation from 1 to {MaxEstimation}. Put 0 to clear.", important = True)
 		position.set_argument(ValidableTypes.Integer)
-		# group.create_modelsList.append(Com)
+		model.register_handler(self.handlers.estimate)
 
 		model = group.create_model("mark", "Set mark of viewing progress to part.")
 		position = model.create_position("INDEX", "Part index.", important = True)
 		position.set_argument(ValidableTypes.Integer)
 		position = model.create_position("MARK", "Last watched episode number.", important = True)
 		position.set_argument(ValidableTypes.Integer)
-		# group.create_modelsList.append(Com)
+		model.register_handler(self.handlers.mark)
 
 		model = group.create_model("move", "Move part.")
 		position = model.create_position("INDEX", "Part index.", important = True)
@@ -76,22 +76,22 @@ class NoteCLI(BaseNoteCLI["Table", "Note", NoteHandlers]):
 		position.add_key("--up", value_type = ValidableTypes.Integer, description = "Up part several times (index decrease).")
 		position.add_flag("-down", description = "Down part (index increase).")
 		position.add_key("--down", value_type = ValidableTypes.Integer, description = "Down part several times (index increase).")
-		# group.create_modelsList.append(Com)
+		model.register_handler(self.handlers.move)
 
 		model = group.create_model("newpart", "Create new part.")
 		types: str = ", ".join(part_type.value for part_type in PartsTypes)
 		position = model.create_position("TYPE", f"Type of part: {types}.", important = True)
 		position.set_argument(ValidableTypes.Alpha)
-		# group.create_modelsList.append(Com)
+		model.register_handler(self.handlers.newpart)
 
 		model = group.create_model("ptypes", "Prints list of parts types.")
-		# group.create_modelsList.append(Com)
+		model.register_handler(self.handlers.ptypes)
 
 		model = group.create_model("tag", "Manage tags.")
 		position = model.create_position("TAG", "Tag name.", important = True)
 		position.set_argument()
 		model.base.add_flag("-r", description = "Remove tag.")
-		# group.create_modelsList.append(Com)
+		model.register_handler(self.handlers.tag)
 
 	@override
 	def _export_handlers(self) -> type[NoteHandlers]:

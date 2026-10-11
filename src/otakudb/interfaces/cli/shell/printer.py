@@ -75,15 +75,18 @@ class Printer:
 
 		self.emit(text, MessagesTypes.Debug, origin)
 
-	def error(self, text: str, origin: str | None = None):
+	def error(self, text: Exception | str, origin: str | None = None):
 		"""
 		Print error.
 
-		:param text: Message text.
-		:type text: str
+		:param text: Exception instance or message text.
+		:type text: Exception | str
 		:param origin: Message origin.
 		:type origin: str | None
 		"""
+
+		if isinstance(text, Exception):
+			text = str(text)
 
 		self.emit(text, MessagesTypes.Error, origin)
 
