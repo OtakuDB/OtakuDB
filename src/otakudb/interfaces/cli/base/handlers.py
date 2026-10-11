@@ -1,6 +1,8 @@
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, NoReturn, cast, overload
 
 from ....core import exceptions
+from ....core.base.note.metainfo import SUPPORTED_TYPES
 from ..enums import InteractionLevels
 from ..exceptions import ObjectUnavailableError
 
@@ -90,6 +92,19 @@ class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 		"""
 
 		raise exceptions.session.StorageUnmountedError()
+
+	def _set_metainfo(self, field: str, value: SUPPORTED_TYPES | Sequence[SUPPORTED_TYPES] | None):
+		"""
+		Set metainfo field value from command entity.
+
+		:param field: Field name.
+		:type field: str
+		:param value: Field value. String with only one character `*` will be transformed to `None`.
+		:type value: SUPPORTED_TYPES | Sequence[SUPPORTED_TYPES] | None
+		"""
+
+		value = self._unstar(value)
+		self.note.metainfo.set_field_value(field, value)
 
 	@overload
 	def _unstar(self, value: str) -> str | None: ...

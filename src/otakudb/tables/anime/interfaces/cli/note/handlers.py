@@ -28,6 +28,17 @@ class NoteHandlers(BaseHandlersCollection["Table", "Note"]):
 		if is_remove: self.note.remove_another_name(name)
 		else: self.note.add_another_name(name)
 
+	def base(self, entity: "CommandEntity"):
+		"""
+		Command handler: **base**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		base: str = entity.get_position_value("BASE", expected_type = str, important = True)
+		self._set_metainfo("base", base)
+
 	def delpart(self, entity: "CommandEntity"):
 		"""
 		Command handler: **delpart**.

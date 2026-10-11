@@ -30,7 +30,7 @@ class NoteCLI(BaseNoteCLI["Table", "Note", NoteHandlers]):
 		bases: str = ", ".join(element.value for element in Bases)
 		position = model.create_position("VALUE", description = f"One of values: {bases}. Put * to clear.", important = True)
 		position.set_argument(ValidableTypes.Alpha)
-		# group.create_modelsList.append(Com)
+		model.register_handler(self.handlers.base)
 
 		model = group.create_model("delpart", "Delete part.")
 		position = model.create_position("INDEX", "Part index.", important = True)
