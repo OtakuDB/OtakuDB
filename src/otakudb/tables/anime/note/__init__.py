@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 from otakudb.core.base.note import BaseNote
 
@@ -97,9 +97,10 @@ class Note(BaseNote["Table", "CustomSettingsModel"]):
 		return Parts
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ТРИГГЕРНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> OVERRIDABLE TRIGGERS METHODS <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _pre_dict_formatter(self):
 		"""Метод, выполняющийся перед конвертированием записи в словарь (фактически, перед её сохранением)."""
 
@@ -107,16 +108,18 @@ class Note(BaseNote["Table", "CustomSettingsModel"]):
 		try: self._data["parts"] = tuple(CurrentPart.to_dict() for CurrentPart in self.__Parts)
 		except AttributeError: pass
 
+	@override
 	def _post_init(self):
-		"""Метод, выполняющийся после инициализации объекта."""
+		"""Execute after instance initialization."""
 
 		self.__Parts: list[Part] = self.__ParseParts()
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> OVERRIDABLE METHODS <<<<< #
 	#==========================================================================================#
 
-	def _get_empty_note(self) -> dict[str, Any]:
+	@override
+	def _export_empty_note(self) -> dict[str, Any]:
 		"""
 		Возвращает пустую структуру записи.
 
@@ -135,7 +138,7 @@ class Note(BaseNote["Table", "CustomSettingsModel"]):
 		}
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> PUBLIC METHODS <<<<< #
 	#==========================================================================================#
 
 	def add_another_name(self, another_name: str):

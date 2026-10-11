@@ -175,15 +175,15 @@ class Interface:
 
 		try:
 			module: ModuleType = importlib.import_module(module_path)
-			TableCLI: type[BaseCLI] = module.TableCLI
+			ElementCLI: type[BaseCLI] = getattr(module, f"{interaction_level.name}CLI")
 
 		except (ImportError, AttributeError):
 			return ()
 
-		if not issubclass(TableCLI, BaseCLI):
-			raise TypeError("Table CLI has incorrect type.")
+		if not issubclass(ElementCLI, BaseCLI):
+			raise TypeError("Element CLI has incorrect type.")
 
-		return TableCLI(self).groups
+		return ElementCLI(self).groups
 
 	#==========================================================================================#
 	# >>>>> PUBLIC METHODS <<<<< #

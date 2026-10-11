@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, NoReturn, cast
+from typing import TYPE_CHECKING, NoReturn, cast, overload
 
 from ....core import exceptions
 from ..enums import InteractionLevels
@@ -15,6 +15,10 @@ if TYPE_CHECKING:
 
 class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 	"""Base handlers collection."""
+
+	#==========================================================================================#
+	# >>>>> PROPERTIES <<<<< #
+	#==========================================================================================#
 
 	@property
 	def driver(self) -> "Driver":
@@ -74,6 +78,10 @@ class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 
 		return cast(T, self.navigator.current_table.table)
 
+	#==========================================================================================#
+	# >>>>> PROTECTED METHODS <<<<< #
+	#==========================================================================================#
+
 	def _raise_unmounted_error(self) -> NoReturn:
 		"""
 		Raise storage unmounted error.
@@ -82,6 +90,11 @@ class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 		"""
 
 		raise exceptions.session.StorageUnmountedError()
+
+	@overload
+	def _unstar(self, value: str) -> str | None: ...
+	@overload
+	def _unstar[V](self, value: V) -> V: ...
 
 	def _unstar[V](self, value: V) -> V | None:
 		"""
@@ -97,6 +110,10 @@ class BaseHandlersCollection[T: "BaseTable", N: "BaseNote"]:
 			return None
 
 		return value
+
+	#==========================================================================================#
+	# >>>>> PUBLIC METHODS <<<<< #
+	#==========================================================================================#
 
 	def __init__(self, interface: "Interface"):
 		"""

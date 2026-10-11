@@ -116,7 +116,7 @@ class BaseNote[T: "BaseTable", C: "BaseModel"]:
 		pass
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ ТРИГГЕРНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> OVERRIDABLE TRIGGERS METHODS <<<<< #
 	#==========================================================================================#
 
 	def _pre_dict_formatter(self):
@@ -125,7 +125,7 @@ class BaseNote[T: "BaseTable", C: "BaseModel"]:
 		pass
 
 	def _post_init(self):
-		"""Метод, выполняющийся после инициализации объекта."""
+		"""Execute after instance initialization."""
 
 		pass
 

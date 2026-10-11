@@ -10,6 +10,10 @@ if TYPE_CHECKING:
 class BaseCLI[H: "BaseHandlersCollection"](ABC):
 	"""Base CLI processor."""
 
+	#==========================================================================================#
+	# >>>>> PROPERTIES <<<<< #
+	#==========================================================================================#
+
 	@property
 	def groups(self) -> tuple[ModelsGroup, ...]:
 		"""Commands models groups."""
@@ -27,6 +31,38 @@ class BaseCLI[H: "BaseHandlersCollection"](ABC):
 		"""Interface processor."""
 
 		return self._interface
+
+	#==========================================================================================#
+	# >>>>> PROTECTED METHODS <<<<< #
+	#==========================================================================================#
+
+	def _create_models_group(self, name: str, supergroup: str | None = None) -> ModelsGroup:
+		"""
+		Create models group.
+
+		:param name: Group name.
+		:type name: str
+		:param supergroup: Supergroup identifier to run commands by template: {supergroup} {command} {parameters}.
+		:type supergroup: str | None
+		:return: Commands models group.
+		:rtype: ModelsGroup
+		:raises KeyError: Group name unavailable.
+		"""
+
+		if name in self._groups:
+			raise KeyError("Group already created.")
+
+		if name in self._interface.reserved_groups:
+			raise KeyError("Group name reserved.")
+
+		group: ModelsGroup = ModelsGroup(name, supergroup)
+		self._groups[name] = group
+
+		return group
+
+	#==========================================================================================#
+	# >>>>> OVERRIDABLE METHODS <<<<< #
+	#==========================================================================================#
 
 	@abstractmethod
 	def _build_models(self):
@@ -50,6 +86,10 @@ class BaseCLI[H: "BaseHandlersCollection"](ABC):
 
 		pass
 
+	#==========================================================================================#
+	# >>>>> PUBLIC METHODS <<<<< #
+	#==========================================================================================#
+
 	def __init__(self, interface: "Interface"):
 		"""
 		Base CLI processor.
@@ -65,27 +105,3 @@ class BaseCLI[H: "BaseHandlersCollection"](ABC):
 
 		self._post_init()
 		self._build_models()
-
-	def create_models_group(self, name: str, supergroup: str | None = None) -> ModelsGroup:
-		"""
-		Create models group.
-
-		:param name: Group name.
-		:type name: str
-		:param supergroup: Supergroup identifier to run commands by template: {supergroup} {command} {parameters}.
-		:type supergroup: str | None
-		:return: Commands models group.
-		:rtype: ModelsGroup
-		:raises KeyError: Group name unavailable.
-		"""
-
-		if name in self._groups:
-			raise KeyError("Group already created.")
-
-		if name in self._interface.reserved_groups:
-			raise KeyError("Group name reserved.")
-
-		group: ModelsGroup = ModelsGroup(name, supergroup)
-		self._groups[name] = group
-
-		return group

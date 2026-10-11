@@ -12,7 +12,7 @@ class CommonNoteCLI(BaseCLI[CommonNoteHandlers]):
 	def _build_models(self):
 		"""Build models and register handlers."""
 
-		note_group: ModelsGroup = self.create_models_group("Note")
+		note_group: ModelsGroup = self._create_models_group("Note")
 
 		model = note_group.create_model("close", "Close note.")
 		model.register_handler(self.handlers.close)

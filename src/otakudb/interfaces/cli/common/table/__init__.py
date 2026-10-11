@@ -12,7 +12,7 @@ class CommonTableCLI(BaseCLI[CommonTableHandlers]):
 	def _build_models_tui(self):
 		"""Build TUI models and register handlers."""
 
-		tui_group: ModelsGroup = self.create_models_group("TUI")
+		tui_group: ModelsGroup = self._create_models_group("TUI")
 
 		model = tui_group.create_model("columns", "Runs columns visibility manager.")
 		model.register_handler(self.handlers.columns)
@@ -20,7 +20,7 @@ class CommonTableCLI(BaseCLI[CommonTableHandlers]):
 	def _build_models_table(self):
 		"""Build table models and register handlers."""
 
-		table_group: ModelsGroup = self.create_models_group("Table")
+		table_group: ModelsGroup = self._create_models_group("Table")
 
 		model = table_group.create_model("chid", "Change note ID.")
 		position = model.create_position("NOTE_ID", description = "Exists note ID.", important = True)
