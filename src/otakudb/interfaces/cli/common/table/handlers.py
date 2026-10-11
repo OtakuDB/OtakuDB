@@ -62,6 +62,18 @@ class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]
 		name: str = entity.get_position_value("NAME", expected_type = str, important = True)
 		self.table.rename(name)
 
+	def search(self, entity: "CommandEntity"):
+		"""
+		Command handler: **search**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		query: str = entity.get_position_value("QUERY", expected_type = str, important = True)
+		viewer = self.interface.load_table_viewer()
+		viewer.view(search_query = query)
+
 	def view(self, entity: "CommandEntity"):  # noqa: ARG002
 		"""
 		Command handler: **view**.

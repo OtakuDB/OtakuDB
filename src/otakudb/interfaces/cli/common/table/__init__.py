@@ -32,6 +32,11 @@ class CommonTableCLI(BaseCLI[CommonTableHandlers]):
 		position.set_argument()
 		model.register_handler(self.handlers.rename)
 
+		model = table_group.create_model("search", "Search notes.")
+		position = model.create_position("QUERY", description = "Search query.", important = True)
+		position.set_argument()
+		model.register_handler(self.handlers.search)
+
 		model = table_group.create_model("view", "View table notes.")
 		model.register_handler(self.handlers.view)
 
