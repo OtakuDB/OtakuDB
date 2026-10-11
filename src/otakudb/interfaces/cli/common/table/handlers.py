@@ -13,6 +13,17 @@ if TYPE_CHECKING:
 class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]", "BaseNote"]):
 	"""Common table commands handlers."""
 
+	def delete(self, entity: "CommandEntity"):  # noqa: ARG002
+		"""
+		Command handler: **delete**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		self.driver.delete_table(self.navigator.current_box, self.table.name)
+		self.navigator.close()
+
 	def close(self, entity: "CommandEntity"):  # noqa: ARG002
 		"""
 		Command handler: **close**.

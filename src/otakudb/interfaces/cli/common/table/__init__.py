@@ -18,6 +18,9 @@ class CommonTableCLI(BaseCLI[CommonTableHandlers]):
 		model = table_group.create_model("close", "Close table.")
 		model.register_handler(self.handlers.close)
 
+		model = table_group.create_model("delete", "Delete table.")
+		model.register_handler(self.handlers.delete)
+
 		model = table_group.create_model("new", "Create note.")
 		model.base.add_flag("-o", description = "Open note after creation.")
 		model.register_handler(self.handlers.new)
