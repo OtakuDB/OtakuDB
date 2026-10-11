@@ -3,16 +3,13 @@ from typing import TYPE_CHECKING
 from dublib.cli.text_styler import FastStyler
 
 if TYPE_CHECKING:
-	from pydantic import BaseModel
-
 	from .....core.base.note import BaseNote
-	from .....core.base.table import BaseTable
 	from ...shell import Interface
 	from ...shell.printer import Printer
 
 ALLOWED_TYPES = float | int | str | None
 
-class BaseNoteViewer[N: "BaseNote[BaseTable, BaseModel]"]:
+class BaseNoteViewer[N: "BaseNote"]:
 	"""Base note viewer."""
 
 	#==========================================================================================#

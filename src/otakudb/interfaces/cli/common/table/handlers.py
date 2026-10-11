@@ -51,6 +51,17 @@ class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]
 
 		self.navigator.open_note(note_id)
 
+	def rename(self, entity: "CommandEntity"):  # noqa: ARG002
+		"""
+		Command handler: **rename**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		name: str = entity.get_position_value("NAME", expected_type = str, important = True)
+		self.table.rename(name)
+
 	def view(self, entity: "CommandEntity"):  # noqa: ARG002
 		"""
 		Command handler: **view**.

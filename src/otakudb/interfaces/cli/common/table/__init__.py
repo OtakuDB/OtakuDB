@@ -27,6 +27,11 @@ class CommonTableCLI(BaseCLI[CommonTableHandlers]):
 		position.set_argument(ValidableTypes.UnsignedInteger)
 		model.register_handler(self.handlers.open)
 
+		model = table_group.create_model("rename", "Rename table.")
+		position = model.create_position("NAME", description = "New table name.")
+		position.set_argument()
+		model.register_handler(self.handlers.rename)
+
 		model = table_group.create_model("view", "View table notes.")
 		model.register_handler(self.handlers.view)
 
