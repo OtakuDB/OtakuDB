@@ -15,6 +15,17 @@ class CommonTableCLI(BaseCLI[CommonTableHandlers]):
 
 		table_group: ModelsGroup = self.create_models_group("Table")
 
+		model = table_group.create_model("chid", "Change note ID.")
+		position = model.create_position("NOTE_ID", description = "Exists note ID.", important = True)
+		position.set_argument(ValidableTypes.UnsignedInteger)
+		position = model.create_position("NEW_ID", description = "New note ID.", important = True)
+		position.set_argument(ValidableTypes.UnsignedInteger)
+		position = model.create_position("MODE", description = "Mode of ID changing. By default may insert only on free index.")
+		position.add_flag("-o", description = "Overwtite exists note.")
+		position.add_flag("-s", description = "Swipe with exists note.")
+		position.add_flag("-i", description = "Insert to filled note place with offset. If index is free same as default.")
+		model.register_handler(self.handlers.chid)
+
 		model = table_group.create_model("close", "Close table.")
 		model.register_handler(self.handlers.close)
 

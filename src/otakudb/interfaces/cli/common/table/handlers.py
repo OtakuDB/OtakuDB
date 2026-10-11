@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from ...base.handlers import BaseHandlersCollection
 
@@ -13,16 +13,24 @@ if TYPE_CHECKING:
 class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]", "BaseNote"]):
 	"""Common table commands handlers."""
 
-	def delete(self, entity: "CommandEntity"):  # noqa: ARG002
+	def chid(self, entity: "CommandEntity"):
 		"""
-		Command handler: **delete**.
+		Command handler: **chid**.
 
 		:param entity: Command entity.
 		:type entity: CommandEntity
 		"""
 
-		self.driver.delete_table(self.navigator.current_box, self.table.name)
-		self.navigator.close()
+		note_id: int = entity.get_position_value("NOTE_ID", expected_type = int, important = True)
+		new_id: int = entity.get_position_value("NEW_ID", expected_type = int, important = True)
+
+		mode: Literal["i", "o", "s"] | None = None
+
+		if entity.check_flag("-i"): mode = "i"
+		elif entity.check_flag("-o"): mode = "o"
+		elif entity.check_flag("-s"): mode = "s"
+
+		self.table.change_note_id(note_id, new_id, mode)
 
 	def close(self, entity: "CommandEntity"):  # noqa: ARG002
 		"""
@@ -32,6 +40,17 @@ class CommonTableHandlers(BaseHandlersCollection["BaseTable[BaseNote, BaseModel]
 		:type entity: CommandEntity
 		"""
 
+		self.navigator.close()
+
+	def delete(self, entity: "CommandEntity"):  # noqa: ARG002
+		"""
+		Command handler: **delete**.
+
+		:param entity: Command entity.
+		:type entity: CommandEntity
+		"""
+
+		self.driver.delete_table(self.navigator.current_box, self.table.name)
 		self.navigator.close()
 
 	def new(self, entity: "CommandEntity"):
